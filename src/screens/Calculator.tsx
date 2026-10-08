@@ -111,6 +111,7 @@ export function Calculator() {
                       </a>
                     </p>
                   )}
+                  {racket.isStock && racket.approxWeight && <p className="mt-1 text-xs text-muted">{t.calc.approxNote}</p>}
                 </div>
               ) : (
                 <div className="space-y-3">

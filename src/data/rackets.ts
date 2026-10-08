@@ -3,7 +3,8 @@ import { DEFAULT_ACCESSORY_MASSES, type Racket } from '../domain/types'
 
 /**
  * Stock library, confirmed on 2026-10-08 against each racket's page on
- * Tennis Warehouse Europe (URL in `source`). TWE measures every frame strung:
+ * Tennis Warehouse Europe (current frames) or its Learning Center review
+ * (earlier generations); URL in `source`. Both measure every frame strung:
  * weight, balance and swingweight below are those strung measurements.
  *
  * The calculator works from the unstrung frame and adds strings itself, so
@@ -18,7 +19,7 @@ type Row = {
   type: Racket['type']
   head: number
   lengthCm: number
-  /** Strung, as measured by TWE. */
+  /** Strung, as measured by Tennis Warehouse. */
   weight: number
   balanceCm: number
   sw: number
@@ -129,6 +130,49 @@ export const ROWS: Row[] = [
   { brand: 'Wilson', model: 'Pro Staff 97 v14', year: 2023, type: 'control', head: 97, lengthCm: 68.58, weight: 332, balanceCm: 32.0, sw: 332, ra: 66, pattern: '16x19', url: R + 'W97V14review.html' },
   { brand: 'Wilson', model: 'Pro Staff X v14', year: 2023, type: 'control', head: 100, lengthCm: 68.58, weight: 332, balanceCm: 32.0, sw: 322, ra: 66, pattern: '16x19', url: R + 'W97VXreview.html' },
   { brand: 'Wilson', model: 'RF 01', year: 2024, type: 'tweener', head: 98, lengthCm: 68.58, weight: 317, balanceCm: 32.64, sw: 319, ra: 64, pattern: '16x19', url: R + 'WRF1Rreview.html', approx: true },
+  // More brands, earlier generations (2020-2025), from Tennis Warehouse review pages.
+  { brand: 'Wilson', model: 'Pro Staff Six.One 100 v14', year: 2023, type: 'tweener', head: 100, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 326, ra: 65, pattern: '16x19', url: R + 'WPS614review.html' },
+  { brand: 'Wilson', model: 'Shift 99 Pro', year: 2023, type: 'control', head: 99, lengthCm: 68.58, weight: 332, balanceCm: 32.39, sw: 332, ra: 68, pattern: '18x20', url: R + 'WSP315review.html' },
+  { brand: 'Wilson', model: 'Ultra 100 v4', year: 2022, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.02, sw: 317, ra: 70, pattern: '16x19', url: R + 'WU10V4review.html' },
+  { brand: 'Wilson', model: 'Ultra Pro 16x19 v4', year: 2023, type: 'control', head: 97, lengthCm: 68.58, weight: 323, balanceCm: 32.41, sw: 317, ra: 62, pattern: '16x19', url: R + 'WUPRO6review.html' },
+  { brand: 'Yonex', model: 'EZONE 98', year: 2022, type: 'tweener', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 32.39, sw: 318, ra: 65, pattern: '16x19', url: R + 'EZO98review.html' },
+  { brand: 'Yonex', model: 'EZONE 100', year: 2022, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.02, sw: 317, ra: 67, pattern: '16x19', url: R + 'EZO10review.html' },
+  { brand: 'Yonex', model: 'EZONE 98 Tour', year: 2022, type: 'control', head: 98, lengthCm: 68.58, weight: 332, balanceCm: 33.02, sw: 332, ra: 64, pattern: '16x19', url: R + 'EZ98TRreview.html' },
+  { brand: 'Yonex', model: 'VCORE 98', year: 2023, type: 'tweener', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 318, ra: 62, pattern: '16x19', url: R + 'YVC98review.html' },
+  { brand: 'Yonex', model: 'VCORE 100', year: 2023, type: 'power', head: 100, lengthCm: 68.58, weight: 320, balanceCm: 33.02, sw: 322, ra: 65, pattern: '16x19', url: R + 'VCR100review.html' },
+  { brand: 'Yonex', model: 'VCORE 95', year: 2023, type: 'control', head: 95, lengthCm: 68.58, weight: 326, balanceCm: 32.07, sw: 321, ra: 61, pattern: '16x20', url: R + 'YVC95review.html' },
+  { brand: 'Yonex', model: 'VCORE 98', year: 2021, type: 'tweener', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 325, ra: 66, pattern: '16x19', url: R + 'YVCR98review.html' },
+  { brand: 'Yonex', model: 'VCORE 100', year: 2021, type: 'power', head: 100, lengthCm: 68.58, weight: 320, balanceCm: 33.02, sw: 324, ra: 66, pattern: '16x19', url: R + 'YVC100review.html' },
+  { brand: 'Yonex', model: 'VCORE Pro 97 (310g)', year: 2021, type: 'control', head: 97, lengthCm: 68.58, weight: 326, balanceCm: 31.98, sw: 318, ra: 60, pattern: '16x19', url: R + '310VD7review.html' },
+  { brand: 'Yonex', model: 'VCORE Pro 97D', year: 2021, type: 'control', head: 97, lengthCm: 68.58, weight: 340, balanceCm: 31.98, sw: 330, ra: 61, pattern: '18x20', url: R + '320HD7review.html' },
+  { brand: 'Yonex', model: 'Percept 100D', year: 2023, type: 'tweener', head: 100, lengthCm: 68.58, weight: 320, balanceCm: 32.49, sw: 318, ra: 66, pattern: '18x19', url: R + 'PERC1Dreview.html' },
+  { brand: 'Yonex', model: 'Percept 97D', year: 2023, type: 'control', head: 97, lengthCm: 68.58, weight: 337, balanceCm: 31.98, sw: 329, ra: 62, pattern: '18x20', url: R + 'PERC9Dreview.html' },
+  { brand: 'Yonex', model: 'Percept 97H', year: 2023, type: 'control', head: 97, lengthCm: 68.58, weight: 346, balanceCm: 31.98, sw: 333, ra: 62, pattern: '16x19', url: R + 'PERC9Hreview.html' },
+  { brand: 'Tecnifibre', model: 'TF40 315 16x19', year: 2022, type: 'control', head: 98, lengthCm: 68.58, weight: 332, balanceCm: 31.78, sw: 313, ra: 64, pattern: '16x19', url: R + 'TF4THreview.html' },
+  { brand: 'Tecnifibre', model: 'TFight 300 ISO', year: 2022, type: 'tweener', head: 98, lengthCm: 68.58, weight: 318, balanceCm: 32.99, sw: 320, ra: 66, pattern: '16x19', url: R + 'ISO300review.html' },
+  { brand: 'Tecnifibre', model: 'TFight 305 ISO', year: 2022, type: 'control', head: 98, lengthCm: 68.58, weight: 320, balanceCm: 33.32, sw: 338, ra: 64, pattern: '18x19', url: R + 'ISO305review.html' },
+  { brand: 'Tecnifibre', model: 'TFight 315 ISO', year: 2022, type: 'control', head: 98, lengthCm: 68.58, weight: 329, balanceCm: 31.98, sw: 324, ra: 69, pattern: '16x19', url: R + 'ISO315review.html' },
+  { brand: 'Tecnifibre', model: 'TFight 300S', year: 2025, type: 'tweener', head: 98, lengthCm: 68.58, weight: 318, balanceCm: 33.02, sw: 321, ra: 66, pattern: '16x19', url: R + 'TF300Sreview.html' },
+  { brand: 'Tecnifibre', model: 'TFight 315S', year: 2025, type: 'control', head: 98, lengthCm: 68.58, weight: 332, balanceCm: 31.98, sw: 325, ra: 65, pattern: '16x19', url: R + 'TF315Sreview.html' },
+  { brand: 'Prince', model: 'ATS Textreme Tour 100 (310g)', year: 2022, type: 'tweener', head: 100, lengthCm: 68.58, weight: 326, balanceCm: 31.98, sw: 323, ra: 62, pattern: '16x18', url: R + 'ATR310review.html' },
+  { brand: 'Prince', model: 'ATS Textreme Tour 98', year: 2022, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 325, ra: 62, pattern: '16x19', url: R + 'ATR98review.html' },
+  { brand: 'Prince', model: 'Phantom 100X (305g)', year: 2020, type: 'tweener', head: 100, lengthCm: 68.58, weight: 323, balanceCm: 32.26, sw: 321, ra: 58, pattern: '16x18', url: R + 'PPX35review.html' },
+  { brand: 'Prince', model: 'Phantom 97P', year: 2020, type: 'control', head: 97, lengthCm: 68.58, weight: 335, balanceCm: 31.75, sw: 320, ra: 58, pattern: '16x18', url: R + 'PP97Preview.html' },
+  { brand: 'Prince', model: 'Phantom 100P', year: 2024, type: 'control', head: 100, lengthCm: 68.58, weight: 326, balanceCm: 32.49, sw: 324, ra: 59, pattern: '16x18', url: R + 'PHNP1review.html' },
+  { brand: 'Dunlop', model: 'CX 200 Tour 16x19', year: 2021, type: 'control', head: 95, lengthCm: 68.58, weight: 326, balanceCm: 31.98, sw: 318, ra: 63, pattern: '16x19', url: R + 'D200T6review.html' },
+  { brand: 'Dunlop', model: 'SX 300', year: 2022, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.02, sw: 322, ra: 68, pattern: '16x19', url: R + 'X300DUreview.html' },
+  { brand: 'Dunlop', model: 'SX 300 Tour', year: 2022, type: 'tweener', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 324, ra: 66, pattern: '16x19', url: R + 'T310DUreview.html' },
+  { brand: 'Dunlop', model: 'FX 500', year: 2023, type: 'power', head: 100, lengthCm: 68.58, weight: 320, balanceCm: 33.02, sw: 321, ra: 69, pattern: '16x19', url: R + 'DFX500review.html' },
+  { brand: 'Dunlop', model: 'FX 500 Tour', year: 2023, type: 'tweener', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 317, ra: 65, pattern: '16x19', url: R + 'FX5TRreview.html' },
+  { brand: 'Solinco', model: 'Blackout 300', year: 2022, type: 'power', head: 100, lengthCm: 68.58, weight: 320, balanceCm: 32.51, sw: 316, ra: 71, pattern: '16x19', url: R + 'BLKO30review.html' },
+  { brand: 'Solinco', model: 'Whiteout 305', year: 2022, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 327, ra: 66, pattern: '16x19', url: R + 'WHTO30review.html' },
+  { brand: 'Solinco', model: 'Whiteout 305 18x20', year: 2023, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 324, ra: 66, pattern: '18x20', url: R + 'WHO18Xreview.html' },
+  { brand: 'Völkl', model: 'V-Cell 8 (315g)', year: 2020, type: 'tweener', head: 100, lengthCm: 68.58, weight: 326, balanceCm: 32.23, sw: 315, ra: 66, pattern: '16x18', url: R + 'VVCL8review.html' },
+  { brand: 'Völkl', model: 'V-Cell 8 (300g)', year: 2020, type: 'power', head: 100, lengthCm: 68.58, weight: 312, balanceCm: 32.64, sw: 312, ra: 67, pattern: '16x18', url: R + 'VVC8Lreview.html' },
+  { brand: 'Völkl', model: 'V-Cell 10 (320g)', year: 2021, type: 'control', head: 98, lengthCm: 68.58, weight: 335, balanceCm: 31.98, sw: 319, ra: 67, pattern: '16x19', url: R + 'VCE102review.html' },
+  { brand: 'Völkl', model: 'Vostra V8 (300g)', year: 2024, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.64, sw: 323, ra: 67, pattern: '16x19', url: R + 'VOSV8Mreview.html' },
+  { brand: 'Völkl', model: 'Vostra V8 (315g)', year: 2024, type: 'tweener', head: 100, lengthCm: 68.58, weight: 329, balanceCm: 32.49, sw: 319, ra: 66, pattern: '16x18', url: R + 'VOSV8Hreview.html' },
+  { brand: 'ProKennex', model: 'Black Ace 300', year: 2025, type: 'tweener', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.99, sw: 324, ra: 55, pattern: '16x19', url: R + 'PKBACreview.html' },
 ]
 
 /** Removes the app's string model from strung measurements. */

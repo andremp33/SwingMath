@@ -30,6 +30,8 @@ export interface Racket extends RacketSpec {
   pattern?: string
   /** Strung measurements the stock values were derived from. */
   strung?: { weightG: number; balanceCm: number; swingweight: number }
+  /** The source gave no strung weight; it was estimated (nominal + strings). */
+  approxWeight?: boolean
   createdAt: number
   updatedAt: number
 }

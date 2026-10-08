@@ -4,7 +4,8 @@ test.describe('F08 library and custom rackets', () => {
   test('F08-H1 search and filter', async ({ page }) => {
     await start(page, { path: '/rackets' })
     await page.getByLabel('Procurar marca ou modelo').fill('ezone')
-    await expect(page.getByRole('article')).toHaveCount(2)
+    // EZONE 98 and 100 (2025), EZONE 98, 100 and 98 Tour (2022)
+    await expect(page.getByRole('article')).toHaveCount(5)
     await page.getByLabel('Procurar marca ou modelo').fill('')
     await page.getByLabel('Marca', { exact: true }).selectOption('Wilson')
     await expect(page.getByRole('article').first()).toContainText('Wilson')
