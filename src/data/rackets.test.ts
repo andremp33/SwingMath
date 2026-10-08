@@ -8,7 +8,7 @@ const strungOnly = { strings: true, leatherGrip: false, overgrip: false, dampene
 describe('stock library', () => {
   it('has a unique id and a source link for every frame', () => {
     expect(new Set(STOCK_RACKETS.map((r) => r.id)).size).toBe(STOCK_RACKETS.length)
-    for (const r of STOCK_RACKETS) expect(r.source).toMatch(/^https:\/\/www\.tenniswarehouse-europe\.com\/.+descpage.+-EN\.html$/)
+    for (const r of STOCK_RACKETS) expect(r.source).toMatch(/^https:\/\/www\.(tenniswarehouse-europe\.com\/.+descpage.+-EN|tennis-warehouse\.com\/learning_center\/racquet_reviews\/\w+review)\.html$/)
   })
 
   it('with strings on, gives back the strung numbers the source measured', () => {

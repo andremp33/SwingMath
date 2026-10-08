@@ -28,9 +28,12 @@ type Row = {
   /** Manufacturer's unstrung nominal values, when the page lists them (used
    *  only to check the string model, see replica/validation.md). */
   nominal?: [weight: number, balanceCm: number]
+  /** The page gave no strung weight: nominal unstrung weight + strings. */
+  approx?: boolean
 }
 
 const T = 'https://www.tenniswarehouse-europe.com/'
+const R = 'https://www.tennis-warehouse.com/learning_center/racquet_reviews/'
 
 export const ROWS: Row[] = [
   // Babolat
@@ -83,6 +86,49 @@ export const ROWS: Row[] = [
   // Dunlop, Prince
   { brand: 'Dunlop', model: 'CX 200 (305g)', year: 2024, type: 'control', head: 98, lengthCm: 68.5, weight: 320, balanceCm: 32.08, sw: 308, ra: 64, pattern: '16x19', url: T + 'Dunlop_CX_200_305g_Rackets/descpageRCDUNHGER-DCX2S-EN.html', nominal: [305, 31.5] },
   { brand: 'Prince', model: 'Phantom 100X (305g)', year: 2024, type: 'tweener', head: 100, lengthCm: 68.5, weight: 323, balanceCm: 32.49, sw: 320, ra: 59, pattern: '16x18', url: T + 'Prince_Phantom_100X_305g_2024_Racket/descpageRCPRINCEH-PHNX5-EN.html', nominal: [305, 31.5] },
+  // Earlier generations (2019-2024), from Tennis Warehouse review pages.
+  { brand: 'Babolat', model: 'Pure Aero', year: 2023, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.99, sw: 322, ra: 65, pattern: '16x19', url: R + 'BAROreview.html' },
+  { brand: 'Babolat', model: 'Pure Aero 98', year: 2023, type: 'tweener', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 327, ra: 65, pattern: '16x20', url: R + 'BARO98review.html' },
+  { brand: 'Babolat', model: 'Pure Aero', year: 2019, type: 'power', head: 100, lengthCm: 68.58, weight: 317, balanceCm: 33.0, sw: 324, ra: 67, pattern: '16x19', url: R + 'BPARreview.html', approx: true },
+  { brand: 'Babolat', model: 'Pure Aero Plus', year: 2019, type: 'power', head: 100, lengthCm: 69.85, weight: 320, balanceCm: 33.0, sw: 330, ra: 68, pattern: '16x19', url: R + 'BPAPRreview.html' },
+  { brand: 'Babolat', model: 'Pure Aero Tour', year: 2019, type: 'tweener', head: 100, lengthCm: 68.58, weight: 335, balanceCm: 32.0, sw: 327, ra: 68, pattern: '16x19', url: R + 'BPATRRreview.html' },
+  { brand: 'Babolat', model: 'Pure Drive', year: 2021, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.0, sw: 320, ra: 71, pattern: '16x19', url: R + 'BRPDRreview.html' },
+  { brand: 'Babolat', model: 'Pure Drive Plus', year: 2021, type: 'power', head: 100, lengthCm: 69.85, weight: 318, balanceCm: 33.0, sw: 324, ra: 69, pattern: '16x19', url: R + 'BRPDPreview.html' },
+  { brand: 'Babolat', model: 'Pure Drive 107', year: 2021, type: 'power', head: 107, lengthCm: 69.09, weight: 301, balanceCm: 33.0, sw: 309, ra: 69, pattern: '16x19', url: R + 'BRPD17review.html' },
+  { brand: 'Babolat', model: 'Pure Strike 100', year: 2019, type: 'control', head: 100, lengthCm: 68.58, weight: 315, balanceCm: 33.0, sw: 319, ra: 69, pattern: '16x19', url: R + 'BPSTRIreview.html' },
+  { brand: 'Babolat', model: 'Pure Strike 98 16x19', year: 2019, type: 'control', head: 98, lengthCm: 68.58, weight: 322, balanceCm: 33.0, sw: 327, ra: 66, pattern: '16x19', url: R + 'PS1619review.html', approx: true },
+  { brand: 'Babolat', model: 'Pure Strike 98 18x20', year: 2019, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.0, sw: 334, ra: 66, pattern: '18x20', url: R + 'PS182review.html' },
+  { brand: 'Babolat', model: 'Pure Strike 98 16x19', year: 2024, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 330, ra: 64, pattern: '16x19', url: R + 'PSRKTreview.html' },
+  { brand: 'Babolat', model: 'Pure Strike 100', year: 2024, type: 'control', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.99, sw: 324, ra: 63, pattern: '16x19', url: R + 'STRPSreview.html' },
+  { brand: 'Babolat', model: 'Pure Strike 97', year: 2024, type: 'control', head: 97, lengthCm: 68.58, weight: 332, balanceCm: 31.98, sw: 321, ra: 63, pattern: '16x20', url: R + 'PS97Sreview.html' },
+  { brand: 'Head', model: 'Graphene 360+ Speed MP', year: 2020, type: 'tweener', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.0, sw: 328, ra: 64, pattern: '16x19', url: R + 'H3SMIPreview.html' },
+  { brand: 'Head', model: 'Graphene 360+ Speed Pro', year: 2020, type: 'control', head: 100, lengthCm: 68.58, weight: 329, balanceCm: 32.46, sw: 329, ra: 62, pattern: '18x20', url: R + 'H3SPROreview.html' },
+  { brand: 'Head', model: 'Speed MP', year: 2022, type: 'tweener', head: 100, lengthCm: 68.58, weight: 317, balanceCm: 33.0, sw: 323, ra: 62, pattern: '16x19', url: R + 'SPDMreview.html', approx: true },
+  { brand: 'Head', model: 'Speed Pro', year: 2022, type: 'control', head: 100, lengthCm: 68.58, weight: 326, balanceCm: 32.5, sw: 326, ra: 62, pattern: '18x20', url: R + 'SPDPreview.html' },
+  { brand: 'Head', model: 'Graphene 360+ Radical MP', year: 2021, type: 'tweener', head: 98, lengthCm: 68.58, weight: 318, balanceCm: 33.0, sw: 326, ra: 65, pattern: '16x19', url: R + 'HRRMPreview.html' },
+  { brand: 'Head', model: 'Radical MP', year: 2023, type: 'tweener', head: 98, lengthCm: 68.58, weight: 318, balanceCm: 33.02, sw: 323, ra: 65, pattern: '16x19', url: R + 'HMPRreview.html' },
+  { brand: 'Head', model: 'Radical Pro', year: 2023, type: 'control', head: 98, lengthCm: 68.58, weight: 332, balanceCm: 32.38, sw: 325, ra: 64, pattern: '16x19', url: R + 'HRPRreview.html' },
+  { brand: 'Head', model: 'Graphene 360+ Gravity Pro', year: 2019, type: 'control', head: 100, lengthCm: 68.58, weight: 332, balanceCm: 32.0, sw: 332, ra: 62, pattern: '18x20', url: R + 'HGPG36review.html' },
+  { brand: 'Head', model: 'Extreme MP', year: 2022, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.0, sw: 322, ra: 66, pattern: '16x19', url: R + 'HREM22review.html' },
+  { brand: 'Head', model: 'Extreme Pro', year: 2024, type: 'tweener', head: 98, lengthCm: 68.58, weight: 322, balanceCm: 32.49, sw: 322, ra: 64, pattern: '16x19', url: R + 'HREP24review.html', approx: true },
+  { brand: 'Head', model: 'Boom MP', year: 2022, type: 'power', head: 100, lengthCm: 68.58, weight: 312, balanceCm: 33.0, sw: 318, ra: 64, pattern: '16x19', url: R + 'BOOMMreview.html', approx: true },
+  { brand: 'Head', model: 'Boom MP', year: 2024, type: 'power', head: 100, lengthCm: 68.58, weight: 312, balanceCm: 32.49, sw: 317, ra: 62, pattern: '16x19', url: R + 'HBOOMMreview.html' },
+  { brand: 'Head', model: 'Boom Pro', year: 2024, type: 'tweener', head: 98, lengthCm: 68.58, weight: 326, balanceCm: 31.98, sw: 323, ra: 64, pattern: '16x19', url: R + 'HBOOMPreview.html' },
+  { brand: 'Head', model: 'Prestige MP', year: 2021, type: 'control', head: 99, lengthCm: 68.58, weight: 326, balanceCm: 33.0, sw: 334, ra: 66, pattern: '18x19', url: R + 'MIPPREreview.html' },
+  { brand: 'Wilson', model: 'Blade 98 16x19 v8', year: 2021, type: 'control', head: 98, lengthCm: 68.58, weight: 320, balanceCm: 33.0, sw: 320, ra: 61, pattern: '16x19', url: R + '16BV8Rreview.html' },
+  { brand: 'Wilson', model: 'Blade 98 18x20 v8', year: 2021, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.0, sw: 327, ra: 60, pattern: '18x20', url: R + '20BV8Sreview.html' },
+  { brand: 'Wilson', model: 'Blade 100 v8', year: 2021, type: 'tweener', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.02, sw: 318, ra: 60, pattern: '16x19', url: R + 'WB1008review.html' },
+  { brand: 'Wilson', model: 'Blade 98 16x19 v9', year: 2024, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 324, ra: 62, pattern: '16x19', url: R + 'WB9816review.html' },
+  { brand: 'Wilson', model: 'Blade 98 18x20 v9', year: 2024, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 330, ra: 60, pattern: '18x20', url: R + 'WB18Vreview.html' },
+  { brand: 'Wilson', model: 'Blade 100 v9', year: 2024, type: 'tweener', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 33.02, sw: 322, ra: 60, pattern: '16x19', url: R + 'WB1009review.html' },
+  { brand: 'Wilson', model: 'Blade 104 v9', year: 2024, type: 'tweener', head: 104, lengthCm: 69.85, weight: 306, balanceCm: 32.99, sw: 311, ra: 64, pattern: '16x19', url: R + 'WB104review.html' },
+  { brand: 'Wilson', model: 'Clash 100', year: 2019, type: 'tweener', head: 100, lengthCm: 68.58, weight: 312, balanceCm: 31.4, sw: 312, ra: 55, pattern: '16x19', url: R + 'WC100Rreview.html' },
+  { brand: 'Wilson', model: 'Clash 100 v2', year: 2022, type: 'tweener', head: 100, lengthCm: 68.58, weight: 312, balanceCm: 32.0, sw: 313, ra: 57, pattern: '16x19', url: R + 'WC100Vreview.html' },
+  { brand: 'Wilson', model: 'Clash 100 Pro v2', year: 2022, type: 'control', head: 100, lengthCm: 68.58, weight: 326, balanceCm: 31.0, sw: 325, ra: 59, pattern: '16x20', url: R + 'WC100Preview.html' },
+  { brand: 'Wilson', model: 'Clash 98 v2', year: 2022, type: 'control', head: 98, lengthCm: 68.58, weight: 326, balanceCm: 31.75, sw: 327, ra: 60, pattern: '16x20', url: R + 'WC98Preview.html' },
+  { brand: 'Wilson', model: 'Pro Staff 97 v14', year: 2023, type: 'control', head: 97, lengthCm: 68.58, weight: 332, balanceCm: 32.0, sw: 332, ra: 66, pattern: '16x19', url: R + 'W97V14review.html' },
+  { brand: 'Wilson', model: 'Pro Staff X v14', year: 2023, type: 'control', head: 100, lengthCm: 68.58, weight: 332, balanceCm: 32.0, sw: 322, ra: 66, pattern: '16x19', url: R + 'W97VXreview.html' },
+  { brand: 'Wilson', model: 'RF 01', year: 2024, type: 'tweener', head: 98, lengthCm: 68.58, weight: 317, balanceCm: 32.64, sw: 319, ra: 64, pattern: '16x19', url: R + 'WRF1Rreview.html', approx: true },
 ]
 
 /** Removes the app's string model from strung measurements. */
@@ -129,6 +175,7 @@ export const STOCK_RACKETS: Racket[] = ROWS.map((r) => {
     pattern: r.pattern,
     strung: { weightG: r.weight, balanceCm: r.balanceCm, swingweight: r.sw },
     source: r.url,
+    approxWeight: r.approx || undefined,
     createdAt: 0,
     updatedAt: 0,
   }
