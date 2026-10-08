@@ -1,0 +1,21 @@
+// Renders the share image for a saved setup into replica/review/share.png.
+import { chromium } from '@playwright/test'
+import { writeFileSync } from 'node:fs'
+const b = await chromium.launch()
+const p = await b.newPage({ viewport: { width: 1200, height: 900 } })
+await p.addInitScript(() => localStorage.setItem('swingmath', JSON.stringify({ version: 2, state: { lang: 'pt', theme: 'dark' } })))
+await p.goto('http://localhost:5173/')
+for (let i = 0; i < 4; i++) await p.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+await p.getByRole('button', { name: 'Guardar setup' }).click()
+await p.getByRole('dialog').getByLabel('Nome').fill('Torneio de sábado')
+await p.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+await p.getByText('A editar: Torneio de sábado').waitFor()
+await p.goto('http://localhost:5173/setups')
+await p.getByRole('button', { name: 'Partilhar' }).click()
+const img = p.getByRole('dialog').getByRole('img', { name: 'Torneio de sábado' })
+await img.waitFor()
+const src = await img.getAttribute('src')
+const bytes = await p.evaluate(async (u) => Array.from(new Uint8Array(await (await fetch(u)).arrayBuffer())), src)
+writeFileSync('replica/review/share.png', Buffer.from(bytes))
+console.log('replica/review/share.png')
+await b.close()

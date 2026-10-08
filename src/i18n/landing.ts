@@ -1,0 +1,167 @@
+import { useStore } from '../data/store'
+import type { Lang } from '.'
+
+/** Marketing and legal copy, kept apart from the app's dictionary. */
+const pt = {
+  meta: 'SwingMath — personaliza a tua raquete com números em que podes confiar',
+  heroTitle: 'Personaliza a tua raquete com números em que podes confiar.',
+  heroSub: 'Vê o que cada grama de chumbo faz ao peso, equilíbrio, swingweight e ponto doce — e confirma com a tua balança. Grátis, no browser, sem conta.',
+  cta: 'Abrir a calculadora',
+  shotAlt: 'A calculadora do SwingMath com chumbo às 12h e às 3 e 9',
+  problemTitle: 'O problema',
+  problems: [
+    ['Números que não consegues verificar', 'As apps de raquetes dão-te um número. Quando a tua máquina diz outra coisa, não sabes em quem acreditar.'],
+    ['Pagar antes de ver', 'Paga-se primeiro e descobre-se depois se funciona.'],
+  ],
+  howTitle: 'Como funciona',
+  how: [
+    ['Escolhe a raquete', 'Da biblioteca, ou com as tuas próprias medições.'],
+    ['Põe chumbo', '12h, 10 e 2, 3 e 9, garganta ou cabo, em passos de 0,5 g.'],
+    ['Vê e confirma', 'O resultado muda na hora. Guarda o setup e confirma com a tua balança.'],
+  ],
+  featuresTitle: 'O que tens',
+  features: [
+    ['Confirma com a tua medição', 'Escreve o que a balança e a máquina dizem. Mostramos a diferença para a previsão.'],
+    ['Qualquer raquete, grátis', 'A tua não está na lista? Adiciona-a com as tuas medições, sem pagar.'],
+    ['Ponto doce no desenho', 'Vê o centro de percussão subir quando pões chumbo na cabeça.'],
+    ['Experimenta antes de pagar', 'As ferramentas Pro funcionam 3 vezes grátis.'],
+    ['Português, español, English', 'A app inteira, nos três idiomas.'],
+    ['Sem conta, sem recolha de dados', 'Tudo fica no teu dispositivo e funciona sem internet.'],
+  ],
+  alsoTitle: 'E ainda',
+  also: ['Sensação estimada de potência, controlo, estabilidade e efeito', 'Comparar dois setups lado a lado', 'Partilhar com imagem e código QR', 'Atingir um alvo: onde pôr o chumbo', 'Igualar 2 ou 3 raquetes', 'Exportar e importar uma cópia'],
+  pricingTitle: 'Preço',
+  free: 'Grátis',
+  freeFor: 'Para todos os jogadores',
+  freeItems: ['Calculadora, ponto doce e confirmação', 'Biblioteca e as tuas raquetes', '5 setups guardados', 'Comparar e partilhar', '3 usos grátis das ferramentas Pro'],
+  pro: 'Pro',
+  proFor: 'Para quem afina a raquete muitas vezes, treinadores e encordoadores',
+  proPrice: '6,99 €',
+  proOnce: 'pagamento único',
+  proItems: ['Atingir um alvo com o chumbo exato', 'Igualar 2 ou 3 raquetes', 'Setups ilimitados', 'Reembolso em 14 dias, sem perguntas'],
+  faqTitle: 'Perguntas',
+  faq: [
+    ['Quão preciso é?', 'Usamos física de massas pontuais, com o mesmo eixo das máquinas de swingweight. A precisão depende sobretudo das medições de partida: com as da tua raquete é melhor do que com valores de catálogo. Usa «Confirmar com a minha medição» para veres no teu caso.'],
+    ['Preciso de conta?', 'Não. Tudo fica no teu dispositivo.'],
+    ['Funciona no telemóvel?', 'Sim. Abre no browser e adiciona ao ecrã inicial. Funciona offline.'],
+    ['A minha raquete não está na lista.', 'Adiciona-a em 30 segundos, grátis.'],
+    ['E se mudar de telemóvel?', 'Exporta uma cópia nas Definições e importa-a no novo.'],
+    ['Posso pedir reembolso?', 'Sim, nos 14 dias depois da compra, sem perguntas.'],
+  ],
+  finalTitle: 'A próxima raquete já está calculada.',
+  privacy: 'Privacidade',
+  terms: 'Termos',
+  contact: 'Contacto',
+}
+
+export type LandingDict = typeof pt
+
+const en: LandingDict = {
+  meta: 'SwingMath — customise your racket with numbers you can trust',
+  heroTitle: 'Customise your racket with numbers you can trust.',
+  heroSub: 'See what every gram of lead does to weight, balance, swingweight and sweet spot — then check it on your own scale. Free, in the browser, no account.',
+  cta: 'Open the calculator',
+  shotAlt: 'The SwingMath calculator with lead at 12 and at 3 and 9',
+  problemTitle: 'The problem',
+  problems: [
+    ['Numbers you cannot check', 'Racket apps give you a number. When your machine says something else, you do not know which to believe.'],
+    ['Pay before you see', 'You pay first and find out later whether it works.'],
+  ],
+  howTitle: 'How it works',
+  how: [
+    ['Pick your racket', 'From the library, or with your own measurements.'],
+    ['Add lead', '12, 10 and 2, 3 and 9, throat or handle, in 0.5 g steps.'],
+    ['See it, check it', 'The result changes as you go. Save the setup and check it on your scale.'],
+  ],
+  featuresTitle: 'What you get',
+  features: [
+    ['Check against your measurement', 'Type what your scale and machine say. We show the difference from the prediction.'],
+    ['Any racket, free', 'Yours is not listed? Add it with your own measurements, at no cost.'],
+    ['Sweet spot on the drawing', 'Watch the centre of percussion move up as you add lead to the head.'],
+    ['Try before you pay', 'The Pro tools work 3 times for free.'],
+    ['Português, español, English', 'The whole app, in all three.'],
+    ['No account, no data collected', 'Everything stays on your device and works offline.'],
+  ],
+  alsoTitle: 'Also',
+  also: ['Estimated feel: power, control, stability and spin', 'Compare two setups side by side', 'Share with an image and a QR code', 'Hit a target: where the lead goes', 'Match 2 or 3 rackets', 'Export and import a backup'],
+  pricingTitle: 'Price',
+  free: 'Free',
+  freeFor: 'For every player',
+  freeItems: ['Calculator, sweet spot and checking', 'Library and your own rackets', '5 saved setups', 'Compare and share', '3 free runs of the Pro tools'],
+  pro: 'Pro',
+  proFor: 'For people who tune often, coaches and stringers',
+  proPrice: '€6.99',
+  proOnce: 'one payment',
+  proItems: ['Hit a target with the exact lead', 'Match 2 or 3 rackets', 'Unlimited setups', '14-day refund, no questions'],
+  faqTitle: 'Questions',
+  faq: [
+    ['How accurate is it?', 'We use point-mass physics with the same axis as swingweight machines. Accuracy depends mostly on your starting numbers: your own measurements beat catalogue values. Use “Check against my measurement” to see it for your racket.'],
+    ['Do I need an account?', 'No. Everything stays on your device.'],
+    ['Does it work on my phone?', 'Yes. Open it in the browser and add it to your home screen. It works offline.'],
+    ['My racket is not listed.', 'Add it in 30 seconds, free.'],
+    ['What if I change phones?', 'Export a backup in Settings and import it on the new one.'],
+    ['Can I get a refund?', 'Yes, within 14 days of buying, no questions.'],
+  ],
+  finalTitle: 'Your next racket is already calculated.',
+  privacy: 'Privacy',
+  terms: 'Terms',
+  contact: 'Contact',
+}
+
+const es: LandingDict = {
+  meta: 'SwingMath — personaliza tu raqueta con números en los que puedes confiar',
+  heroTitle: 'Personaliza tu raqueta con números en los que puedes confiar.',
+  heroSub: 'Mira lo que hace cada gramo de plomo al peso, el balance, el swingweight y el punto dulce — y compruébalo con tu báscula. Gratis, en el navegador, sin cuenta.',
+  cta: 'Abrir la calculadora',
+  shotAlt: 'La calculadora de SwingMath con plomo a las 12 y a las 3 y las 9',
+  problemTitle: 'El problema',
+  problems: [
+    ['Números que no puedes comprobar', 'Las apps de raquetas te dan un número. Cuando tu máquina dice otra cosa, no sabes a quién creer.'],
+    ['Pagar antes de ver', 'Primero pagas y después descubres si funciona.'],
+  ],
+  howTitle: 'Cómo funciona',
+  how: [
+    ['Elige la raqueta', 'De la biblioteca, o con tus propias mediciones.'],
+    ['Pon plomo', 'Las 12, las 10 y las 2, las 3 y las 9, garganta o mango, en pasos de 0,5 g.'],
+    ['Míralo y compruébalo', 'El resultado cambia al momento. Guarda el setup y compruébalo con tu báscula.'],
+  ],
+  featuresTitle: 'Lo que tienes',
+  features: [
+    ['Comprueba con tu medición', 'Escribe lo que dicen tu báscula y tu máquina. Te mostramos la diferencia con la previsión.'],
+    ['Cualquier raqueta, gratis', '¿La tuya no está? Añádela con tus mediciones, sin pagar.'],
+    ['Punto dulce en el dibujo', 'Mira cómo sube el centro de percusión al poner plomo en la cabeza.'],
+    ['Prueba antes de pagar', 'Las herramientas Pro funcionan 3 veces gratis.'],
+    ['Português, español, English', 'Toda la app, en los tres idiomas.'],
+    ['Sin cuenta, sin recogida de datos', 'Todo se queda en tu dispositivo y funciona sin internet.'],
+  ],
+  alsoTitle: 'Y además',
+  also: ['Sensación estimada de potencia, control, estabilidad y efecto', 'Comparar dos setups lado a lado', 'Compartir con imagen y código QR', 'Llegar a un objetivo: dónde va el plomo', 'Igualar 2 o 3 raquetas', 'Exportar e importar una copia'],
+  pricingTitle: 'Precio',
+  free: 'Gratis',
+  freeFor: 'Para todos los jugadores',
+  freeItems: ['Calculadora, punto dulce y comprobación', 'Biblioteca y tus raquetas', '5 setups guardados', 'Comparar y compartir', '3 usos gratis de las herramientas Pro'],
+  pro: 'Pro',
+  proFor: 'Para quien ajusta a menudo, entrenadores y encordadores',
+  proPrice: '6,99 €',
+  proOnce: 'un solo pago',
+  proItems: ['Llegar a un objetivo con el plomo exacto', 'Igualar 2 o 3 raquetas', 'Setups ilimitados', 'Reembolso en 14 días, sin preguntas'],
+  faqTitle: 'Preguntas',
+  faq: [
+    ['¿Qué precisión tiene?', 'Usamos física de masas puntuales con el mismo eje que las máquinas de swingweight. La precisión depende sobre todo de los datos de partida: tus mediciones son mejores que los valores de catálogo. Usa «Comprobar con mi medición» para verlo con tu raqueta.'],
+    ['¿Necesito una cuenta?', 'No. Todo se queda en tu dispositivo.'],
+    ['¿Funciona en el móvil?', 'Sí. Ábrela en el navegador y añádela a la pantalla de inicio. Funciona sin conexión.'],
+    ['Mi raqueta no está en la lista.', 'Añádela en 30 segundos, gratis.'],
+    ['¿Y si cambio de móvil?', 'Exporta una copia en Ajustes e impórtala en el nuevo.'],
+    ['¿Puedo pedir un reembolso?', 'Sí, en los 14 días siguientes a la compra, sin preguntas.'],
+  ],
+  finalTitle: 'Tu próxima raqueta ya está calculada.',
+  privacy: 'Privacidad',
+  terms: 'Términos',
+  contact: 'Contacto',
+}
+
+const DICTS: Record<Lang, LandingDict> = { pt, en, es }
+
+export function useLanding(): LandingDict {
+  return DICTS[useStore((s) => s.lang)]
+}
