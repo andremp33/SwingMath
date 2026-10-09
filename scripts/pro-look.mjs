@@ -1,0 +1,16 @@
+// Visual review of the paywall and the landing pricing: node scripts/pro-look.mjs <theme> <width>
+import { chromium } from '@playwright/test'
+const [theme = 'light', width = '390'] = process.argv.slice(2)
+const w = Number(width)
+const b = await chromium.launch()
+const p = await b.newPage({ viewport: { width: w, height: w > 800 ? 900 : 844 }, colorScheme: theme })
+await p.addInitScript((th) => localStorage.setItem('swingmath', JSON.stringify({ version: 3, state: { lang: 'pt', theme: th } })), theme)
+await p.goto('http://localhost:5173/settings')
+await p.waitForTimeout(600)
+await p.screenshot({ path: `replica/review/v2-pro-${theme}-${width}.png`, fullPage: true })
+await p.goto('http://localhost:5173/sobre')
+await p.waitForTimeout(600)
+await p.getByRole('heading', { name: 'Preço' }).scrollIntoViewIfNeeded()
+await p.screenshot({ path: `replica/review/v2-pricing-${theme}-${width}.png` })
+console.log('ok')
+await b.close()

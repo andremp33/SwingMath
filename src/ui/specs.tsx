@@ -81,14 +81,14 @@ export function SpecTable({ rows, showDelta = true }: { rows: SpecRow[]; showDel
 
 /** One ring: a full circle filled to the value, starting at 12 o'clock. An
  *  optional inner ring shows a second setup for comparison. */
-function Ring({ value, compare, label }: { value: number; compare?: number; label: string }) {
+export function Ring({ value, compare, label, small }: { value: number; compare?: number; label: string; small?: boolean }) {
   const R = 34
   const C = 2 * Math.PI * R
   const r2 = 25
   const C2 = 2 * Math.PI * r2
   return (
     <div className="flex flex-col items-center gap-1.5" role="meter" aria-label={label} aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-      <div className="relative size-[84px]">
+      <div className={small ? 'relative size-[68px]' : 'relative size-[84px]'}>
         <svg viewBox="0 0 80 80" className="size-full -rotate-90" aria-hidden>
           <circle cx="40" cy="40" r={R} fill="none" stroke="var(--c-border)" strokeWidth="6" />
           <circle
@@ -122,7 +122,7 @@ function Ring({ value, compare, label }: { value: number; compare?: number; labe
           )}
         </svg>
         <span className="absolute inset-0 flex items-center justify-center">
-          <span className="readout text-lg leading-none">
+          <span className={small ? 'readout text-base leading-none' : 'readout text-lg leading-none'}>
             {value}
             {compare !== undefined && <span className="block text-center text-[11px] font-normal text-muted">{compare}</span>}
           </span>

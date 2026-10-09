@@ -1,17 +1,26 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { z } from 'zod'
+import { SESSION_KINDS, type Session, type Stringing } from '../domain/journal'
+import { MATERIALS } from '../domain/strings'
 import { POSITIONS, type Racket, type Setup } from '../domain/types'
 import { STOCK_RACKETS } from './rackets'
 
 export const db = new Dexie('swingmath') as Dexie & {
   rackets: EntityTable<Racket, 'id'>
   setups: EntityTable<Setup, 'id'>
+  stringings: EntityTable<Stringing, 'id'>
+  sessions: EntityTable<Session, 'id'>
 }
 
 // Custom rackets only; stock rackets live in code and are merged on read.
 db.version(1).stores({
   rackets: 'id, brand, type, updatedAt',
   setups: 'id, racketId, favourite, updatedAt',
+})
+// v2: the journal.
+db.version(2).stores({
+  stringings: 'id, label, date',
+  sessions: 'id, stringingId, date',
 })
 
 export const uid = () =>
@@ -54,6 +63,14 @@ export const extraSchema = z.object({
   grams: num(0, 50),
 })
 
+const stringSpecSchema = z.object({
+  material: z.enum(MATERIALS),
+  tensionKg: num(10, 40),
+  name: z.string().trim().max(60).optional(),
+  gaugeMm: num(1, 1.6).optional(),
+})
+export const stringbedSchema = z.object({ mains: stringSpecSchema, crosses: stringSpecSchema.optional() })
+
 const rating = z.number().int().min(1).max(5).optional()
 
 export const setupSchema = z.object({
@@ -76,11 +93,61 @@ export const setupSchema = z.object({
   }),
   leadG: leadSchema,
   extra: z.array(extraSchema).max(12).optional(),
+  grip: z
+    .object({ base: z.number().int().min(0).max(5), extraOvergrips: z.number().int().min(0).max(3), sleeves: z.number().int().min(0).max(3) })
+    .optional(),
+  strings: stringbedSchema.optional(),
   ratings: z.object({ forehand: rating, backhand: rating, serve: rating, volley: rating }),
   notes: z.string().max(500).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 })
+
+const rating5 = z.number().int().min(1).max(5).optional()
+
+export const stringingSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim().min(1).max(40),
+  racketId: z.string().min(1),
+  setupId: z.string().optional(),
+  date: z.number(),
+  bed: stringbedSchema,
+  lifeHours: num(2, 200).optional(),
+  notes: z.string().max(500).optional(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+})
+
+export const sessionSchema = z.object({
+  id: z.string().min(1),
+  date: z.number(),
+  minutes: num(5, 600),
+  kind: z.enum(SESSION_KINDS),
+  stringingId: z.string().optional(),
+  ratings: z.object({ overall: rating5, power: rating5, control: rating5, spin: rating5, comfort: rating5 }),
+  armPain: z.boolean().optional(),
+  notes: z.string().max(500).optional(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+})
+
+export async function saveStringing(s: Stringing) {
+  await db.stringings.put(stringingSchema.parse(s) as Stringing)
+}
+
+export async function saveSession(s: Session) {
+  await db.sessions.put(sessionSchema.parse(s) as Session)
+}
+
+/** Deletes a stringing; its sessions stay, unlinked. */
+export async function deleteStringing(id: string) {
+  await db.transaction('rw', db.stringings, db.sessions, async () => {
+    await db.sessions.where('stringingId').equals(id).modify((s) => {
+      delete s.stringingId
+    })
+    await db.stringings.delete(id)
+  })
+}
 
 export async function saveRacket(r: Racket) {
   await db.rackets.put(racketSchema.parse(r) as Racket)
@@ -103,24 +170,37 @@ export function findRacket(id: string | undefined, custom: Racket[] | undefined)
 }
 
 export async function exportAll() {
-  const [rackets, setups] = await Promise.all([db.rackets.toArray(), db.setups.toArray()])
-  return { app: 'swingmath', version: 1, exportedAt: new Date().toISOString(), rackets, setups }
+  const [rackets, setups, stringings, sessions] = await Promise.all([
+    db.rackets.toArray(),
+    db.setups.toArray(),
+    db.stringings.toArray(),
+    db.sessions.toArray(),
+  ])
+  return { app: 'swingmath', version: 2, exportedAt: new Date().toISOString(), rackets, setups, stringings, sessions }
 }
 
 export async function importAll(data: unknown) {
   const parsed = z
-    .object({ app: z.literal('swingmath'), rackets: z.array(racketSchema), setups: z.array(setupSchema) })
+    .object({
+      app: z.literal('swingmath'),
+      rackets: z.array(racketSchema),
+      setups: z.array(setupSchema),
+      // Version 1 backups have no journal.
+      stringings: z.array(stringingSchema).default([]),
+      sessions: z.array(sessionSchema).default([]),
+    })
     .parse(data)
-  await db.transaction('rw', db.rackets, db.setups, async () => {
+  await db.transaction('rw', [db.rackets, db.setups, db.stringings, db.sessions], async () => {
     await db.rackets.bulkPut(parsed.rackets as Racket[])
     await db.setups.bulkPut(parsed.setups as Setup[])
+    await db.stringings.bulkPut(parsed.stringings as Stringing[])
+    await db.sessions.bulkPut(parsed.sessions as Session[])
   })
-  return { rackets: parsed.rackets.length, setups: parsed.setups.length }
+  return { rackets: parsed.rackets.length, setups: parsed.setups.length, sessions: parsed.sessions.length }
 }
 
 export async function deleteAll() {
-  await db.transaction('rw', db.rackets, db.setups, async () => {
-    await db.rackets.clear()
-    await db.setups.clear()
+  await db.transaction('rw', [db.rackets, db.setups, db.stringings, db.sessions], async () => {
+    await Promise.all([db.rackets.clear(), db.setups.clear(), db.stringings.clear(), db.sessions.clear()])
   })
 }

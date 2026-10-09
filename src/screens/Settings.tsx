@@ -2,19 +2,18 @@ import { Download, Trash2, Upload } from 'lucide-react'
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteAll, exportAll, importAll } from '../data/db'
-import { useStore, type Theme } from '../data/store'
+import { isPro, useStore, type Theme } from '../data/store'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, useT, type Lang } from '../i18n'
-import { fmtDate } from '../lib/format'
-import { deactivateLicense } from '../lib/entitlement'
 import { Badge, Button, Card, CardTitle, NumberField, PageTitle, Segmented } from '../ui/basics'
 import { useToast } from '../ui/overlay'
-import { ProPanel } from './Pro'
+import { ProStatus } from './Pro'
 
 export function Settings() {
   const t = useT()
   const toast = useToast()
   const s = useStore()
+  const pro = useStore(isPro)
   const fileRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -47,31 +46,15 @@ export function Settings() {
         </Card>
 
         <Card>
-          <CardTitle action={s.license && <Badge tone="pro">Pro</Badge>}>{t.pro.title}</CardTitle>
-          {s.license ? (
-            <div className="space-y-3">
-              <p className="text-sm">{fmt(t.pro.activeSince, { date: fmtDate(s.license.activatedAt, s.lang) })}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  await deactivateLicense(s.license!)
-                  s.setLicense(null)
-                }}
-              >
-                {t.pro.deactivate}
-              </Button>
-            </div>
-          ) : (
-            <ProPanel />
-          )}
+          <CardTitle action={pro && <Badge tone="pro">Pro</Badge>}>{t.pro.title}</CardTitle>
+          <ProStatus />
         </Card>
 
         <Card>
           <CardTitle action={<Button variant="ghost" size="sm" onClick={() => s.setMasses(DEFAULT_ACCESSORY_MASSES)}>{t.common.reset}</Button>}>{t.settings.masses}</CardTitle>
           <p className="mb-3 text-sm text-muted">{t.settings.massesHint}</p>
           <div className="grid grid-cols-2 gap-3">
-            {(['strings', 'overgrip', 'leatherGrip', 'dampener'] as const).map((k) => (
+            {(['strings', 'overgrip', 'leatherGrip', 'dampener', 'sleeve'] as const).map((k) => (
               <NumberField key={k} label={t.acc[k]} unit="g" min={0} max={40} value={s.masses[k]} onChange={(v) => v !== undefined && s.setMasses({ [k]: v })} />
             ))}
           </div>

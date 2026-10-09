@@ -8,6 +8,7 @@ import {
   type Position,
   type SetupConfig,
 } from '../domain/types'
+import { DEFAULT_STRINGBED } from '../domain/strings'
 import type { Lang } from '../i18n'
 import { STOCK_RACKETS } from './rackets'
 
@@ -18,6 +19,12 @@ export interface License {
   key?: string
   instanceId?: string
   activatedAt: number
+  /** Last time the store confirmed the subscription. */
+  checkedAt?: number
+  /** 'ended': the subscription ended; 'offline': not confirmed for too long. */
+  status?: 'active' | 'ended' | 'offline'
+  /** When the current period ends, as Lemon Squeezy reports it. */
+  expiresAt?: string | null
 }
 
 export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
@@ -27,6 +34,8 @@ export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
   accessories: { strings: true, leatherGrip: false, overgrip: true, dampener: false },
   leadG: emptyLead(),
   extra: [],
+  grip: { base: 2, extraOvergrips: 0, sleeves: 0 },
+  strings: DEFAULT_STRINGBED,
 })
 
 interface State {
@@ -44,6 +53,8 @@ interface State {
   compare: string[]
   /** Pro tool runs used before buying (try before you pay). */
   freeRunsUsed: number
+  /** Stringings we already sent a restring reminder for. */
+  reminded: string[]
 
   setLang: (l: Lang) => void
   setTheme: (t: Theme) => void
@@ -60,6 +71,7 @@ interface State {
   toggleCompare: (id: string) => void
   clearCompare: () => void
   spendFreeRun: () => void
+  markReminded: (ids: string[]) => void
 }
 
 const browserLang = (): Lang => {
@@ -78,6 +90,7 @@ export const useStore = create<State>()(
       loadedSetupId: null,
       compare: [],
       freeRunsUsed: 0,
+      reminded: [],
 
       setLang: (lang) => set({ lang }),
       setTheme: (theme) => set({ theme }),
@@ -99,10 +112,11 @@ export const useStore = create<State>()(
         })),
       clearCompare: () => set({ compare: [] }),
       spendFreeRun: () => set((s) => ({ freeRunsUsed: s.freeRunsUsed + 1 })),
+      markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),
     }),
     {
       name: 'swingmath',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       // v2: the stock library was replaced by verified frames with new ids.
       migrate: (persisted, version) => {
@@ -113,12 +127,16 @@ export const useStore = create<State>()(
           s.config = { ...s.config, racketId: STOCK_RACKETS[0].id }
           s.loadedSetupId = null
         }
+        // v3: a sleeve mass was added; keep the user's own masses.
+        if (version < 3 && s.masses) s.masses = { ...DEFAULT_ACCESSORY_MASSES, ...s.masses }
         return s as State
       },
     },
   ),
 )
 
-export const isPro = (s: { license: License | null }) => s.license !== null
-export const FREE_SETUP_LIMIT = 5
+export const isPro = (s: { license: License | null }) => s.license !== null && (s.license.status ?? 'active') === 'active'
+export const FREE_SETUP_LIMIT = 3
 export const FREE_PRO_RUNS = 3
+/** Sessions the free journal shows. */
+export const FREE_SESSIONS = 10

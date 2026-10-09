@@ -1,4 +1,4 @@
-import { ArrowRight, Check, CircleCheck, Globe, Scale, Sparkles, Target, Wifi } from 'lucide-react'
+import { ArrowRight, Check, CircleCheck, Globe, NotebookPen, Scale, Target, Wifi } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../data/store'
@@ -8,11 +8,13 @@ import { useLanding } from '../i18n/landing'
 import { useLegal } from '../i18n/legal'
 import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
+import { PRICING } from '../lib/entitlement'
+import { usePrice } from './Pro'
 
-const FEATURE_ICONS = [Scale, CircleCheck, Target, Sparkles, Globe, Wifi]
+const FEATURE_ICONS = [Scale, CircleCheck, Target, NotebookPen, Globe, Wifi]
 
-const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL as string | undefined
-const OWNER = (import.meta.env.VITE_OWNER_NAME as string | undefined) ?? 'SwingMath'
+const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined) || undefined
+const OWNER = (import.meta.env.VITE_OWNER_NAME as string | undefined) || 'SwingMath'
 
 function useTitle(title: string) {
   useEffect(() => {
@@ -109,6 +111,7 @@ const Section = ({ title, children, className }: { title: string; children: Reac
 
 export function Landing() {
   const t = useLanding()
+  const price = usePrice()
   useTitle(t.meta)
 
   return (
@@ -185,7 +188,7 @@ export function Landing() {
           <div className="rounded-lg border border-border p-6">
             <h3 className="text-lg font-semibold">{t.free}</h3>
             <p className="text-sm text-muted">{t.freeFor}</p>
-            <p className="readout mt-4 text-[36px] leading-none">0 €</p>
+            <p className="readout mt-4 text-[36px] leading-none">{price(0)}</p>
             <ul className="mt-4 space-y-2">
               {t.freeItems.map((x) => (
                 <li key={x} className="flex gap-2 text-sm">
@@ -198,10 +201,11 @@ export function Landing() {
           <div className="rounded-lg border border-text/60 p-6">
             <h3 className="text-lg font-semibold">{t.pro}</h3>
             <p className="text-sm text-muted">{t.proFor}</p>
-            <p className="mt-4 flex items-baseline gap-2">
-              <span className="readout text-[36px] leading-none">{t.proPrice}</span>
-              <span className="text-muted">{t.proOnce}</span>
+            <p className="mt-4 flex items-baseline gap-1">
+              <span className="readout text-[36px] leading-none">{price(PRICING.monthly)}</span>
+              <span className="text-muted">{t.proPer}</span>
             </p>
+            <p className="mt-1 text-sm text-muted">{fmt(t.proTerms, { annual: price(PRICING.annual), days: PRICING.trialDays })}</p>
             <ul className="mt-4 space-y-2">
               {t.proItems.map((x) => (
                 <li key={x} className="flex gap-2 text-sm">

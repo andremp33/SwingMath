@@ -1,4 +1,4 @@
-import { Bookmark, GitCompareArrows, Library, Settings, SlidersHorizontal } from 'lucide-react'
+import { Bookmark, GitCompareArrows, Library, NotebookPen, Settings, SlidersHorizontal } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useStore } from '../data/store'
@@ -6,11 +6,13 @@ import { useT } from '../i18n'
 import { LOCALE } from '../lib/format'
 import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
+import { useRestringReminders } from '../screens/reminders'
 
 const TABS = [
   { to: '/', icon: SlidersHorizontal, key: 'calc' },
   { to: '/rackets', icon: Library, key: 'library' },
   { to: '/setups', icon: Bookmark, key: 'setups' },
+  { to: '/diario', icon: NotebookPen, key: 'journal' },
   { to: '/match', icon: GitCompareArrows, key: 'match' },
 ] as const
 
@@ -36,6 +38,7 @@ export function useApplyTheme() {
 export function Shell() {
   const t = useT()
   const loc = useLocation()
+  const due = useRestringReminders()
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [loc.pathname])
@@ -87,8 +90,12 @@ export function Shell() {
                 {({ isActive }) => (
                   <>
                     {isActive && <span aria-hidden className="absolute inset-x-6 top-0 h-0.5 rounded-b bg-accent lg:hidden" />}
-                    <Icon className="size-5" strokeWidth={isActive ? 2 : 1.75} aria-hidden />
+                    <span className="relative">
+                      <Icon className="size-5" strokeWidth={isActive ? 2 : 1.75} aria-hidden />
+                      {key === 'journal' && due > 0 && <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-accent ring-2 ring-bg" aria-hidden />}
+                    </span>
                     {t.nav[key]}
+                    {key === 'journal' && due > 0 && <span className="sr-only">({due})</span>}
                   </>
                 )}
               </NavLink>

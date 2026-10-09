@@ -33,3 +33,11 @@ export function useComputed(config: SetupConfig | undefined, racket: Racket | un
     return compute({ spec: racket, ...config, masses })
   }, [config, racket, masses])
 }
+
+export function useStringings() {
+  return useLiveQuery(() => db.stringings.orderBy('date').reverse().toArray(), [])
+}
+
+export function useSessions() {
+  return useLiveQuery(() => db.sessions.orderBy('date').reverse().toArray(), [])
+}

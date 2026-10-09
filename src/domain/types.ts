@@ -1,3 +1,5 @@
+import type { Stringbed } from './strings'
+
 export const POSITIONS = ['tip', 'tenTwo', 'threeNine', 'throat', 'handle'] as const
 export type Position = (typeof POSITIONS)[number]
 export type LeadMap = Record<Position, number>
@@ -48,6 +50,8 @@ export interface AccessoryMasses {
   leatherGrip: number
   overgrip: number
   dampener: number
+  /** A heat-shrink sleeve under the grip. */
+  sleeve: number
 }
 
 export type BaseMode = 'reference' | 'measured'
@@ -76,6 +80,13 @@ export interface ExtraLead {
   grams: number
 }
 
+/** Handle build-up: the frame's size, overgrips beyond the first, sleeves. */
+export interface GripConfig {
+  base: number
+  extraOvergrips: number
+  sleeves: number
+}
+
 export interface SetupConfig {
   racketId: string
   baseMode: BaseMode
@@ -83,6 +94,8 @@ export interface SetupConfig {
   accessories: Accessories
   leadG: LeadMap
   extra?: ExtraLead[]
+  grip?: GripConfig
+  strings?: Stringbed
 }
 
 export interface Setup extends SetupConfig {
@@ -116,4 +129,5 @@ export const DEFAULT_ACCESSORY_MASSES: AccessoryMasses = {
   leatherGrip: 10,
   overgrip: 6,
   dampener: 2,
+  sleeve: 7,
 }

@@ -361,3 +361,30 @@ export function PageTitle({ children, action }: { children: ReactNode; action?: 
     </div>
   )
 }
+
+/** 1 to 5; tapping the chosen value again clears it. */
+export function RatingInput({ label, value, onChange }: { label: string; value?: number; onChange: (v: number | undefined) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm">{label}</span>
+      <div role="radiogroup" aria-label={label} className="flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button
+            key={i}
+            type="button"
+            role="radio"
+            aria-checked={value === i}
+            aria-label={`${i}/5`}
+            onClick={() => onChange(value === i ? undefined : i)}
+            className={cx(
+              'num size-9 rounded-full text-sm font-bold transition',
+              value !== undefined && i <= value ? 'bg-accent text-on-accent' : 'bg-surface-2 text-muted hover:text-text',
+            )}
+          >
+            {i}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}

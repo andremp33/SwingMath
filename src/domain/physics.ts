@@ -7,6 +7,7 @@ import {
   type Position,
   type BaseMode,
   type ExtraLead,
+  type GripConfig,
   type RacketSpec,
   type Specs,
 } from './types'
@@ -82,6 +83,21 @@ export function accessoryElements(g: Geometry, on: Accessories, masses: Accessor
   }
   if (on.dampener) {
     out.push({ grams: masses.dampener, x: g.xc - g.a + 3, y: 0 })
+  }
+  return out
+}
+
+/** Extra overgrips wrap the handle like the first one; sleeves sit under the
+ *  grip along the same 0-20 cm as a leather grip. */
+export function gripElements(grip: GripConfig | undefined, masses: AccessoryMasses): MassElement[] {
+  const out: MassElement[] = []
+  for (let i = 0; i < (grip?.extraOvergrips ?? 0); i++) {
+    const m = masses.overgrip
+    out.push({ grams: m, x: 12, y: 0, ownSwing: (m * 24 * 24) / 12, ownTwist: m * 1.5 * 1.5 })
+  }
+  for (let i = 0; i < (grip?.sleeves ?? 0); i++) {
+    const m = masses.sleeve ?? 7
+    out.push({ grams: m, x: 10, y: 0, ownSwing: (m * 20 * 20) / 12, ownTwist: m * 1.4 * 1.4 })
   }
   return out
 }
@@ -193,6 +209,7 @@ export interface ComputeInput {
   accessories: Accessories
   leadG: LeadMap
   extra?: ExtraLead[]
+  grip?: GripConfig
   masses: AccessoryMasses
 }
 
@@ -203,6 +220,7 @@ export function compute(input: ComputeInput): { base: Specs; result: Specs } {
     ...accessoryElements(g, input.accessories, input.masses),
     ...leadElements(g, input.leadG),
     ...extraElements(g, input.extra),
+    ...gripElements(input.grip, input.masses),
   ]
   return { base: applyMasses(base, []), result: applyMasses(base, elements) }
 }

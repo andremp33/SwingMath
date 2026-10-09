@@ -64,3 +64,8 @@ export function leadParts(cfg: { leadG: LeadMap; extra?: ExtraLead[] }, t: Dict,
     ...(cfg.extra ?? []).filter((e) => e.grams > 0).map((e) => `${extraLabel(e, t, lang)} ${fmtNum(e.grams, 1, lang)} g`),
   ]
 }
+
+/** Grip size in half steps: 3 -> "L3", 3.5 -> "L3½". */
+export const gripLabel = (eighths: number) => `L${Math.floor(eighths)}${eighths % 1 ? '½' : ''}`
+
+export const kgToLb = (kg: number) => kg * 2.20462

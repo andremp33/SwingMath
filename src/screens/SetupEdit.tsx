@@ -1,9 +1,9 @@
 import { Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { STROKES, type Setup, type Stroke } from '../domain/types'
+import { STROKES, type Setup } from '../domain/types'
 import { saveSetup } from '../data/db'
 import { useT } from '../i18n'
-import { Button, cx, Label, TextField, Toggle } from '../ui/basics'
+import { Button, Label, RatingInput, TextField, Toggle } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 
 export function SetupEditSheet({ setup, onClose }: { setup: Setup | null; onClose: () => void }) {
@@ -45,9 +45,9 @@ export function SetupEditSheet({ setup, onClose }: { setup: Setup | null; onClos
           <Label hint={t.setups.ratingsHint}>{t.setups.ratings}</Label>
           <div className="space-y-2">
             {STROKES.map((k) => (
-              <RatingRow
+              <RatingInput
                 key={k}
-                stroke={k}
+                label={t.stroke[k]}
                 value={draft.ratings[k]}
                 onChange={(v) => setDraft({ ...draft, ratings: { ...draft.ratings, [k]: v } })}
               />
@@ -67,32 +67,5 @@ export function SetupEditSheet({ setup, onClose }: { setup: Setup | null; onClos
         </div>
       </div>
     </Sheet>
-  )
-}
-
-function RatingRow({ stroke, value, onChange }: { stroke: Stroke; value?: number; onChange: (v: number | undefined) => void }) {
-  const t = useT()
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-sm">{t.stroke[stroke]}</span>
-      <div role="radiogroup" aria-label={t.stroke[stroke]} className="flex gap-1.5">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <button
-            key={i}
-            type="button"
-            role="radio"
-            aria-checked={value === i}
-            aria-label={`${i}/5`}
-            onClick={() => onChange(value === i ? undefined : i)}
-            className={cx(
-              'num size-9 rounded-full text-sm font-bold transition',
-              value !== undefined && i <= value ? 'bg-accent text-on-accent' : 'bg-surface-2 text-muted hover:text-text',
-            )}
-          >
-            {i}
-          </button>
-        ))}
-      </div>
-    </div>
   )
 }

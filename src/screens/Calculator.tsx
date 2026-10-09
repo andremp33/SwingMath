@@ -14,6 +14,7 @@ import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecTable, useSpecRows } from '../ui/specs'
+import { ComfortCard, GripCard, StringsCard } from './CalcExtras'
 import { InfoSheet } from './InfoSheet'
 import { usePaywall } from './Pro'
 
@@ -225,6 +226,8 @@ export function Calculator() {
               )}
             </div>
           </Card>
+          <StringsCard racket={racket} />
+          <GripCard />
         </div>
 
         <div className="space-y-4 xl:sticky xl:top-8">
@@ -237,6 +240,7 @@ export function Calculator() {
             <FeelRings feel={f} />
             <p className="mt-3 text-xs text-muted">{t.calc.feelHint}</p>
           </Card>
+          <ComfortCard racket={racket} specs={result} />
           <SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} />
           <VerifyCard predicted={result} />
         </div>

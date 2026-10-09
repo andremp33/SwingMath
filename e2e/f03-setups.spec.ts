@@ -48,11 +48,11 @@ test.describe('F03 save, name and rate a setup', () => {
 
   test('F03-N1 free limit opens the Pro sheet', async ({ page }) => {
     await start(page)
-    for (let i = 1; i <= 5; i++) await saveSetup(page, `S${i}`)
+    for (let i = 1; i <= 3; i++) await saveSetup(page, `S${i}`)
     await page.getByRole('button', { name: 'Guardar como novo' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
     await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toBeVisible()
-    await expect(page.getByRole('dialog')).toContainText('até 5 setups')
+    await expect(page.getByRole('dialog')).toContainText('até 3 setups')
   })
 
   test('F03-N2 delete with undo', async ({ page }) => {
