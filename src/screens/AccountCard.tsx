@@ -5,7 +5,7 @@ import { accountProActive, useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { cloudConfigured } from '../lib/cloud'
 import { fmtDate } from '../lib/format'
-import { Badge, Button, Card, CardTitle, TextField } from '../ui/basics'
+import { Badge, Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -17,16 +17,15 @@ function ago(ms: number, t: Dict) {
   return fmt(t.account.hoursAgo, { n: Math.round(min / 60) })
 }
 
-/** Settings card: sign in with a code, or the account's status. */
-export function AccountCard() {
+/** Settings group: sign in, or the account's status and sync. */
+export function AccountGroup() {
   const t = useT()
   const account = useStore((s) => s.account)
   if (!cloudConfigured()) return null
   return (
-    <Card label={t.account.title}>
-      <CardTitle action={!account && <span className="text-sm text-muted">{t.account.optional}</span>}>{t.account.title}</CardTitle>
+    <SettingsGroup title={t.account.title} action={!account && <span className="text-sm text-muted">{t.account.optional}</span>}>
       {account ? <SignedIn /> : <SignInForm />}
-    </Card>
+    </SettingsGroup>
   )
 }
 
@@ -59,7 +58,7 @@ function SignInForm() {
   if (!sent) {
     return (
       <form
-        className="space-y-3"
+        className="space-y-3 py-3.5"
         onSubmit={(e) => {
           e.preventDefault()
           if (!EMAIL.test(email.trim())) {
@@ -70,16 +69,18 @@ function SignInForm() {
         }}
       >
         <p className="text-sm text-muted">{t.account.intro}</p>
-        <TextField label={t.account.email} value={email} onChange={setEmail} error={error} placeholder="nome@exemplo.com" maxLength={120} />
-        <Button type="submit" variant="primary" icon={UserRound} loading={busy} disabled={!email.trim()}>
-          {t.account.sendCode}
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <TextField label={t.account.email} value={email} onChange={setEmail} error={error} placeholder="nome@exemplo.com" maxLength={120} />
+          <Button type="submit" variant="primary" icon={UserRound} loading={busy} disabled={!email.trim()} className="h-11">
+            {t.account.sendCode}
+          </Button>
+        </div>
       </form>
     )
   }
   return (
     <form
-      className="space-y-3"
+      className="space-y-3 py-3.5"
       onSubmit={(e) => {
         e.preventDefault()
         void run(async () => {
@@ -124,23 +125,25 @@ function SignedIn() {
   const pro = accountProActive(accountPro)
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-sm">{fmt(t.account.signedInAs, { email: account.email })}</p>
-        {pro && <Badge tone="pro">Pro</Badge>}
-      </div>
-      <p className="text-sm text-muted">
-        {pro
-          ? accountPro?.status === 'cancelled' && accountPro.endsAt
-            ? fmt(t.account.proUntil, { date: fmtDate(Date.parse(accountPro.endsAt), lang) })
-            : t.account.proActive
-          : t.account.noPro}
-      </p>
-
-      <div className="border-t border-border pt-3">
-        <p className="text-sm font-medium">{t.account.sync}</p>
-        <p className="text-sm text-muted">
-          {!pro
+    <>
+      <SettingsRow
+        label={fmt(t.account.signedInAs, { email: account.email })}
+        hint={
+          pro
+            ? accountPro?.status === 'cancelled' && accountPro.endsAt
+              ? fmt(t.account.proUntil, { date: fmtDate(Date.parse(accountPro.endsAt), lang) })
+              : t.account.proActive
+            : t.account.noPro
+        }
+      >
+        <Button variant="secondary" size="sm" icon={LogOut} onClick={() => void signOut()}>
+          {t.account.signOut}
+        </Button>
+      </SettingsRow>
+      <SettingsRow
+        label={t.account.sync}
+        hint={
+          !pro
             ? t.account.syncPro
             : sync.error === 'nopro'
               ? t.account.syncNoPro
@@ -150,13 +153,14 @@ function SignedIn() {
                   ? t.account.syncOther
                   : sync.lastAt
                     ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
-                    : t.account.never}
-        </p>
-        {pro && (
+                    : t.account.never
+        }
+      >
+        {pro ? (
           <Button
+            variant="secondary"
             size="sm"
             icon={RefreshCw}
-            className="mt-2"
             loading={busy}
             onClick={async () => {
               setBusy(true)
@@ -166,17 +170,15 @@ function SignedIn() {
           >
             {t.account.syncNow}
           </Button>
+        ) : (
+          <Badge tone="pro">Pro</Badge>
         )}
-      </div>
-
-      <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-        <Button variant="ghost" size="sm" icon={LogOut} onClick={() => void signOut()}>
-          {t.account.signOut}
-        </Button>
-        <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setConfirm(true)}>
+      </SettingsRow>
+      <SettingsRow label={t.account.deleteAccount} hint={t.account.deleteHint} danger>
+        <Button variant="danger" size="sm" icon={Trash2} onClick={() => setConfirm(true)}>
           {t.account.deleteAccount}
         </Button>
-      </div>
+      </SettingsRow>
 
       <Sheet
         open={confirm}
@@ -211,6 +213,6 @@ function SignedIn() {
       >
         <p className="text-sm">{t.account.deleteBody}</p>
       </Sheet>
-    </div>
+    </>
   )
 }

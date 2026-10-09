@@ -172,6 +172,7 @@ export function NumberField({
   required,
   hint,
   forceError,
+  inline,
 }: {
   label: string
   value: number | undefined
@@ -183,6 +184,8 @@ export function NumberField({
   required?: boolean
   hint?: ReactNode
   forceError?: boolean
+  /** In a settings row: the row shows the name, the input is compact. */
+  inline?: boolean
 }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
@@ -208,16 +211,22 @@ export function NumberField({
   }
 
   return (
-    <div>
-      <Label htmlFor={id} hint={hint}>
-        {label}
-      </Label>
+    <div className={inline ? 'w-32' : undefined}>
+      {inline ? (
+        <label htmlFor={id} className="sr-only">
+          {label}
+        </label>
+      ) : (
+        <Label htmlFor={id} hint={hint}>
+          {label}
+        </Label>
+      )}
       <div className="relative">
         <input
           id={id}
           inputMode="decimal"
           autoComplete="off"
-          className={cx(inputBase, 'num pr-16', error ? 'border-danger' : 'border-border-input')}
+          className={cx(inputBase, 'num', inline ? 'h-10 pr-12 text-right' : 'pr-16', error ? 'border-danger' : 'border-border-input')}
           value={text}
           placeholder={placeholder}
           aria-invalid={!!error || undefined}
@@ -385,6 +394,39 @@ export function RatingInput({ label, value, onChange }: { label: string; value?:
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/** A titled group of settings rows, separated by hairlines. */
+export function SettingsGroup({ title, children, footer, action }: { title: string; children: ReactNode; footer?: ReactNode; action?: ReactNode }) {
+  return (
+    <section aria-label={title} className="border-t border-border pt-5">
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <h2 className="font-semibold">{title}</h2>
+        {action}
+      </div>
+      <div className="divide-y divide-border">{children}</div>
+      {footer && <p className="mt-2 text-xs text-muted">{footer}</p>}
+    </section>
+  )
+}
+
+/** Name and explanation on the left, the control on the right. A wide
+ *  control (`stack`) goes below the name on phones. */
+export function SettingsRow({ label, hint, children, danger, stack }: { label: ReactNode; hint?: ReactNode; children?: ReactNode; danger?: boolean; stack?: boolean }) {
+  return (
+    <div
+      className={cx(
+        'grid items-center gap-x-4 gap-y-2.5 py-3.5 sm:gap-x-6',
+        stack ? 'sm:grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-[minmax(0,1fr)_auto]',
+      )}
+    >
+      <div className="min-w-0">
+        <p className={cx('text-sm font-medium', danger && 'text-danger')}>{label}</p>
+        {hint && <p className="mt-0.5 text-sm text-muted">{hint}</p>}
+      </div>
+      {children && <div className={cx('flex flex-wrap items-center gap-2', stack ? 'sm:justify-end' : 'justify-end')}>{children}</div>}
     </div>
   )
 }

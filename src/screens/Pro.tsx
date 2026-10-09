@@ -6,17 +6,15 @@ import {
   activateLicense,
   annualSaving,
   CHECKOUT,
-  deactivateLicense,
   LicenseError,
   needsCheck,
   PLANS,
-  PORTAL_URL,
   PRICING,
   revalidate,
   storeConfigured,
   type Plan,
 } from '../lib/entitlement'
-import { fmtDate, LOCALE } from '../lib/format'
+import { LOCALE } from '../lib/format'
 import { Badge, Button, Card, cx, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 
@@ -232,48 +230,6 @@ function LapsedNote() {
       >
         {t.pro.recheck}
       </Button>
-    </div>
-  )
-}
-
-/** The Pro card in Settings. */
-export function ProStatus() {
-  const t = useT()
-  const s = useStore()
-  const pro = useStore(isPro)
-  if (!pro) return <ProPanel />
-  const l = s.license
-  // Pro may come from the account's subscription, with no key on this device.
-  const keyActive = l !== null && (l.status ?? 'active') === 'active'
-  return (
-    <div className="space-y-3">
-      {keyActive ? (
-        <>
-          <p className="text-sm">{fmt(t.pro.activeSince, { date: fmtDate(l.activatedAt, s.lang) })}</p>
-          {l.expiresAt && <p className="text-sm text-muted">{fmt(t.pro.renews, { date: fmtDate(Date.parse(l.expiresAt), s.lang) })}</p>}
-        </>
-      ) : (
-        <p className="text-sm">{t.account.proActive}</p>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {PORTAL_URL && (
-          <a href={PORTAL_URL} target="_blank" rel="noopener" className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-semibold hover:bg-surface-2">
-            {t.pro.manage}
-          </a>
-        )}
-        {keyActive && l.provider !== 'dev' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              await deactivateLicense(l)
-              s.setLicense(null)
-            }}
-          >
-            {t.pro.deactivate}
-          </Button>
-        )}
-      </div>
     </div>
   )
 }
