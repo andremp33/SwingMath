@@ -74,3 +74,15 @@ test.describe('F07 match rackets', () => {
     await expect(page.getByRole('alert')).toBeVisible()
   })
 })
+
+test.describe('Pro targets', () => {
+  test('F06-H5 a pro target fills the specs and names its source', async ({ page }) => {
+    await start(page, { path: '/match' })
+    await page.getByLabel('Igualar a um profissional').selectOption('nadal')
+    const to = page.getByRole('region', { name: 'Alvo', exact: true })
+    await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('337')
+    await expect(to.getByLabel('Swingweight', { exact: true })).toHaveValue('371')
+    await expect(to.getByRole('link', { name: 'Fonte: Tennis Warehouse' })).toHaveAttribute('href', /BARORreview/)
+    await expect(to).toContainText('Valores com cordas')
+  })
+})

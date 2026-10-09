@@ -130,6 +130,7 @@ export const ROWS: Row[] = [
   { brand: 'Wilson', model: 'Pro Staff 97 v14', year: 2023, type: 'control', head: 97, lengthCm: 68.58, weight: 332, balanceCm: 32.0, sw: 332, ra: 66, pattern: '16x19', url: R + 'W97V14review.html' },
   { brand: 'Wilson', model: 'Pro Staff X v14', year: 2023, type: 'control', head: 100, lengthCm: 68.58, weight: 332, balanceCm: 32.0, sw: 322, ra: 66, pattern: '16x19', url: R + 'W97VXreview.html' },
   { brand: 'Wilson', model: 'RF 01', year: 2024, type: 'tweener', head: 98, lengthCm: 68.58, weight: 317, balanceCm: 32.64, sw: 319, ra: 64, pattern: '16x19', url: R + 'WRF1Rreview.html', approx: true },
+  { brand: 'Babolat', model: 'Pure Aero Rafa Origin', year: 2023, type: 'tweener', head: 100, lengthCm: 68.58, weight: 337, balanceCm: 33.99, sw: 371, ra: 70, pattern: '16x19', url: R + 'BARORreview.html' },
   // More brands, earlier generations (2020-2025), from Tennis Warehouse review pages.
   { brand: 'Wilson', model: 'Pro Staff Six.One 100 v14', year: 2023, type: 'tweener', head: 100, lengthCm: 68.58, weight: 323, balanceCm: 32.49, sw: 326, ra: 65, pattern: '16x19', url: R + 'WPS614review.html' },
   { brand: 'Wilson', model: 'Shift 99 Pro', year: 2023, type: 'control', head: 99, lengthCm: 68.58, weight: 332, balanceCm: 32.39, sw: 332, ra: 68, pattern: '18x20', url: R + 'WSP315review.html' },

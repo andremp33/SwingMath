@@ -25,7 +25,8 @@ describe('stock library', () => {
       expect(r.weightG).toBeGreaterThan(270)
       expect(r.weightG).toBeLessThan(330)
       expect(r.swingweight).toBeGreaterThan(270)
-      expect(r.swingweight).toBeLessThan(310)
+      // The Rafa Origin is built to Nadal's match specs: 371 strung.
+      expect(r.swingweight).toBeLessThan(345)
     }
   })
 

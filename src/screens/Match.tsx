@@ -8,6 +8,7 @@ import { findRacket } from '../data/db'
 import { useComputed, useCustomRackets, useRacket, useSetups } from '../data/hooks'
 import { compute } from '../domain/physics'
 import { FREE_PRO_RUNS, isPro, useStore } from '../data/store'
+import { PRO_TARGETS } from '../data/pros'
 import { fmt, useT } from '../i18n'
 import { fmtNum, fmtSigned, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select } from '../ui/basics'
@@ -118,6 +119,8 @@ function Smart() {
   const [targetRacketId, setTargetRacketId] = useState<string>()
   const targetRacket = useRacket(targetRacketId)
   const [to, setTo] = useState<Vals>({})
+  const [proId, setProId] = useState('')
+  const pro_ = PRO_TARGETS.find((p) => p.id === proId)
   const [allowed, setAllowed] = useState<Position[]>([...POSITIONS])
   const [maxPer, setMaxPer] = useState<number | undefined>(LEAD_MAX)
   const [res, setRes] = useState<MatchResult | null>(null)
@@ -214,21 +217,44 @@ function Smart() {
                   swingweight: Math.round(result.swingweight * 10) / 10,
                   twistweight: result.twistweightEstimated || result.twistweight === undefined ? undefined : Math.round(result.twistweight * 100) / 100,
                 })
+                setProId('')
                 setRes(null)
               }}
               options={[{ value: '', label: t.match.pickSetup }, ...savedSetups.map((s) => ({ value: s.id, label: s.name }))]}
             />
+          )}
+          <Select
+            label={t.match.targetPro}
+            value={proId}
+            onChange={(id) => {
+              setProId(id)
+              const p = PRO_TARGETS.find((x) => x.id === id)
+              if (!p) return
+              setTo({ weightG: p.weightG, balanceMm: Math.round(p.balanceCm * 100) / 10, swingweight: p.swingweight })
+              setRes(null)
+            }}
+            options={[{ value: '', label: t.match.pickPro }, ...PRO_TARGETS.map((p) => ({ value: p.id, label: `${p.player} · ${p.racket}` }))]}
+          />
+          {pro_ && (
+            <div className="space-y-1 rounded-md bg-surface-2 px-3 py-2.5 text-sm">
+              <p>{t.match.pros[pro_.id]}</p>
+              <p className="font-medium">{pro_.strung ? t.match.proStrung : t.match.proUnstrung}</p>
+              <a href={pro_.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
+                {fmt(t.match.proSource, { source: pro_.source })}
+              </a>
+            </div>
           )}
           <RacketPicker
             label={t.match.targetRacket}
             value={targetRacket}
             onChange={(r) => {
               setTargetRacketId(r.id)
+              setProId('')
               setTo(fromRacket(r))
               setRes(null)
             }}
           />
-          <SpecFields v={to} onChange={(v) => { setTo(v); setRes(null) }} />
+          <SpecFields v={to} onChange={(v) => { setTo(v); setProId(''); setRes(null) }} />
         </Card>
         <Card>
           <CardTitle>{t.match.positions}</CardTitle>
