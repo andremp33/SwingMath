@@ -22,7 +22,7 @@ test.describe('F10 site pages', () => {
     await start(page, { path: '/sobre' })
     await page.getByRole('link', { name: 'Privacidade' }).click()
     await expect(page.getByRole('heading', { name: 'Política de privacidade' })).toBeVisible()
-    await expect(page.getByText('não recolhe dados pessoais')).toBeVisible()
+    await expect(page.getByText('A conta é opcional.', { exact: false })).toBeVisible()
     await a11y(page)
     await page.getByRole('link', { name: 'Termos' }).click()
     await expect(page.getByRole('heading', { name: 'Termos de utilização' })).toBeVisible()

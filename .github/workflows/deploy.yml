@@ -37,6 +37,8 @@ jobs:
           VITE_PRICE_ANNUAL: ${{ vars.VITE_PRICE_ANNUAL }}
           VITE_PRICE_CURRENCY: ${{ vars.VITE_PRICE_CURRENCY }}
           VITE_TRIAL_DAYS: ${{ vars.VITE_TRIAL_DAYS }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL }}
           VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME }}
       # Deep links (/SwingMath/rackets, shared setups) load the app too.

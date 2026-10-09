@@ -7,6 +7,8 @@ import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, useT, type Lang } from '../i18n'
 import { Badge, Button, Card, CardTitle, NumberField, PageTitle, Segmented } from '../ui/basics'
 import { useToast } from '../ui/overlay'
+import { signOut } from '../app/account'
+import { AccountCard } from './AccountCard'
 import { ProStatus } from './Pro'
 
 export function Settings() {
@@ -44,6 +46,8 @@ export function Settings() {
             />
           </div>
         </Card>
+
+        <AccountCard />
 
         <Card>
           <CardTitle action={pro && <Badge tone="pro">Pro</Badge>}>{t.pro.title}</CardTitle>
@@ -111,6 +115,10 @@ export function Settings() {
               onClick={async () => {
                 if (!confirm(t.settings.deleteAllConfirm)) return
                 await deleteAll()
+                // The account keeps its cloud copy; sign out so this device
+                // does not half-sync an empty database.
+                if (s.account) await signOut()
+                s.setSync({ userId: null, cursor: null, lastAt: undefined, error: undefined })
                 s.clearCompare()
                 s.resetConfig()
                 toast(t.common.deleted)

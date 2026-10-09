@@ -2,11 +2,13 @@ import { ArrowLeft, Play, Plus, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mean, swingweightFromPeriod, swingweightUncertainty } from '../domain/measure'
+import { useRacket } from '../data/hooks'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
 import { Button, Card, CardTitle, NumberField, PageTitle } from '../ui/basics'
 import { useToast } from '../ui/overlay'
+import { ShareMeasurement } from './Community'
 
 interface Trial {
   totalS: number
@@ -21,6 +23,7 @@ export function Measure() {
   const lang = useStore((s) => s.lang)
   const config = useStore((s) => s.config)
   const setConfig = useStore((s) => s.setConfig)
+  const racket = useRacket(config.racketId)
 
   const [weightG, setWeight] = useState<number>()
   const [balanceMm, setBalance] = useState<number>()
@@ -187,6 +190,7 @@ export function Measure() {
               {t.measure.use}
             </Button>
           </Card>
+          <ShareMeasurement racket={racket} weightG={weightG} balanceCm={balanceMm === undefined ? undefined : balanceMm / 10} swingweight={sw} />
         </div>
       </div>
     </>

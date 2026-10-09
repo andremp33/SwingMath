@@ -27,6 +27,26 @@ export interface License {
   expiresAt?: string | null
 }
 
+export interface Account {
+  userId: string
+  email: string
+}
+
+/** The account's subscription, as the server last reported it. */
+export interface AccountPro {
+  status: string
+  endsAt: string | null
+  checkedAt: number
+}
+
+export interface SyncState {
+  /** Account the cursor belongs to; another account starts over. */
+  userId: string | null
+  cursor: string | null
+  lastAt?: number
+  error?: 'nopro' | 'offline' | 'other'
+}
+
 export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
   racketId,
   baseMode: 'reference',
@@ -55,6 +75,9 @@ interface State {
   freeRunsUsed: number
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
+  account: Account | null
+  accountPro: AccountPro | null
+  sync: SyncState
 
   setLang: (l: Lang) => void
   setTheme: (t: Theme) => void
@@ -72,6 +95,9 @@ interface State {
   clearCompare: () => void
   spendFreeRun: () => void
   markReminded: (ids: string[]) => void
+  setAccount: (a: Account | null) => void
+  setAccountPro: (p: AccountPro | null) => void
+  setSync: (s: Partial<SyncState>) => void
 }
 
 const browserLang = (): Lang => {
@@ -91,6 +117,9 @@ export const useStore = create<State>()(
       compare: [],
       freeRunsUsed: 0,
       reminded: [],
+      account: null,
+      accountPro: null,
+      sync: { userId: null, cursor: null },
 
       setLang: (lang) => set({ lang }),
       setTheme: (theme) => set({ theme }),
@@ -112,6 +141,9 @@ export const useStore = create<State>()(
         })),
       clearCompare: () => set({ compare: [] }),
       spendFreeRun: () => set((s) => ({ freeRunsUsed: s.freeRunsUsed + 1 })),
+      setAccount: (account) => set({ account }),
+      setAccountPro: (accountPro) => set({ accountPro }),
+      setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
       markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),
     }),
     {
@@ -135,7 +167,18 @@ export const useStore = create<State>()(
   ),
 )
 
-export const isPro = (s: { license: License | null }) => s.license !== null && (s.license.status ?? 'active') === 'active'
+const DAY = 86_400_000
+
+/** Pro through the account: a running subscription, or the paid rest of a
+ *  cancelled one. Offline, it holds for 30 days after the last check. */
+export function accountProActive(p: AccountPro | null, now = Date.now()) {
+  if (!p || now - p.checkedAt > 30 * DAY) return false
+  if (['on_trial', 'active', 'past_due'].includes(p.status)) return true
+  return p.status === 'cancelled' && !!p.endsAt && Date.parse(p.endsAt) > now
+}
+
+export const isPro = (s: { license: License | null; accountPro?: AccountPro | null }) =>
+  (s.license !== null && (s.license.status ?? 'active') === 'active') || accountProActive(s.accountPro ?? null)
 export const FREE_SETUP_LIMIT = 3
 export const FREE_PRO_RUNS = 3
 /** Sessions the free journal shows. */

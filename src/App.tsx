@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { useAccountSync } from './app/account'
 import { Shell, useApplyTheme } from './app/Shell'
 import { Calculator } from './screens/Calculator'
 import { NotFound } from './screens/NotFound'
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
 
 export default function App() {
   useApplyTheme()
+  useAccountSync()
   return (
     <ToastProvider>
       <PaywallProvider>

@@ -5,23 +5,42 @@ import { MATERIALS } from '../domain/strings'
 import { POSITIONS, type Racket, type Setup } from '../domain/types'
 import { STOCK_RACKETS } from './rackets'
 
-export const db = new Dexie('swingmath') as Dexie & {
+/** A change waiting to be synced: the item is read again when it is sent,
+ *  and a missing item means it was deleted. */
+export interface OutboxEntry {
+  key: string
+  kind: string
+  id: string
+  /** When it changed (ms); a deletion is sent with this time. */
+  at: number
+}
+
+export type SwingDb = Dexie & {
   rackets: EntityTable<Racket, 'id'>
   setups: EntityTable<Setup, 'id'>
   stringings: EntityTable<Stringing, 'id'>
   sessions: EntityTable<Session, 'id'>
+  outbox: EntityTable<OutboxEntry, 'key'>
 }
 
-// Custom rackets only; stock rackets live in code and are merged on read.
-db.version(1).stores({
-  rackets: 'id, brand, type, updatedAt',
-  setups: 'id, racketId, favourite, updatedAt',
-})
-// v2: the journal.
-db.version(2).stores({
-  stringings: 'id, label, date',
-  sessions: 'id, stringingId, date',
-})
+export function openDb(name: string): SwingDb {
+  const d = new Dexie(name) as SwingDb
+  // Custom rackets only; stock rackets live in code and are merged on read.
+  d.version(1).stores({
+    rackets: 'id, brand, type, updatedAt',
+    setups: 'id, racketId, favourite, updatedAt',
+  })
+  // v2: the journal.
+  d.version(2).stores({
+    stringings: 'id, label, date',
+    sessions: 'id, stringingId, date',
+  })
+  // v3: changes waiting to sync with the account.
+  d.version(3).stores({ outbox: 'key' })
+  return d
+}
+
+export const db = openDb('swingmath')
 
 export const uid = () =>
   globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
@@ -199,8 +218,10 @@ export async function importAll(data: unknown) {
   return { rackets: parsed.rackets.length, setups: parsed.setups.length, sessions: parsed.sessions.length }
 }
 
+/** Wipes this device. Clearing does not queue deletions, so an account's
+ *  copy in the cloud stays (signing in again brings it back). */
 export async function deleteAll() {
-  await db.transaction('rw', [db.rackets, db.setups, db.stringings, db.sessions], async () => {
-    await Promise.all([db.rackets.clear(), db.setups.clear(), db.stringings.clear(), db.sessions.clear()])
+  await db.transaction('rw', [db.rackets, db.setups, db.stringings, db.sessions, db.outbox], async () => {
+    await Promise.all([db.rackets.clear(), db.setups.clear(), db.stringings.clear(), db.sessions.clear(), db.outbox.clear()])
   })
 }

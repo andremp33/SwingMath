@@ -15,6 +15,7 @@ import { Sheet, useToast } from '../ui/overlay'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecTable, useSpecRows } from '../ui/specs'
 import { ComfortCard, GripCard, StringsCard } from './CalcExtras'
+import { CommunityCard } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { usePaywall } from './Pro'
 
@@ -228,6 +229,7 @@ export function Calculator() {
           </Card>
           <StringsCard racket={racket} />
           <GripCard />
+          <CommunityCard racket={racket} />
         </div>
 
         <div className="space-y-4 xl:sticky xl:top-8">

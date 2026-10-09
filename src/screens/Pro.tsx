@@ -1,6 +1,6 @@
 import { Check, Lock, Sparkles } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { isPro, useStore } from '../data/store'
+import { isPro, useStore, type Account } from '../data/store'
 import { fmt, useT } from '../i18n'
 import {
   activateLicense,
@@ -66,6 +66,16 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
   )
 }
 
+/** Signed in: the checkout carries the account, so the subscription is
+ *  linked to it (and Pro follows the account) without a key. */
+function checkoutUrl(base: string | undefined, account: Account | null) {
+  if (!base || !account) return base
+  const u = new URL(base)
+  u.searchParams.set('checkout[email]', account.email)
+  u.searchParams.set('checkout[custom][user_id]', account.userId)
+  return u.toString()
+}
+
 export function usePrice() {
   const lang = useStore((s) => s.lang)
   const nf = new Intl.NumberFormat(LOCALE[lang], { style: 'currency', currency: PRICING.currency })
@@ -79,6 +89,7 @@ export function ProPanel({ onDone }: { onDone?: () => void }) {
   const toast = useToast()
   const price = usePrice()
   const license = useStore((s) => s.license)
+  const account = useStore((s) => s.account)
   const setLicense = useStore((s) => s.setLicense)
   const pro = useStore(isPro)
   const [plan, setPlan] = useState<Plan>('annual')
@@ -112,7 +123,7 @@ export function ProPanel({ onDone }: { onDone?: () => void }) {
   }
 
   const amount = (p: Plan) => (p === 'monthly' ? PRICING.monthly : PRICING.annual)
-  const url = CHECKOUT[plan] ?? CHECKOUT.monthly ?? CHECKOUT.annual
+  const url = checkoutUrl(CHECKOUT[plan] ?? CHECKOUT.monthly ?? CHECKOUT.annual, account)
 
   return (
     <div className="space-y-4">
@@ -231,27 +242,37 @@ export function ProStatus() {
   const s = useStore()
   const pro = useStore(isPro)
   if (!pro) return <ProPanel />
-  const l = s.license!
+  const l = s.license
+  // Pro may come from the account's subscription, with no key on this device.
+  const keyActive = l !== null && (l.status ?? 'active') === 'active'
   return (
     <div className="space-y-3">
-      <p className="text-sm">{fmt(t.pro.activeSince, { date: fmtDate(l.activatedAt, s.lang) })}</p>
-      {l.expiresAt && <p className="text-sm text-muted">{fmt(t.pro.renews, { date: fmtDate(Date.parse(l.expiresAt), s.lang) })}</p>}
+      {keyActive ? (
+        <>
+          <p className="text-sm">{fmt(t.pro.activeSince, { date: fmtDate(l.activatedAt, s.lang) })}</p>
+          {l.expiresAt && <p className="text-sm text-muted">{fmt(t.pro.renews, { date: fmtDate(Date.parse(l.expiresAt), s.lang) })}</p>}
+        </>
+      ) : (
+        <p className="text-sm">{t.account.proActive}</p>
+      )}
       <div className="flex flex-wrap gap-2">
-        {PORTAL_URL && l.provider === 'lemonsqueezy' && (
+        {PORTAL_URL && (
           <a href={PORTAL_URL} target="_blank" rel="noopener" className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-semibold hover:bg-surface-2">
             {t.pro.manage}
           </a>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={async () => {
-            await deactivateLicense(l)
-            s.setLicense(null)
-          }}
-        >
-          {t.pro.deactivate}
-        </Button>
+        {keyActive && l.provider !== 'dev' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              await deactivateLicense(l)
+              s.setLicense(null)
+            }}
+          >
+            {t.pro.deactivate}
+          </Button>
+        )}
       </div>
     </div>
   )

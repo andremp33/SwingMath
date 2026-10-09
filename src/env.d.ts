@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_PRICE_ANNUAL?: string
   readonly VITE_PRICE_CURRENCY?: string
   readonly VITE_TRIAL_DAYS?: string
+  readonly VITE_SUPABASE_URL?: string
+  readonly VITE_SUPABASE_ANON_KEY?: string
   readonly VITE_SUPPORT_EMAIL?: string
   readonly VITE_OWNER_NAME?: string
 }

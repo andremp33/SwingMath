@@ -9,6 +9,7 @@ import { leadParts, racketLabel } from '../lib/format'
 import { encodeShare, renderShareImage, shareUrl, specRowsText } from '../lib/share'
 import { Button } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
+import { PublishSetup } from './Community'
 
 export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: () => void }) {
   const t = useT()
@@ -94,6 +95,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
             {t.share.link}
           </Button>
         </div>
+        {setup && racket && <PublishSetup setup={setup} racket={racket} />}
       </div>
     </Sheet>
   )
