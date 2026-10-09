@@ -33,6 +33,9 @@ export function decodeShare(data: string): SharePayload | null {
 
 export const shareUrl = (data: string) => `${location.origin}${import.meta.env.BASE_URL}s/${data}`
 
+/** Feel colours in FEEL_KEYS order, dark-theme steps (the card is dark). */
+const FEEL_COLORS = ['#d95926', '#3987e5', '#199e70', '#9085e9', '#d55181', '#c98500']
+
 export interface ImageText {
   title: string
   racket: string
@@ -98,7 +101,7 @@ export async function renderShareImage(text: ImageText, url: string): Promise<Bl
     g.beginPath()
     g.arc(cx, cy, R, 0, Math.PI * 2)
     g.stroke()
-    g.strokeStyle = CLAY
+    g.strokeStyle = FEEL_COLORS[i] ?? CLAY
     g.beginPath()
     g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * v) / 100)
     g.stroke()

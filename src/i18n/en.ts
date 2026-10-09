@@ -284,6 +284,7 @@ export const en: Dict = {
   comfort: {
     title: 'Arm comfort',
     hint: 'Our estimate for sore elbows and shoulders: frame stiffness, weight, balance and strings. Higher is kinder.',
+    bands: { good: 'Kind to the arm', mid: 'Fair on the arm', harsh: 'Hard on the arm' },
     improve: 'What costs the most',
     good: 'Looks good for your arm.',
     factors: { ra: 'Frame stiffness', weight: 'Weight', balance: 'Balance', stringbed: 'Stringbed stiffness', material: 'String material' },

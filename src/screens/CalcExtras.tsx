@@ -11,6 +11,13 @@ import { Card, CardTitle, Segmented, Select } from '../ui/basics'
 import { Ring } from '../ui/specs'
 import { StringbedEditor, StringbedSummary } from '../ui/strings'
 
+/** Kind, middling or harsh for the arm; colour and words together. */
+function comfortBand(score: number) {
+  if (score >= 65) return { key: 'good' as const, color: 'var(--c-success)' }
+  if (score >= 40) return { key: 'mid' as const, color: 'var(--c-warning)' }
+  return { key: 'harsh' as const, color: 'var(--c-danger)' }
+}
+
 const DEFAULT_GRIP: GripConfig = { base: 2, extraOvergrips: 0, sleeves: 0 }
 
 export function StringsCard({ racket }: { racket: Racket }) {
@@ -79,13 +86,17 @@ export function ComfortCard({ racket, specs }: { racket: Racket; specs: Specs })
   const bed = useStore((s) => s.config.strings) ?? DEFAULT_STRINGBED
   const c = armComfort(specs, racket, bed)
   // Factors that still cost a noticeable number of points.
+  const band = comfortBand(c.score)
   const weak = c.factors.filter((f) => f.weight * (1 - f.value) > 0.05).slice(0, 2)
   return (
     <Card label={t.comfort.title}>
       <CardTitle>{t.comfort.title}</CardTitle>
       <div className="flex items-start gap-4">
-        <Ring value={c.score} label={t.strings.feel.comfort} />
+        <Ring value={c.score} label={t.strings.feel.comfort} color={band.color} />
         <div className="min-w-0 flex-1 space-y-2 text-sm">
+          <p className="font-medium" style={{ color: band.color }}>
+            {t.comfort.bands[band.key]}
+          </p>
           {weak.length === 0 ? (
             <p>{t.comfort.good}</p>
           ) : (

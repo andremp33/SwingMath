@@ -19,6 +19,20 @@
   --c-success: #86c39b;
   --c-warning: #dcb35c;
   --c-bar: #d9764a;
+  /* Data colours: one hue per sensation, the same everywhere it appears.
+     Order and steps checked for colour-blind separation on each surface. */
+  --c-power: #d95926;
+  --c-stability: #3987e5;
+  --c-manoeuvrability: #199e70;
+  --c-spin: #9085e9;
+  --c-control: #d55181;
+  --c-plow: #c98500;
+  --c-comfort: #2f9a3c;
+  /* Court colours for the app's areas: clay, hard court, grass. */
+  --c-area-library: #3987e5;
+  --c-area-setups: #9085e9;
+  --c-area-journal: #2f9a3c;
+  --c-area-match: #c98500;
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
@@ -38,6 +52,17 @@
   --c-success: #2f7a4f;
   --c-warning: #8a5a00;
   --c-bar: #b4532e;
+  --c-power: #eb6834;
+  --c-stability: #2a78d6;
+  --c-manoeuvrability: #1baf7a;
+  --c-spin: #4a3aa7;
+  --c-control: #e87ba4;
+  --c-plow: #eda100;
+  --c-comfort: #008300;
+  --c-area-library: #2a78d6;
+  --c-area-setups: #4a3aa7;
+  --c-area-journal: #2f7a3a;
+  --c-area-match: #a86f00;
   --shadow-pop: 0 12px 32px rgba(40, 30, 20, 0.14);
   color-scheme: light;
 }
@@ -57,6 +82,13 @@
   --color-success: var(--c-success);
   --color-warning: var(--c-warning);
   --color-bar: var(--c-bar);
+  --color-power: var(--c-power);
+  --color-stability: var(--c-stability);
+  --color-manoeuvrability: var(--c-manoeuvrability);
+  --color-spin: var(--c-spin);
+  --color-control: var(--c-control);
+  --color-plow: var(--c-plow);
+  --color-comfort: var(--c-comfort);
 
   --font-sans: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 

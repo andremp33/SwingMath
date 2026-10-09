@@ -9,11 +9,11 @@ import { Logo } from '../ui/Logo'
 import { useRestringReminders } from '../screens/reminders'
 
 const TABS = [
-  { to: '/', icon: SlidersHorizontal, key: 'calc' },
-  { to: '/rackets', icon: Library, key: 'library' },
-  { to: '/setups', icon: Bookmark, key: 'setups' },
-  { to: '/diario', icon: NotebookPen, key: 'journal' },
-  { to: '/match', icon: GitCompareArrows, key: 'match' },
+  { to: '/', icon: SlidersHorizontal, key: 'calc', color: 'var(--c-accent)' },
+  { to: '/rackets', icon: Library, key: 'library', color: 'var(--c-area-library)' },
+  { to: '/setups', icon: Bookmark, key: 'setups', color: 'var(--c-area-setups)' },
+  { to: '/diario', icon: NotebookPen, key: 'journal', color: 'var(--c-area-journal)' },
+  { to: '/match', icon: GitCompareArrows, key: 'match', color: 'var(--c-area-match)' },
 ] as const
 
 export function useApplyTheme() {
@@ -75,7 +75,7 @@ export function Shell() {
           {t.appName}
         </Link>
         <ul className="mx-auto flex h-[60px] max-w-lg items-stretch justify-around lg:h-auto lg:flex-col lg:gap-0.5">
-          {[...TABS, { to: '/settings', icon: Settings, key: 'settings' as const }].map(({ to, icon: Icon, key }) => (
+          {[...TABS, { to: '/settings', icon: Settings, key: 'settings' as const, color: 'var(--c-text)' }].map(({ to, icon: Icon, key, color }) => (
             <li key={to} className={cx('flex-1 lg:flex-none', key === 'settings' && 'hidden lg:block')}>
               <NavLink
                 to={to}
@@ -89,9 +89,9 @@ export function Shell() {
               >
                 {({ isActive }) => (
                   <>
-                    {isActive && <span aria-hidden className="absolute inset-x-6 top-0 h-0.5 rounded-b bg-accent lg:hidden" />}
+                    {isActive && <span aria-hidden className="absolute inset-x-6 top-0 h-0.5 rounded-b lg:hidden" style={{ background: color }} />}
                     <span className="relative">
-                      <Icon className="size-5" strokeWidth={isActive ? 2 : 1.75} aria-hidden />
+                      <Icon className="size-5" strokeWidth={isActive ? 2 : 1.75} style={isActive ? { color } : undefined} aria-hidden />
                       {key === 'journal' && due > 0 && <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-accent ring-2 ring-bg" aria-hidden />}
                     </span>
                     {t.nav[key]}

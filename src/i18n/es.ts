@@ -284,6 +284,7 @@ export const es: Dict = {
   comfort: {
     title: 'Confort del brazo',
     hint: 'Nuestra estimación para codos y hombros con molestias: rigidez del marco, peso, balance y cuerdas. Más alto es más suave.',
+    bands: { good: 'Suave para el brazo', mid: 'Regular para el brazo', harsh: 'Duro para el brazo' },
     improve: 'Lo que más pesa',
     good: 'Va bien para el brazo.',
     factors: { ra: 'Rigidez del marco', weight: 'Peso', balance: 'Balance', stringbed: 'Rigidez del encordado', material: 'Material de las cuerdas' },

@@ -11,6 +11,14 @@ import { Badge, Button, EmptyState, IconButton, PageTitle, Select } from '../ui/
 import { useToast } from '../ui/overlay'
 import { matchesQuery } from '../ui/RacketPicker'
 
+/** Frame types wear the colour of the sensation they lean to. */
+const TYPE_COLOR: Record<RacketType, string> = {
+  power: 'var(--c-power)',
+  control: 'var(--c-control)',
+  tweener: 'var(--c-stability)',
+  junior: 'var(--c-manoeuvrability)',
+}
+
 export function Library() {
   const t = useT()
   const nav = useNavigate()
@@ -150,7 +158,10 @@ function RacketCard({ racket: r }: { racket: Racket }) {
           {r.year && <span className="text-muted"> {r.year}</span>}
         </h3>
         <p className="mt-0.5 flex items-center gap-2 text-xs text-muted">
-          {t.library.types[r.type]}
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2 rounded-full" style={{ background: TYPE_COLOR[r.type] }} />
+            {t.library.types[r.type]}
+          </span>
           {!r.isStock && <Badge tone="accent">{t.library.custom}</Badge>}
         </p>
         <p className="num mt-1 text-sm text-muted md:hidden">{[cells[0], cells[1], `${cells[2]} SW`, cells[3], cells[4]].join(' · ')}</p>

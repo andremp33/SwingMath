@@ -282,6 +282,7 @@ export const pt = {
   comfort: {
     title: 'Conforto do braço',
     hint: 'Estimativa nossa para quem tem dores no cotovelo ou no ombro: rigidez do quadro, peso, equilíbrio e cordas. Mais alto é mais suave.',
+    bands: { good: 'Suave para o braço', mid: 'Razoável para o braço', harsh: 'Duro para o braço' },
     improve: 'O que mais pesa',
     good: 'Está bem para o braço.',
     factors: { ra: 'Rigidez do quadro', weight: 'Peso', balance: 'Equilíbrio', stringbed: 'Rigidez do encordoamento', material: 'Material das cordas' },

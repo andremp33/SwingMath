@@ -153,7 +153,8 @@ export function stringLife(bed: Stringbed, hours: number, days: number, lifeHour
   }
 }
 
-export const STRING_FEEL_KEYS = ['power', 'control', 'comfort', 'spin'] as const
+// Display order: no two similar colours side by side.
+export const STRING_FEEL_KEYS = ['power', 'spin', 'comfort', 'control'] as const
 export type StringFeelKey = (typeof STRING_FEEL_KEYS)[number]
 export type StringFeel = Record<StringFeelKey, number>
 

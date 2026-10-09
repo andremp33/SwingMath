@@ -65,7 +65,7 @@ export function StringbedSummary({ frame, bed }: { frame: FrameForStrings; bed: 
       </div>
       <div className="grid grid-cols-4 gap-x-1">
         {STRING_FEEL_KEYS.map((k) => (
-          <Ring key={k} value={f[k]} label={t.strings.feel[k]} small />
+          <Ring key={k} value={f[k]} label={t.strings.feel[k]} color={`var(--c-${k})`} small />
         ))}
       </div>
       <p className="text-xs text-muted">{t.strings.indexHint}</p>

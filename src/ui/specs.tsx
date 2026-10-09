@@ -81,7 +81,7 @@ export function SpecTable({ rows, showDelta = true }: { rows: SpecRow[]; showDel
 
 /** One ring: a full circle filled to the value, starting at 12 o'clock. An
  *  optional inner ring shows a second setup for comparison. */
-export function Ring({ value, compare, label, small }: { value: number; compare?: number; label: string; small?: boolean }) {
+export function Ring({ value, compare, label, small, color = 'var(--c-bar)' }: { value: number; compare?: number; label: string; small?: boolean; color?: string }) {
   const R = 34
   const C = 2 * Math.PI * R
   const r2 = 25
@@ -96,7 +96,7 @@ export function Ring({ value, compare, label, small }: { value: number; compare?
             cy="40"
             r={R}
             fill="none"
-            stroke="var(--c-bar)"
+            stroke={color}
             strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={C}
@@ -141,7 +141,7 @@ export function FeelRings({ feel, compare, labels }: { feel: Feel; compare?: Fee
       {labels && compare && (
         <div className="mb-3 flex gap-4 text-xs text-muted">
           <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-bar" /> {labels[0]}
+            <span className="size-2.5 rounded-full bg-text" /> {labels[0]}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-full bg-muted" /> {labels[1]}
@@ -150,7 +150,7 @@ export function FeelRings({ feel, compare, labels }: { feel: Feel; compare?: Fee
       )}
       <div className="grid grid-cols-3 gap-x-2 gap-y-4">
         {FEEL_KEYS.map((k) => (
-          <Ring key={k} value={feel[k]} compare={compare?.[k]} label={t.feel[k]} />
+          <Ring key={k} value={feel[k]} compare={compare?.[k]} label={t.feel[k]} color={`var(--c-${k})`} />
         ))}
       </div>
     </div>

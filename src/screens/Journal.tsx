@@ -45,26 +45,27 @@ export function Journal() {
   const [now] = useState(() => Date.now())
   if (stringings === undefined || sessions === undefined) return null
 
-  const blankStringing = (from?: Stringing): Stringing => ({
+  // Built when a button is pressed, so they take the time of the click.
+  const blankStringing = (from?: Stringing, at = Date.now()): Stringing => ({
     id: uid(),
     label: from?.label ?? '',
     racketId: from?.racketId ?? config.racketId,
     setupId: from?.setupId ?? loadedSetupId ?? undefined,
-    date: now,
+    date: at,
     bed: structuredClone(from?.bed ?? config.strings ?? DEFAULT_STRINGBED),
     lifeHours: from?.lifeHours,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: at,
+    updatedAt: at,
   })
-  const blankSession = (): Session => ({
+  const blankSession = (at = Date.now()): Session => ({
     id: uid(),
-    date: now,
+    date: at,
     minutes: 90,
     kind: 'practice',
     stringingId: current[0]?.id,
     ratings: {},
-    createdAt: now,
-    updatedAt: now,
+    createdAt: at,
+    updatedAt: at,
   })
 
   const due = dueForRestring(stringings, sessions, now)
@@ -123,9 +124,10 @@ export function Journal() {
                   const life = lifeOf(st, sessions, now)
                   const racket = rackets.find((r) => r.id === st.racketId)
                   const days = Math.floor(life.days)
+                  const left = Math.round(Math.max(0, 1 - life.used) * 100)
                   return (
                     <li key={st.id} className="flex gap-4">
-                      <Ring value={Math.round(Math.max(0, 1 - life.used) * 100)} label={t.journal.life} />
+                      <Ring value={left} label={t.journal.life} color={left > 40 ? 'var(--c-success)' : left > 15 ? 'var(--c-warning)' : 'var(--c-danger)'} />
                       <div className="min-w-0 flex-1 space-y-0.5 text-sm">
                         <div className="flex items-start justify-between gap-2">
                           <p className="truncate font-semibold">{st.label}</p>
@@ -228,7 +230,7 @@ function WeeklyCard({ sessions }: { sessions: Session[] }) {
               <span className="num mb-1 text-center text-[11px] text-muted" aria-hidden>
                 {h > 0 ? fmtNum(h, h < 10 ? 1 : 0, lang) : ''}
               </span>
-              <span className={cx('block rounded-t-sm', h > 0 ? 'bg-bar' : 'bg-border')} style={{ height: h > 0 ? `${(h / max) * 70}%` : 2, minHeight: 2 }} aria-hidden />
+              <span className={cx('block rounded-t-sm', h > 0 ? 'bg-[var(--c-area-journal)]' : 'bg-border')} style={{ height: h > 0 ? `${(h / max) * 70}%` : 2, minHeight: 2 }} aria-hidden />
               <span className="num mt-1.5 text-center text-[10px] text-muted" aria-hidden>
                 {new Date(start).getDate()}/{new Date(start).getMonth() + 1}
               </span>
