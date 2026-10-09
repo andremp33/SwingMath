@@ -12,7 +12,9 @@ const siteUrl = process.env.SITE_URL ?? ''
 
 export default defineConfig({
   base,
-  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  // The commit goes next to the version, so support can tell which build a
+  // player is on.
+  define: { __APP_VERSION__: JSON.stringify(process.env.GITHUB_SHA ? `${pkg.version} · ${process.env.GITHUB_SHA.slice(0, 7)}` : pkg.version) },
   plugins: [
     {
       name: 'site-url',
