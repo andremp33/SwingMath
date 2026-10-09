@@ -35,10 +35,12 @@ variables (names in `.env.example`).
 
 **Accounts (Supabase), optional.**
 
-1. Create a project in an EU region. In Authentication → Emails, set the
+1. Create a project in an EU region. Set the site URL and allow
+   `<site>/**` as a redirect URL. Sign-in works with the default email (a
+   link). For a code instead (better in the installed app), set up custom SMTP
+   first (the free tier only allows template changes with it), then set the
    "Magic Link" and "Confirm signup" templates to `supabase/templates/code.html`
-   (subject `SwingMath: {{ .Token }}`), and set up custom SMTP so codes do not
-   hit the built-in limit. Add the site URL to the allowed redirect URLs.
+   with the subject `SwingMath: {{ .Token }}`.
 2. `npx supabase link --project-ref <ref>` then `npx supabase db push`.
 3. `npx supabase functions deploy ls-webhook --no-verify-jwt` and
    `npx supabase secrets set LS_WEBHOOK_SECRET=<signing secret> LS_STORE_ID=<id>`.

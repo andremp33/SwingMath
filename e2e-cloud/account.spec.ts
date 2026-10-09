@@ -41,7 +41,7 @@ async function signIn(page: Page, email: string) {
   await card.getByLabel('Email').fill(email)
   const sentAt = Date.now()
   await card.getByRole('button', { name: 'Enviar código' }).click()
-  await expect(card.getByText(`Enviámos um código de 6 dígitos para ${email}.`)).toBeVisible()
+  await expect(card.getByText(`Enviámos um email para ${email}.`, { exact: false })).toBeVisible()
   await card.getByLabel('Código').fill(await codeFor(email, sentAt))
   await card.getByRole('button', { name: 'Entrar' }).click()
   await expect(card.getByText(`Entraste como ${email}`)).toBeVisible()

@@ -16,7 +16,9 @@ export function getCloud(): Promise<SupabaseClient> | null {
   if (!cloudConfigured()) return null
   client ??= import('@supabase/supabase-js').then(({ createClient }) =>
     createClient(URL!, KEY!, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'swingmath-auth' },
+      // The sign-in email carries a link (default template) and, with a
+      // custom template, a code; the link lands back here with the session.
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'swingmath-auth' },
     }),
   )
   return client

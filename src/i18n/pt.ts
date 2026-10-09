@@ -359,7 +359,7 @@ export const pt = {
     intro: 'Sem conta, tudo continua a funcionar neste dispositivo. Com conta, sincronizas entre dispositivos (Pro) e partilhas medições e setups com a comunidade.',
     email: 'Email',
     sendCode: 'Enviar código',
-    codeSent: 'Enviámos um código de 6 dígitos para {email}.',
+    codeSent: 'Enviámos um email para {email}. Abre o link desse email neste dispositivo, ou escreve aqui o código, se o email tiver um.',
     code: 'Código',
     signIn: 'Entrar',
     resend: 'Reenviar código',

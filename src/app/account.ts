@@ -31,7 +31,7 @@ async function client() {
 
 export async function sendCode(email: string) {
   const c = await client()
-  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } }).catch(() => ({ error: { status: 0 } }))
+  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}${import.meta.env.BASE_URL}settings` } }).catch(() => ({ error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
 }
 

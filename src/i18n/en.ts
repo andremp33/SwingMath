@@ -361,7 +361,7 @@ export const en: Dict = {
     intro: 'Without an account, everything keeps working on this device. With one, you sync across devices (Pro) and share measurements and setups with the community.',
     email: 'Email',
     sendCode: 'Send code',
-    codeSent: 'We sent a 6-digit code to {email}.',
+    codeSent: 'We sent an email to {email}. Open its link on this device, or type the code here if the email has one.',
     code: 'Code',
     signIn: 'Sign in',
     resend: 'Send the code again',

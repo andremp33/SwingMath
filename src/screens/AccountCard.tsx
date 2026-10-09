@@ -89,9 +89,9 @@ function SignInForm() {
       }}
     >
       <p className="text-sm">{fmt(t.account.codeSent, { email: email.trim() })}</p>
-      <TextField label={t.account.code} value={code} onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))} error={error} placeholder="123456" maxLength={6} autoFocus />
+      <TextField label={t.account.code} value={code} onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 10))} error={error} placeholder="123456" maxLength={10} />
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="primary" loading={busy} disabled={code.length !== 6}>
+        <Button type="submit" variant="primary" loading={busy} disabled={code.length < 6}>
           {t.account.signIn}
         </Button>
         <Button variant="ghost" onClick={() => void run(() => sendCode(email))}>

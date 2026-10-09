@@ -361,7 +361,7 @@ export const es: Dict = {
     intro: 'Sin cuenta, todo sigue funcionando en este dispositivo. Con cuenta, sincronizas entre dispositivos (Pro) y compartes mediciones y setups con la comunidad.',
     email: 'Email',
     sendCode: 'Enviar código',
-    codeSent: 'Hemos enviado un código de 6 dígitos a {email}.',
+    codeSent: 'Hemos enviado un email a {email}. Abre su enlace en este dispositivo, o escribe aquí el código si el email trae uno.',
     code: 'Código',
     signIn: 'Entrar',
     resend: 'Reenviar código',
