@@ -7,8 +7,11 @@ const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405 })
+  // Without a secret nothing can be verified, so nothing is accepted.
+  const secret = Deno.env.get('LS_WEBHOOK_SECRET')
+  if (!secret) return new Response('not configured', { status: 503 })
   const res = await handle(await req.text(), req.headers.get('x-signature'), {
-    secret: Deno.env.get('LS_WEBHOOK_SECRET')!,
+    secret,
     storeId: Deno.env.get('LS_STORE_ID') || undefined,
     upsert: subscriptionUpsert(db),
   })

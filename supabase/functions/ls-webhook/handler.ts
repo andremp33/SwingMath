@@ -38,7 +38,7 @@ function same(a: string, b: string) {
 }
 
 export async function handle(body: string, signature: string | null, deps: Deps): Promise<{ status: number; body: string }> {
-  if (!signature || !same(signature.toLowerCase(), await sign(deps.secret, body))) return { status: 401, body: 'bad signature' }
+  if (!deps.secret || !signature || !same(signature.toLowerCase(), await sign(deps.secret, body))) return { status: 401, body: 'bad signature' }
   let event: {
     meta?: { event_name?: string; custom_data?: { user_id?: string } }
     data?: { type?: string; id?: string; attributes?: Record<string, unknown> }
