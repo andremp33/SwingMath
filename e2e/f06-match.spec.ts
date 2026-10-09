@@ -76,13 +76,25 @@ test.describe('F07 match rackets', () => {
 })
 
 test.describe('Pro targets', () => {
-  test('F06-H5 a pro target fills the specs and names its source', async ({ page }) => {
+  test('F06-H5 a pro target, converted to the state of the starting point, with its source', async ({ page }) => {
     await start(page, { path: '/match' })
-    await page.getByLabel('Igualar a um profissional').selectOption('nadal')
     const to = page.getByRole('region', { name: 'Alvo', exact: true })
-    await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('337')
-    await expect(to.getByLabel('Swingweight', { exact: true })).toHaveValue('371')
+    await to.getByRole('radio', { name: 'Profissional' }).click()
+    await to.getByRole('radio', { name: /Rafael Nadal/ }).click()
+    // Library values are unstrung, so Nadal's strung 337 g loses the 17 g of strings.
+    await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('320')
+    await expect(to).toContainText('Medida com cordas; convertemos para sem cordas')
     await expect(to.getByRole('link', { name: 'Fonte: Tennis Warehouse' })).toHaveAttribute('href', /BARORreview/)
-    await expect(to).toContainText('Valores com cordas')
+    await a11y(page)
+  })
+
+  test('F06-H6 from the calculator with strings on, the target stays strung', async ({ page }) => {
+    await start(page, { path: '/match' })
+    await page.getByRole('button', { name: 'Da calculadora' }).click()
+    const to = page.getByRole('region', { name: 'Alvo', exact: true })
+    await to.getByRole('radio', { name: 'Profissional' }).click()
+    await to.getByRole('radio', { name: /Roger Federer/ }).click()
+    await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('357')
+    await expect(to).toContainText('Valores com cordas.')
   })
 })

@@ -8,7 +8,7 @@ import { findRacket } from '../data/db'
 import { useComputed, useCustomRackets, useRacket, useSetups } from '../data/hooks'
 import { compute } from '../domain/physics'
 import { FREE_PRO_RUNS, isPro, useStore } from '../data/store'
-import { PRO_TARGETS } from '../data/pros'
+import { PRO_TARGETS, withStrings, type PlainSpecs, type ProTarget } from '../data/pros'
 import { fmt, useT } from '../i18n'
 import { fmtNum, fmtSigned, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select } from '../ui/basics'
@@ -87,6 +87,57 @@ const toBase = (r: Racket, v: Vals): Base | null =>
         twistweight: v.twistweight,
       }
 
+const toVals = (s: PlainSpecs): Vals => ({
+  weightG: Math.round(s.weightG * 10) / 10,
+  balanceMm: Math.round(s.balanceCm * 100) / 10,
+  swingweight: Math.round(s.swingweight * 10) / 10,
+})
+
+/** Players with measured specs, each with its source. */
+function ProList({ selected, fromStrung, onPick }: { selected: string; fromStrung: boolean; onPick: (p: ProTarget) => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const picked = PRO_TARGETS.find((p) => p.id === selected)
+  return (
+    <div className="space-y-3">
+      <div role="radiogroup" aria-label={t.match.kindPro} className="divide-y divide-border rounded-md border border-border">
+        {PRO_TARGETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={selected === p.id}
+            onClick={() => onPick(p)}
+            className={cx('flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors', selected === p.id ? 'bg-surface-2' : 'hover:bg-surface-2/60')}
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-medium">{p.player}</span>
+              <span className="block truncate text-muted">{p.racket}</span>
+            </span>
+            <span className="num shrink-0 text-right text-xs text-muted">
+              {fmtNum(p.weightG, 0, lang)} g · SW {fmtNum(p.swingweight, 0, lang)}
+              <span className="block">{p.strung ? t.match.strungShort : t.match.unstrungShort}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {picked && (
+        <div className="space-y-1 rounded-md bg-surface-2 px-3 py-2.5 text-sm">
+          <p>{t.match.pros[picked.id]}</p>
+          {picked.strung !== fromStrung && (
+            <p className="font-medium">
+              {fmt(t.match.converted, { from: picked.strung ? t.match.strungShort : t.match.unstrungShort, to: fromStrung ? t.match.strungShort : t.match.unstrungShort })}
+            </p>
+          )}
+          <a href={picked.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
+            {fmt(t.match.proSource, { source: picked.source })}
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SpecFields({ v, onChange, required }: { v: Vals; onChange: (v: Vals) => void; required?: boolean }) {
   const t = useT()
   return (
@@ -119,8 +170,11 @@ function Smart() {
   const [targetRacketId, setTargetRacketId] = useState<string>()
   const targetRacket = useRacket(targetRacketId)
   const [to, setTo] = useState<Vals>({})
+  const [kind, setKind] = useState<'racket' | 'pro'>('racket')
   const [proId, setProId] = useState('')
-  const pro_ = PRO_TARGETS.find((p) => p.id === proId)
+  // Library specs are unstrung; the calculator's result has strings when they
+  // are on. Targets are converted to the same state before comparing.
+  const [fromStrung, setFromStrung] = useState(false)
   const [allowed, setAllowed] = useState<Position[]>([...POSITIONS])
   const [maxPer, setMaxPer] = useState<number | undefined>(LEAD_MAX)
   const [res, setRes] = useState<MatchResult | null>(null)
@@ -132,6 +186,7 @@ function Smart() {
     setFilledFor(racket.id)
     setFrom(fromRacket(racket))
     setFromCalc(false)
+    setFromStrung(false)
     setRes(null)
   }
 
@@ -147,6 +202,7 @@ function Smart() {
       twistweight: r.twistweightEstimated || r.twistweight === undefined ? undefined : Math.round(r.twistweight * 100) / 100,
     })
     setFromCalc(true)
+    setFromStrung(config.accessories.strings)
     setRes(null)
   }
 
@@ -199,61 +255,61 @@ function Smart() {
           <CardTitle action={calc && <Button size="sm" icon={Calculator} onClick={useCalc}>{t.match.useCalc}</Button>}>{t.match.from}</CardTitle>
           <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setRacketId(r.id)} />
           <SpecFields v={from} onChange={(v) => { setFrom(v); setFromCalc(false); setRes(null) }} required />
+          <p className="text-xs text-muted">{fromStrung ? t.match.basisStrung : t.match.basisUnstrung}</p>
         </Card>
         <Card className="space-y-4" label={t.match.to}>
           <CardTitle>{t.match.to}</CardTitle>
-          {savedSetups && savedSetups.length > 0 && (
-            <Select
-              label={t.match.targetSetup}
-              value=""
-              onChange={(id) => {
-                const s = savedSetups.find((x) => x.id === id)
-                const r = s && findRacket(s.racketId, customRackets)
-                if (!s || !r) return
-                const { result } = compute({ spec: r, ...s, masses })
-                setTo({
-                  weightG: Math.round(result.weightG * 10) / 10,
-                  balanceMm: Math.round(result.balanceCm * 100) / 10,
-                  swingweight: Math.round(result.swingweight * 10) / 10,
-                  twistweight: result.twistweightEstimated || result.twistweight === undefined ? undefined : Math.round(result.twistweight * 100) / 100,
-                })
-                setProId('')
+          <Segmented
+            label={t.match.to}
+            value={kind}
+            onChange={(k) => {
+              setKind(k)
+              setRes(null)
+            }}
+            options={[
+              { value: 'racket', label: t.match.kindRacket },
+              { value: 'pro', label: t.match.kindPro },
+            ]}
+          />
+          {kind === 'racket' ? (
+            <>
+              <RacketPicker
+                label={t.match.targetRacket}
+                value={targetRacket}
+                onChange={(r) => {
+                  setTargetRacketId(r.id)
+                  setTo(toVals(withStrings(r, r, false, fromStrung)))
+                  setRes(null)
+                }}
+              />
+              {savedSetups && savedSetups.length > 0 && (
+                <Select
+                  label={t.match.targetSetup}
+                  value=""
+                  onChange={(id) => {
+                    const s = savedSetups.find((x) => x.id === id)
+                    const r = s && findRacket(s.racketId, customRackets)
+                    if (!s || !r) return
+                    const { result } = compute({ spec: r, ...s, masses })
+                    setTo(toVals(withStrings(r, result, s.accessories.strings, fromStrung)))
+                    setRes(null)
+                  }}
+                  options={[{ value: '', label: t.match.pickSetup }, ...savedSetups.map((s) => ({ value: s.id, label: s.name }))]}
+                />
+              )}
+            </>
+          ) : (
+            <ProList
+              selected={proId}
+              fromStrung={fromStrung}
+              onPick={(p) => {
+                setProId(p.id)
+                setTo(toVals(withStrings(p, p, p.strung, fromStrung)))
                 setRes(null)
               }}
-              options={[{ value: '', label: t.match.pickSetup }, ...savedSetups.map((s) => ({ value: s.id, label: s.name }))]}
             />
           )}
-          <Select
-            label={t.match.targetPro}
-            value={proId}
-            onChange={(id) => {
-              setProId(id)
-              const p = PRO_TARGETS.find((x) => x.id === id)
-              if (!p) return
-              setTo({ weightG: p.weightG, balanceMm: Math.round(p.balanceCm * 100) / 10, swingweight: p.swingweight })
-              setRes(null)
-            }}
-            options={[{ value: '', label: t.match.pickPro }, ...PRO_TARGETS.map((p) => ({ value: p.id, label: `${p.player} · ${p.racket}` }))]}
-          />
-          {pro_ && (
-            <div className="space-y-1 rounded-md bg-surface-2 px-3 py-2.5 text-sm">
-              <p>{t.match.pros[pro_.id]}</p>
-              <p className="font-medium">{pro_.strung ? t.match.proStrung : t.match.proUnstrung}</p>
-              <a href={pro_.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
-                {fmt(t.match.proSource, { source: pro_.source })}
-              </a>
-            </div>
-          )}
-          <RacketPicker
-            label={t.match.targetRacket}
-            value={targetRacket}
-            onChange={(r) => {
-              setTargetRacketId(r.id)
-              setProId('')
-              setTo(fromRacket(r))
-              setRes(null)
-            }}
-          />
+          <p className="text-xs text-muted">{fromStrung ? t.match.basisStrung : t.match.basisUnstrung}</p>
           <SpecFields v={to} onChange={(v) => { setTo(v); setProId(''); setRes(null) }} />
         </Card>
         <Card>
