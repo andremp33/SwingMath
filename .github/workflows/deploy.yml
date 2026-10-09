@@ -28,19 +28,19 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
           SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
-          # Store and contact settings, from the repository's Actions variables.
-          VITE_LS_STORE_ID: ${{ vars.VITE_LS_STORE_ID }}
-          VITE_LS_CHECKOUT_MONTHLY: ${{ vars.VITE_LS_CHECKOUT_MONTHLY }}
-          VITE_LS_CHECKOUT_ANNUAL: ${{ vars.VITE_LS_CHECKOUT_ANNUAL }}
-          VITE_LS_PORTAL_URL: ${{ vars.VITE_LS_PORTAL_URL }}
-          VITE_PRICE_MONTHLY: ${{ vars.VITE_PRICE_MONTHLY }}
-          VITE_PRICE_ANNUAL: ${{ vars.VITE_PRICE_ANNUAL }}
-          VITE_PRICE_CURRENCY: ${{ vars.VITE_PRICE_CURRENCY }}
-          VITE_TRIAL_DAYS: ${{ vars.VITE_TRIAL_DAYS }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-          VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL }}
-          VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME }}
+          # Store, account and contact settings: repository Actions variables (or secrets).
+          VITE_LS_STORE_ID: ${{ vars.VITE_LS_STORE_ID || secrets.VITE_LS_STORE_ID }}
+          VITE_LS_CHECKOUT_MONTHLY: ${{ vars.VITE_LS_CHECKOUT_MONTHLY || secrets.VITE_LS_CHECKOUT_MONTHLY }}
+          VITE_LS_CHECKOUT_ANNUAL: ${{ vars.VITE_LS_CHECKOUT_ANNUAL || secrets.VITE_LS_CHECKOUT_ANNUAL }}
+          VITE_LS_PORTAL_URL: ${{ vars.VITE_LS_PORTAL_URL || secrets.VITE_LS_PORTAL_URL }}
+          VITE_PRICE_MONTHLY: ${{ vars.VITE_PRICE_MONTHLY || secrets.VITE_PRICE_MONTHLY }}
+          VITE_PRICE_ANNUAL: ${{ vars.VITE_PRICE_ANNUAL || secrets.VITE_PRICE_ANNUAL }}
+          VITE_PRICE_CURRENCY: ${{ vars.VITE_PRICE_CURRENCY || secrets.VITE_PRICE_CURRENCY }}
+          VITE_TRIAL_DAYS: ${{ vars.VITE_TRIAL_DAYS || secrets.VITE_TRIAL_DAYS }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL || secrets.VITE_SUPPORT_EMAIL }}
+          VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME || secrets.VITE_OWNER_NAME }}
       # Deep links (/SwingMath/rackets, shared setups) load the app too.
       - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
       - uses: peaceiris/actions-gh-pages@v4
