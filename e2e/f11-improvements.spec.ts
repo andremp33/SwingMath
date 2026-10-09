@@ -69,7 +69,9 @@ test.describe('F12 practical helpers', () => {
     await page.goto('/match')
     await page.getByLabel('Igualar a um setup guardado').selectOption({ label: 'Antiga' })
     const target = page.getByRole('region', { name: 'Alvo', exact: true })
-    await expect(target.getByLabel('Peso', { exact: true })).toHaveValue('332')
+    // The setup weighs 332 g strung; the starting point is the library's
+    // unstrung frame, so the target drops the 17 g of strings.
+    await expect(target.getByLabel('Peso', { exact: true })).toHaveValue('315')
     await page.getByRole('button', { name: 'Calcular', exact: true }).click()
     await expect(page.getByRole('region', { name: 'Onde pôr o chumbo' })).toBeVisible()
   })
