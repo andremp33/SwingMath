@@ -18,6 +18,7 @@ import { ComfortCard, GripCard, StringsCard } from './CalcExtras'
 import { CommunityCard } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { usePaywall } from './Pro'
+import { InfoTip } from '../ui/disclosure'
 
 export function Calculator() {
   const t = useT()
@@ -101,7 +102,18 @@ export function Calculator() {
               {config.baseMode === 'reference' ? (
                 <div>
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-sm text-muted">{t.calc.reference}</span>
+                    <span className="flex items-center gap-1.5 text-sm text-muted">
+                      {t.calc.reference}
+                      {racket.isStock && racket.source?.startsWith('http') && (
+                        <InfoTip title={t.calc.reference}>
+                          <p>{t.calc.sourceNote}</p>
+                          {racket.approxWeight && <p>{t.calc.approxNote}</p>}
+                          <a href={racket.source} target="_blank" rel="noopener noreferrer" className="inline-block font-semibold text-accent-text underline underline-offset-2">
+                            {t.calc.sourceLink}
+                          </a>
+                        </InfoTip>
+                      )}
+                    </span>
                     {racket.isStock ? <Badge>{t.library.stock}</Badge> : <Badge tone="accent">{t.library.custom}</Badge>}
                   </div>
                   <div className="xl:hidden">
@@ -110,15 +122,6 @@ export function Calculator() {
                   <div className="hidden xl:block">
                     <SpecTable rows={baseRows} showDelta={false} />
                   </div>
-                  {racket.isStock && racket.source?.startsWith('http') && (
-                    <p className="mt-2 text-xs text-muted">
-                      {t.calc.sourceNote}{' '}
-                      <a href={racket.source} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
-                        {t.calc.sourceLink}
-                      </a>
-                    </p>
-                  )}
-                  {racket.isStock && racket.approxWeight && <p className="mt-1 text-xs text-muted">{t.calc.approxNote}</p>}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -243,9 +246,8 @@ export function Calculator() {
             <SpecTable rows={resultRows} />
           </Card>
           <Card className="order-4 xl:order-none">
-            <CardTitle>{t.calc.feel}</CardTitle>
+            <CardTitle info={<InfoTip title={t.calc.feel}>{t.calc.feelHint}</InfoTip>}>{t.calc.feel}</CardTitle>
             <FeelRings feel={f} />
-            <p className="mt-3 text-xs text-muted">{t.calc.feelHint}</p>
           </Card>
           <div className="order-8 xl:order-none"><ComfortCard racket={racket} specs={result} /></div>
           <div className="order-9 xl:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>

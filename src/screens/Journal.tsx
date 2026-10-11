@@ -24,6 +24,7 @@ import { bedLabel } from '../ui/strings'
 import { SessionSheet, StringingSheet } from './JournalSheets'
 import { ProGate } from './Pro'
 import { useReminders } from './reminders'
+import { InfoTip } from '../ui/disclosure'
 
 const DAY = 86_400_000
 
@@ -118,7 +119,7 @@ export function Journal() {
 
           {current.length > 0 && (
             <Card label={t.journal.rackets}>
-              <CardTitle>{t.journal.rackets}</CardTitle>
+              <CardTitle info={<InfoTip title={t.journal.life}>{t.journal.lifeHint}</InfoTip>}>{t.journal.rackets}</CardTitle>
               <ul className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
                 {current.map((st) => {
                   const life = lifeOf(st, sessions, now)
@@ -150,7 +151,6 @@ export function Journal() {
                   )
                 })}
               </ul>
-              <p className="mt-4 text-xs text-muted">{t.journal.lifeHint}</p>
             </Card>
           )}
 

@@ -15,6 +15,7 @@ import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, 
 import { LEAD_MAX, RacketDiagram } from '../ui/lead'
 import { RacketPicker } from '../ui/RacketPicker'
 import { usePaywall } from './Pro'
+import { InfoTip } from '../ui/disclosure'
 
 type Mode = 'smart' | 'batch'
 
@@ -252,13 +253,26 @@ function Smart() {
       <div className="space-y-4">
         <p className="text-sm text-muted">{t.match.smartIntro}</p>
         <Card className="space-y-4" label={t.match.from}>
-          <CardTitle action={calc && <Button size="sm" icon={Calculator} onClick={useCalc}>{t.match.useCalc}</Button>}>{t.match.from}</CardTitle>
+          <CardTitle
+            action={calc && <Button size="sm" icon={Calculator} onClick={useCalc}>{t.match.useCalc}</Button>}
+            info={<Badge>{fromStrung ? t.match.strungShort : t.match.unstrungShort}</Badge>}
+          >
+            {t.match.from}
+          </CardTitle>
           <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setRacketId(r.id)} />
           <SpecFields v={from} onChange={(v) => { setFrom(v); setFromCalc(false); setRes(null) }} required />
-          <p className="text-xs text-muted">{fromStrung ? t.match.basisStrung : t.match.basisUnstrung}</p>
         </Card>
         <Card className="space-y-4" label={t.match.to}>
-          <CardTitle>{t.match.to}</CardTitle>
+          <CardTitle
+            info={
+              <>
+                <Badge>{fromStrung ? t.match.strungShort : t.match.unstrungShort}</Badge>
+                <InfoTip title={t.match.to}>{fromStrung ? t.match.basisStrung : t.match.basisUnstrung}</InfoTip>
+              </>
+            }
+          >
+            {t.match.to}
+          </CardTitle>
           <Segmented
             label={t.match.to}
             value={kind}
@@ -309,7 +323,6 @@ function Smart() {
               }}
             />
           )}
-          <p className="text-xs text-muted">{fromStrung ? t.match.basisStrung : t.match.basisUnstrung}</p>
           <SpecFields v={to} onChange={(v) => { setTo(v); setProId(''); setRes(null) }} />
         </Card>
         <Card>
@@ -434,8 +447,10 @@ function Batch() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">{t.match.batchIntro}</p>
-      <p className="text-xs text-muted">{t.match.sameRacketTwice}</p>
+      <div className="flex items-center gap-1.5 text-sm text-muted">
+        <p>{t.match.batchIntro}</p>
+        <InfoTip title={t.match.batch}>{t.match.sameRacketTwice}</InfoTip>
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {slots.map((s, i) => (
           <BatchSlot

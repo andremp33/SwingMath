@@ -79,10 +79,13 @@ export function Card({ className, children, as: As = 'section', label }: { class
   return <As aria-label={label} className={cx('border-t border-border pt-4 pb-5', className)}>{children}</As>
 }
 
-export function CardTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+export function CardTitle({ children, action, info }: { children: ReactNode; action?: ReactNode; info?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
-      <h2 className="text-[15px] font-semibold tracking-tight">{children}</h2>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <h2 className="text-[15px] font-semibold tracking-tight">{children}</h2>
+        {info}
+      </div>
       {action}
     </div>
   )
@@ -399,15 +402,17 @@ export function RatingInput({ label, value, onChange }: { label: string; value?:
 }
 
 /** A titled group of settings rows, separated by hairlines. */
-export function SettingsGroup({ title, children, footer, action }: { title: string; children: ReactNode; footer?: ReactNode; action?: ReactNode }) {
+export function SettingsGroup({ title, children, info, action }: { title: string; children: ReactNode; info?: ReactNode; action?: ReactNode }) {
   return (
     <section aria-label={title} className="border-t border-border pt-5">
       <div className="mb-1 flex items-center justify-between gap-3">
-        <h2 className="font-semibold">{title}</h2>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h2 className="font-semibold">{title}</h2>
+          {info}
+        </div>
         {action}
       </div>
       <div className="divide-y divide-border">{children}</div>
-      {footer && <p className="mt-2 text-xs text-muted">{footer}</p>}
     </section>
   )
 }

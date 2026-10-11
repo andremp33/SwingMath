@@ -95,6 +95,6 @@ test.describe('Pro targets', () => {
     await to.getByRole('radio', { name: 'Profissional' }).click()
     await to.getByRole('radio', { name: /Roger Federer/ }).click()
     await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('357')
-    await expect(to).toContainText('Valores com cordas.')
+    await expect(to).toContainText('com cordas')
   })
 })

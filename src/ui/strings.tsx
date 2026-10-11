@@ -68,7 +68,6 @@ export function StringbedSummary({ frame, bed }: { frame: FrameForStrings; bed: 
           <Ring key={k} value={f[k]} label={t.strings.feel[k]} color={`var(--c-${k})`} small />
         ))}
       </div>
-      <p className="text-xs text-muted">{t.strings.indexHint}</p>
     </div>
   )
 }

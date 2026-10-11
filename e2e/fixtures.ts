@@ -55,3 +55,9 @@ export async function saveSetup(page: Page, name: string) {
   // The save is done once the calculator says it is editing that setup.
   await expect(page.getByText(`A editar: ${name.trim().slice(0, 60) || 'Setup'}`, { exact: false })).toBeVisible()
 }
+
+/** Opens a collapsible section (closed by default on phones). */
+export async function expand(page: Page, name: string) {
+  const closed = page.getByRole('region', { name }).locator('button[aria-expanded="false"]')
+  if (await closed.count()) await closed.first().click()
+}

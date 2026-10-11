@@ -12,6 +12,7 @@ import { Badge, Button, NumberField, PageTitle, Segmented, SettingsGroup, Settin
 import { useToast } from '../ui/overlay'
 import { AccountGroup } from './AccountCard'
 import { usePaywall } from './Pro'
+import { InfoTip } from '../ui/disclosure'
 
 /**
  * One column of groups, each a list of rows: name and explanation on the
@@ -54,7 +55,7 @@ export function Settings() {
 
         <SettingsGroup
           title={t.settings.equipment}
-          footer={t.settings.massesHint}
+          info={<InfoTip title={t.settings.equipment}>{t.settings.massesHint}</InfoTip>}
           action={
             <Button variant="ghost" size="sm" icon={RotateCcw} onClick={() => s.setMasses(DEFAULT_ACCESSORY_MASSES)}>
               {t.common.reset}
@@ -164,7 +165,7 @@ function DataGroup() {
   const s = useStore()
   const fileRef = useRef<HTMLInputElement>(null)
   return (
-    <SettingsGroup title={t.settings.data} footer={t.settings.dataHint}>
+    <SettingsGroup title={t.settings.data} info={<InfoTip title={t.settings.data}>{t.settings.dataHint}</InfoTip>}>
       <SettingsRow label={t.settings.export} hint={t.settings.exportHint}>
         <Button
           variant="secondary"

@@ -18,6 +18,7 @@ import {
 } from '../lib/community'
 import { fmtNum, leadParts } from '../lib/format'
 import { Button, Card, CardTitle, IconButton, Segmented, TextField, Toggle } from '../ui/basics'
+import { CollapsibleCard, InfoTip } from '../ui/disclosure'
 import { useToast } from '../ui/overlay'
 
 /** Calculator card: what players measured, and setups they published. */
@@ -53,9 +54,14 @@ export function CommunityCard({ racket }: { racket: Racket }) {
     }
   }
 
+  const measured = (stats ?? []).reduce((n, x) => n + x.n, 0)
   return (
-    <Card label={t.community.title}>
-      <CardTitle>{t.community.title}</CardTitle>
+    <CollapsibleCard
+      id="community"
+      title={t.community.title}
+      summary={[measured ? fmt(t.community.measuredShort, { n: measured }) : '', setups?.length ? fmt(t.community.setupsShort, { n: setups.length }) : ''].filter(Boolean).join(' · ') || undefined}
+      info={<InfoTip title={t.community.title}>{t.community.medianHint}</InfoTip>}
+    >
       <div className="space-y-2 text-sm">
         {stats === undefined ? null : stats.length === 0 ? (
           <p className="text-muted">{t.community.noStats}</p>
@@ -89,7 +95,6 @@ export function CommunityCard({ racket }: { racket: Racket }) {
                   </div>
                 )}
               </dl>
-              <p className="mt-1 text-xs text-muted">{t.community.medianHint}</p>
             </div>
           ))
         )}
@@ -152,7 +157,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
           })}
         </ul>
       )}
-    </Card>
+    </CollapsibleCard>
   )
 }
 

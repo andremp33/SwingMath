@@ -1,4 +1,4 @@
-import { a11y, expect, resultCard, start, test } from './fixtures'
+import { a11y, expand, expect, resultCard, start, test } from './fixtures'
 import type { Page } from '@playwright/test'
 
 async function addStringing(page: Page, label: string) {
@@ -74,6 +74,8 @@ test.describe('F14 journal', () => {
 test.describe('F15 strings, grip and arm comfort', () => {
   test('F15-H1 tension changes the stringbed stiffness', async ({ page }) => {
     await start(page)
+    await expand(page, 'Cordas')
+    await expand(page, 'Conforto do braço')
     const card = page.getByRole('region', { name: 'Cordas' })
     const index = card.getByText(/^\d+$/).first()
     const before = Number(await index.textContent())
@@ -84,6 +86,7 @@ test.describe('F15 strings, grip and arm comfort', () => {
 
   test('F15-H2 a heat-shrink sleeve adds a size and its weight', async ({ page }) => {
     await start(page)
+    await expand(page, 'Punho')
     const grip = page.getByRole('region', { name: 'Punho' })
     const weight = async () => Number((await resultCard(page).locator('.readout').first().textContent())!.replace(',', '.'))
     const before = await weight()
@@ -109,5 +112,26 @@ test.describe('F15 strings, grip and arm comfort', () => {
     await expect(result).not.toContainText(/^23 kg/)
     const kg = Number((await result.locator('.readout').first().textContent())!.replace(',', '.').replace(' kg', ''))
     expect(kg).toBeGreaterThan(23)
+  })
+})
+
+test.describe('F17 phone sections', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('F17-H1 strings start closed with a summary, open on tap, (?) explains', async ({ page }) => {
+    await start(page)
+    const card = page.getByRole('region', { name: 'Cordas' })
+    const head = card.getByRole('button', { name: /^Cordas/ })
+    await expect(head).toHaveAttribute('aria-expanded', 'false')
+    await expect(card).toContainText('Poli 23 kg · rigidez')
+    await head.click()
+    await expect(card.getByLabel('Tensão')).toBeVisible()
+    await card.getByRole('button', { name: 'Informação: Rigidez do encordoamento' }).click()
+    await expect(page.getByRole('dialog', { name: 'Rigidez do encordoamento' })).toContainText('100 = cabeça de 100')
+    await page.keyboard.press('Escape')
+    // Remembered on the next visit.
+    await page.reload()
+    await expect(page.getByRole('region', { name: 'Cordas' }).getByRole('button', { name: /^Cordas/ })).toHaveAttribute('aria-expanded', 'true')
+    await a11y(page)
   })
 })

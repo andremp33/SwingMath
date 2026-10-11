@@ -9,6 +9,7 @@ import { Card, CardTitle, PageTitle, Select, Toggle } from '../ui/basics'
 import { RacketPicker } from '../ui/RacketPicker'
 import { StringbedEditor } from '../ui/strings'
 import { ProGate } from './Pro'
+import { InfoTip } from '../ui/disclosure'
 
 /** Same stringbed stiffness in another frame, pattern or string. */
 export function StringCalc() {
@@ -70,7 +71,7 @@ export function StringCalc() {
         </div>
 
         <Card label={t.stringCalc.result}>
-          <CardTitle>{t.stringCalc.result}</CardTitle>
+          <CardTitle info={<InfoTip title={t.stringCalc.title}>{t.stringCalc.hint}</InfoTip>}>{t.stringCalc.result}</CardTitle>
           <ProGate title={t.stringCalc.title} bare>
             {eq && from && to && (
               <div className="space-y-4">
@@ -102,7 +103,6 @@ export function StringCalc() {
               </div>
             )}
           </ProGate>
-          <p className="mt-4 text-xs text-muted">{t.stringCalc.hint}</p>
         </Card>
       </div>
     </>
