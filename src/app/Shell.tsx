@@ -74,7 +74,7 @@ export function Shell() {
           <Logo className="size-7" />
           {t.appName}
         </Link>
-        <ul className="mx-auto flex h-[60px] max-w-lg items-stretch justify-around lg:h-auto lg:flex-col lg:gap-0.5">
+        <ul className="mx-auto flex h-[var(--tabbar-h)] max-w-lg items-stretch justify-around lg:h-auto lg:flex-col lg:gap-0.5">
           {[...TABS, { to: '/settings', icon: Settings, key: 'settings' as const, color: 'var(--c-text)' }].map(({ to, icon: Icon, key, color }) => (
             <li key={to} className={cx('flex-1 lg:flex-none', key === 'settings' && 'hidden lg:block')}>
               <NavLink
@@ -94,7 +94,7 @@ export function Shell() {
                       <Icon className="size-5" strokeWidth={isActive ? 2 : 1.75} style={isActive ? { color } : undefined} aria-hidden />
                       {key === 'journal' && due > 0 && <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-accent ring-2 ring-bg" aria-hidden />}
                     </span>
-                    {t.nav[key]}
+                    <span className="tab-label">{t.nav[key]}</span>
                     {key === 'journal' && due > 0 && <span className="sr-only">({due})</span>}
                   </>
                 )}

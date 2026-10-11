@@ -253,7 +253,7 @@ export function Calculator() {
       </div>
 
       {/* Phones: the result follows you while you move the sliders. */}
-      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 py-2 backdrop-blur lg:hidden" aria-hidden>
+      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 py-2 backdrop-blur lg:hidden result-bar" aria-hidden>
         <div className="num mx-auto flex max-w-lg justify-between text-center text-xs">
           <Mini label={t.spec.weight} value={fmtNum(result.weightG, 1, lang)} delta={result.weightG - base.weightG} lang={lang} />
           <Mini label={t.spec.balance} value={fmtNum(result.balanceCm * 10, 1, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />

@@ -233,8 +233,8 @@ export function Landing() {
       <Section title={t.faqTitle}>
         <div className="divide-y divide-border border-y border-border">
           {t.faq.map(([q, a]) => (
-            <details key={q} className="group py-4">
-              <summary className="cursor-pointer list-none font-semibold marker:hidden">
+            <details key={q} className="group">
+              <summary className="cursor-pointer list-none py-4 font-semibold marker:hidden">
                 <span className="flex items-center justify-between gap-4">
                   {q}
                   <span className="text-muted transition group-open:rotate-45" aria-hidden>
@@ -242,7 +242,7 @@ export function Landing() {
                   </span>
                 </span>
               </summary>
-              <p className="mt-2 text-muted">{a}</p>
+              <p className="-mt-2 pb-4 text-muted">{a}</p>
             </details>
           ))}
         </div>
