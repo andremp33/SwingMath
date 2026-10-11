@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { compute } from '../domain/physics'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead } from '../domain/types'
+import { OFFICIAL } from './official'
 import { predictStrung, RENAMED, ROWS, STOCK_RACKETS } from './rackets'
 
 const strungOnly = { strings: true, leatherGrip: false, overgrip: false, dampener: false }
@@ -44,6 +45,11 @@ describe('stock library', () => {
       expect(STOCK_RACKETS.some((r) => r.id === now), now).toBe(true)
       expect(STOCK_RACKETS.some((r) => r.id === old), old).toBe(false)
     }
+  })
+
+  it("every maker's entry belongs to a frame in the library", () => {
+    const keys = new Set(ROWS.map((r) => `${r.brand}|${r.model}|${r.year ?? ''}`))
+    for (const k of Object.keys(OFFICIAL)) expect(keys.has(k), k).toBe(true)
   })
 
   // An independent measurement against the maker's figures: printed for

@@ -170,7 +170,7 @@ export const ROWS: Row[] = [
   { brand: 'Völkl', model: 'V-Cell 8 (315g)', year: 2020, type: 'tweener', head: 100, lengthCm: 68.58, weight: 326, balanceCm: 32.23, sw: 315, ra: 66, pattern: '16x18', url: R + 'VVCL8review.html' },
   { brand: 'Völkl', model: 'V-Cell 8 (300g)', year: 2020, type: 'power', head: 100, lengthCm: 68.58, weight: 312, balanceCm: 32.64, sw: 312, ra: 67, pattern: '16x18', url: R + 'VVC8Lreview.html' },
   { brand: 'Völkl', model: 'V-Cell 10 (320g)', year: 2021, type: 'control', head: 98, lengthCm: 68.58, weight: 335, balanceCm: 31.98, sw: 319, ra: 67, pattern: '16x19', url: R + 'VCE102review.html' },
-  { brand: 'Völkl', model: 'Vostra V8 (300g)', year: 2024, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.64, sw: 323, ra: 67, pattern: '16x19', url: R + 'VOSV8Mreview.html' },
+  { brand: 'Völkl', model: 'Vostra V8 (300g)', year: 2024, type: 'power', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.64, sw: 323, ra: 67, pattern: '16x18', url: R + 'VOSV8Mreview.html' },
   { brand: 'Völkl', model: 'Vostra V8 (315g)', year: 2024, type: 'tweener', head: 100, lengthCm: 68.58, weight: 329, balanceCm: 32.49, sw: 319, ra: 66, pattern: '16x18', url: R + 'VOSV8Hreview.html' },
   { brand: 'ProKennex', model: 'Black Ace 300', year: 2025, type: 'tweener', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.99, sw: 324, ra: 55, pattern: '16x19', url: R + 'PKBACreview.html' },
 ]

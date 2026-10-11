@@ -58,8 +58,8 @@ test.describe('F01 see the effect of adding lead', () => {
     await page.getByRole('button', { name: /Raquete Babolat Pure Aero 98/ }).first().click()
     await page.getByRole('dialog').getByRole('searchbox').fill('prestige')
     await page.getByRole('dialog').getByRole('button', { name: 'Head Prestige MP (2023)' }).click()
-    // Prestige MP 2023: measured strung 326 g + overgrip 6
-    await expect(resultCard(page)).toContainText('332,0')
+    // Prestige MP 2023: Head's 310 g + strings 17 + overgrip 6
+    await expect(resultCard(page)).toContainText('333,0')
   })
 
   test('F01-E7 info sheet opens and closes with Escape', async ({ page }) => {

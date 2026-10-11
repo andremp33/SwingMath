@@ -15,11 +15,19 @@ export interface Official {
   url: string
   /** Wayback Machine snapshot (yyyymmddhhmmss) when the live page is gone. */
   archived?: string
+  /** Read from a search engine's copy of the official page (Head and Wilson
+   *  build their pages in the browser, so a plain read finds no specs).
+   *  Accepted only when that exact model's page was among the results. */
+  indexed?: true
 }
 
 const BAB = 'https://www.babolat.com/'
 const YNX = 'https://www.yonex.com/tennis/racquets/'
 const TEC = 'https://www.tecnifibre.com/en/products/'
+const HEAD = 'https://www.head.com/'
+const DUN = 'https://dunlopsports.com/de/products/tennis/rackets/'
+const SOL = 'https://solincosports.com/equipment/'
+const VOL = 'https://www.volkltennis.com/products/'
 
 export const OFFICIAL: Record<string, Official> = {
   // Babolat: weight and balance ±7, stiffness ±3, as the pages say.
@@ -70,6 +78,63 @@ export const OFFICIAL: Record<string, Official> = {
   'Tecnifibre|TFight 300S|2025': { weightG: 300, url: TEC + 't-fight-300s' },
   'Tecnifibre|TFight 305S|2025': { weightG: 305, url: TEC + 't-fight-305s' },
   'Tecnifibre|TFight 315S|2025': { weightG: 315, url: TEC + 't-fight-315s' },
+  // Head: weight and balance.
+  'Head|Speed MP|2026': { weightG: 300, balanceMm: 320, url: HEAD + 'en_US/product/speed-mp-2026-232026', indexed: true },
+  'Head|Speed Pro|2026': { weightG: 310, balanceMm: 310, url: HEAD + 'en_US/product/speed-pro-2026-232006', indexed: true },
+  'Head|Speed MP|2024': { weightG: 300, balanceMm: 320, url: HEAD + 'en_AU/product/speed-mp-2024-236014', indexed: true },
+  'Head|Speed Pro|2024': { weightG: 310, balanceMm: 310, url: HEAD + 'en_AU/product/speed-pro-2024-236004', indexed: true },
+  'Head|Speed MP|2022': { weightG: 300, balanceMm: 320, url: HEAD + 'en_BG/speed-mp-2022-233612.html', indexed: true },
+  'Head|Speed Pro|2022': { weightG: 310, balanceMm: 315, url: HEAD + 'en_CA/speed-pro-2022-233602.html', indexed: true },
+  'Head|Radical MP|2025': { weightG: 300, balanceMm: 320, url: HEAD + 'en_US/product/radical-mp-2025-231015', indexed: true },
+  'Head|Radical Pro|2025': { weightG: 315, balanceMm: 315, url: HEAD + 'en_US/product/radical-pro-2025-231005', indexed: true },
+  'Head|Gravity MP|2025': { weightG: 295, balanceMm: 325, url: HEAD + 'en_US/product/gravity-mp-2025-231125', indexed: true },
+  'Head|Gravity Pro|2025': { weightG: 315, balanceMm: 310, url: HEAD + 'en_US/product/gravity-pro-2025-231105', indexed: true },
+  'Head|Extreme MP|2026': { weightG: 300, balanceMm: 320, url: HEAD + 'en_US/product/extreme-mp-2026-233316', indexed: true },
+  'Head|Extreme Pro|2024': { weightG: 305, balanceMm: 315, url: HEAD + 'en_US/product/extreme-pro-2024-231104', indexed: true },
+  'Head|Boom MP|2026': { weightG: 295, balanceMm: 315, url: HEAD + 'en_US/product/boom-mp-2026-232216', indexed: true },
+  'Head|Boom Pro|2024': { weightG: 310, balanceMm: 310, url: HEAD + 'en_US/product/boom-pro-2024-230104', indexed: true },
+  'Head|Prestige MP|2023': { weightG: 310, balanceMm: 320, url: HEAD + 'product/prestige-mp-2023-236123', indexed: true },
+  'Head|Prestige Pro|2023': { weightG: 320, balanceMm: 310, url: HEAD + 'en_US/product/prestige-pro-2023-236103', indexed: true },
+
+  // Wilson: weight and balance (Pro Staff X: weight only).
+  'Wilson|Blade 98 16x19 v10|2026': { weightG: 305, balanceMm: 325, url: 'https://au.wilson.com/products/blade-98-16x19-v10-tennis-racket', indexed: true },
+  'Wilson|Blade 98 18x20 v10|2026': { weightG: 305, balanceMm: 325, url: 'https://mas.wilson.com/products/wilson-blade-v10-racket-line', indexed: true },
+  'Wilson|Blade 98 16x19 v9|2024': { weightG: 305, balanceMm: 320, url: 'https://id.wilson.com/en/products/blade-98-16x19-v9', indexed: true },
+  'Wilson|Blade 98 18x20 v9|2024': { weightG: 305, balanceMm: 320, url: 'https://mas.wilson.com/products/wilson-blade-98-18x20-v9-performance-tennis-racket-unstrung-wr149911u2', indexed: true },
+  'Wilson|Blade 98 16x19 v8|2021': { weightG: 305, balanceMm: 320, url: 'https://mas.wilson.com/products/blade-98-16x19-v8.0-performance-tennis-racket-unstrung', indexed: true },
+  'Wilson|Blade 98 18x20 v8|2021': { weightG: 305, balanceMm: 320, url: 'https://sg.wilson.com/products/blade-98-18x20-v8.0-performance-tennis-racket-unstrung', indexed: true },
+  'Wilson|Clash 100 v3|2025': { weightG: 293, balanceMm: 310, url: 'https://mas.wilson.com/products/wilson-clash-100-v3.0-performance-racket-unstrung-wr172811', indexed: true },
+  'Wilson|Clash 100 v2|2022': { weightG: 295, balanceMm: 310, url: 'https://sg.wilson.com/products/wilson-clash-100-v2.0-performance-tennis-racket-unstrung-wr074011u', indexed: true },
+  'Wilson|Clash 100 Pro v2|2022': { weightG: 310, balanceMm: 306, url: 'https://sg.wilson.com/products/clash-100-pro-v2-performance-tennis-racket-unstrung', indexed: true },
+  'Wilson|Pro Staff 97 v14|2023': { weightG: 315, balanceMm: 310, url: 'https://mas.wilson.com/products/pro-staff-97-v14-professional-tennis-racket-wr125711u', indexed: true },
+  'Wilson|Pro Staff X v14|2023': { weightG: 315, url: 'https://sg.wilson.com/products/wilson-pro-staff-x-v14-frm-performance-tennis-racket-unstrung---wr125811u-free-stringing-service', indexed: true },
+  'Wilson|RF 01 Pro (leather grip)|': { weightG: 320, balanceMm: 315, url: 'https://mas.wilson.com/products/wilson-rf-01-pro-performance-tennis-racket-unstrung-wr151311u2', indexed: true },
+  'Wilson|Shift 99 Pro|2023': { weightG: 315, balanceMm: 315, url: 'https://id.wilson.com/en/products/shift-99-pro-v1', indexed: true },
+  'Wilson|Shift 99 (300g)|': { weightG: 300, balanceMm: 315, url: 'https://ph.wilson.com/products/wilson-shift-99-v1-professional-racket', indexed: true },
+  'Wilson|Ultra 100 v5|2025': { weightG: 300, balanceMm: 320, url: 'https://www.wilson.com/en-gb/product/ultra-100-v5-wr17880', indexed: true },
+  'Wilson|Ultra 100 v4|2022': { weightG: 300, balanceMm: 320, url: 'https://ph.wilson.com/products/ultra-100-v4-0-professional-tennis-racket-wr108311u', indexed: true },
+
+  // Dunlop (German pages print each value before its label): weight and balance.
+  'Dunlop|CX 200 (305g)|2024': { weightG: 305, balanceMm: 315, url: DUN + 'cx-200-2/', archived: '20240918160705' },
+  'Dunlop|CX 200 Tour 16x19|2021': { weightG: 310, balanceMm: 310, url: DUN + 'cx-200-tour/', archived: '20220126165125' },
+  'Dunlop|SX 300|2022': { weightG: 300, balanceMm: 320, url: DUN + 'sx-300-2/', archived: '20241202083214' },
+  'Dunlop|SX 300 Tour|2022': { weightG: 305, balanceMm: 315, url: DUN + 'sx-300-tour-2/', archived: '20241006130709' },
+  'Dunlop|FX 500|2023': { weightG: 300, balanceMm: 320, url: DUN + 'fx-500-2/', archived: '20241012161012' },
+  'Dunlop|FX 500 Tour|2023': { weightG: 305, balanceMm: 315, url: DUN + 'fx-500-tour-2/', archived: '20240429145935' },
+
+  // Solinco: weight and balance.
+  'Solinco|Blackout 300|2022': { weightG: 300, balanceMm: 315, url: SOL + 'blackout-300/', archived: '20260315085505' },
+  'Solinco|Blackout 300 v2|': { weightG: 300, balanceMm: 315, url: SOL + 'blackout-v2-300/', archived: '20260521130133' },
+  'Solinco|Whiteout 305|2022': { weightG: 305, balanceMm: 320, url: SOL + 'whiteout-305/', archived: '20260521145316' },
+  'Solinco|Whiteout 305 v2|': { weightG: 305, balanceMm: 320, url: SOL + 'whiteout-305-v2/', archived: '20260421110455' },
+  'Solinco|Whiteout 305 18x20|2023': { weightG: 305, balanceMm: 320, url: SOL + 'whiteout-305-18x20/', archived: '20260421111003' },
+
+  // Völkl: weight and balance.
+  'Völkl|V-Cell 8 (300g)|2020': { weightG: 300, balanceMm: 320, url: VOL + 'v-cell-8-300', archived: '20240712205059' },
+  'Völkl|V-Cell 8 (315g)|2020': { weightG: 315, balanceMm: 315, url: VOL + 'v-cell-8-315', archived: '20240923071605' },
+  'Völkl|V-Cell 10 (320g)|2021': { weightG: 320, balanceMm: 315, url: VOL + 'v-cell-10-320g', archived: '20240823205153' },
+  'Völkl|Vostra V8 (300g)|2024': { weightG: 300, balanceMm: 320, url: VOL + 'vostra-v8-300g', archived: '20261003200118' },
+  'Völkl|Vostra V8 (315g)|2024': { weightG: 315, balanceMm: 315, url: VOL + 'vostra-v8-315g', archived: '20251110035100' },
 }
 
 /** The address to show: the archived copy when the live page is gone. */
