@@ -35,3 +35,4 @@ replica/
 .claude/
 *.tmp.*
 .vs/
+*.apk
