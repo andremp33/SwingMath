@@ -55,6 +55,23 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
   return rows
 }
 
+/** Four numbers in a row, for the reference on phones. */
+export function SpecStrip({ rows }: { rows: SpecRow[] }) {
+  return (
+    <dl className="grid grid-cols-4 gap-2">
+      {rows.slice(0, 4).map((r) => (
+        <div key={r.key} className="min-w-0">
+          <dt className="truncate text-xs text-muted">{r.key === 'sw' ? 'SW' : r.key === 'tw' ? 'TW' : r.label}</dt>
+          <dd className={cx('num truncate text-[15px] font-semibold', r.muted && 'text-muted')}>
+            {r.value}
+            {r.unit && <span className="ml-0.5 text-xs font-normal text-muted">{r.unit}</span>}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 export function SpecTable({ rows, showDelta = true }: { rows: SpecRow[]; showDelta?: boolean }) {
   const lang = useStore((x) => x.lang)
   return (

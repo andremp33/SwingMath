@@ -364,8 +364,8 @@ export function EmptyState({ icon: Icon, text, action }: { icon: LucideIcon; tex
 
 export function PageTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
-      <h1 className="text-xl font-semibold tracking-tight">{children}</h1>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-3">
+      <h1 className="min-w-0 text-xl font-semibold tracking-tight">{children}</h1>
       {action}
     </div>
   )

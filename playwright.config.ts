@@ -12,7 +12,8 @@ export default defineConfig({
     { name: 'offline', use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:4173' }, testMatch: /offline/ },
   ],
   webServer: [
-    { command: 'npx vite --port 5173 --strictPort', url: 'http://localhost:5173', reuseExistingServer: true },
+    // The paid tier's rules (limits, paywall) stay tested with the beta off.
+    { command: 'npx vite --port 5173 --strictPort', url: 'http://localhost:5173', reuseExistingServer: true, env: { VITE_PRO_BETA: 'false' } },
     { command: 'npx vite preview --port 4173 --strictPort', url: 'http://localhost:4173', reuseExistingServer: true },
   ],
 })

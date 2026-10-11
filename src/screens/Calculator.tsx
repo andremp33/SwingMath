@@ -13,7 +13,7 @@ import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, 
 import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
 import { RacketPicker } from '../ui/RacketPicker'
-import { FeelRings, SpecTable, useSpecRows } from '../ui/specs'
+import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
 import { ComfortCard, GripCard, StringsCard } from './CalcExtras'
 import { CommunityCard } from './Community'
 import { InfoSheet } from './InfoSheet'
@@ -69,8 +69,8 @@ export function Calculator() {
             <Button variant="ghost" size="sm" icon={Info} onClick={() => setInfoOpen(true)} aria-label={t.info.title}>
               <span className="hidden sm:inline">{t.info.title}</span>
             </Button>
-            <Button variant="ghost" size="sm" icon={RotateCcw} onClick={resetConfig}>
-              {t.calc.clear}
+            <Button variant="ghost" size="sm" icon={RotateCcw} onClick={resetConfig} aria-label={t.calc.clear}>
+              <span className="hidden sm:inline">{t.calc.clear}</span>
             </Button>
           </div>
         }
@@ -84,9 +84,9 @@ export function Calculator() {
         </p>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
-        <div className="space-y-4">
-          <Card>
+      <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+        <div className="contents xl:block xl:space-y-4">
+          <Card className="order-1 xl:order-none">
             <div className="space-y-4">
               <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
               <Segmented
@@ -104,7 +104,12 @@ export function Calculator() {
                     <span className="text-sm text-muted">{t.calc.reference}</span>
                     {racket.isStock ? <Badge>{t.library.stock}</Badge> : <Badge tone="accent">{t.library.custom}</Badge>}
                   </div>
-                  <SpecTable rows={baseRows} showDelta={false} />
+                  <div className="xl:hidden">
+                    <SpecStrip rows={baseRows} />
+                  </div>
+                  <div className="hidden xl:block">
+                    <SpecTable rows={baseRows} showDelta={false} />
+                  </div>
                   {racket.isStock && racket.source?.startsWith('http') && (
                     <p className="mt-2 text-xs text-muted">
                       {t.calc.sourceNote}{' '}
@@ -163,9 +168,9 @@ export function Calculator() {
             </div>
           </Card>
 
-          <Card>
+          <Card className="order-5 xl:order-none">
             <CardTitle>{t.acc.title}</CardTitle>
-            <div className="grid gap-x-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
               {(['strings', 'overgrip', 'leatherGrip', 'dampener'] as const).map((k) => (
                 <Toggle
                   key={k}
@@ -178,12 +183,12 @@ export function Calculator() {
             </div>
           </Card>
 
-          <Card>
+          <Card className="order-2 xl:order-none">
             <CardTitle action={<span className="text-sm text-muted">{t.calc.totalLead}: <span className="readout text-text">{fmtNum(totalLead, 1, lang)} g</span></span>}>
               {t.calc.lead}
             </CardTitle>
             <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
-            <div className="@container"><div className="grid items-center gap-4 @lg:grid-cols-[150px_minmax(0,1fr)]">
+            <div className="@container"><div className="grid grid-cols-1 items-center gap-4 @lg:grid-cols-[150px_minmax(0,1fr)]">
               <RacketDiagram
                 sweetSpot={{ x: result.sweetSpotCm, g: geo! }}
                 geometry={geo}
@@ -227,24 +232,24 @@ export function Calculator() {
               )}
             </div>
           </Card>
-          <StringsCard racket={racket} />
-          <GripCard />
-          <CommunityCard racket={racket} />
+          <div className="order-6 xl:order-none"><StringsCard racket={racket} /></div>
+          <div className="order-7 xl:order-none"><GripCard /></div>
+          <div className="order-11 xl:order-none"><CommunityCard racket={racket} /></div>
         </div>
 
-        <div className="space-y-4 xl:sticky xl:top-8">
-          <Card label={t.calc.result}>
+        <div className="contents xl:sticky xl:top-8 xl:block xl:space-y-4">
+          <Card label={t.calc.result} className="order-3 xl:order-none">
             <CardTitle>{t.calc.result}</CardTitle>
             <SpecTable rows={resultRows} />
           </Card>
-          <Card>
+          <Card className="order-4 xl:order-none">
             <CardTitle>{t.calc.feel}</CardTitle>
             <FeelRings feel={f} />
             <p className="mt-3 text-xs text-muted">{t.calc.feelHint}</p>
           </Card>
-          <ComfortCard racket={racket} specs={result} />
-          <SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} />
-          <VerifyCard predicted={result} />
+          <div className="order-8 xl:order-none"><ComfortCard racket={racket} specs={result} /></div>
+          <div className="order-9 xl:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
+          <div className="order-10 xl:order-none"><VerifyCard predicted={result} /></div>
         </div>
       </div>
 
@@ -370,12 +375,12 @@ function SaveButtons({ loaded, onSaveNew }: { loaded: Setup | undefined; onSaveN
       </Button>
     )
   return (
-    <div className="flex gap-2">
+    <div className="grid grid-cols-2 gap-2">
       <Button
         variant="primary"
         size="lg"
         icon={Save}
-        className="flex-1"
+        className="min-w-0 whitespace-normal text-sm leading-tight"
         onClick={async () => {
           await saveSetup({ ...loaded, ...structuredClone(config), updatedAt: Date.now() })
           toast(t.calc.updated)
@@ -383,7 +388,7 @@ function SaveButtons({ loaded, onSaveNew }: { loaded: Setup | undefined; onSaveN
       >
         {t.calc.updateSetup}
       </Button>
-      <Button size="lg" onClick={onSaveNew}>
+      <Button size="lg" className="min-w-0 whitespace-normal text-sm leading-tight" onClick={onSaveNew}>
         {t.calc.saveAsNew}
       </Button>
     </div>

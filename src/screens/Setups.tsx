@@ -46,7 +46,7 @@ export function Setups() {
         <EmptyState icon={Bookmark} text={t.setups.empty} action={<Button variant="primary" onClick={() => nav('/')}>{t.setups.emptyAction}</Button>} />
       ) : (
         <>
-          <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <Select
               label={t.calc.racket}
               value={racketFilter}
@@ -65,7 +65,7 @@ export function Setups() {
               )}
             </div>
           </div>
-          <ul className="grid border-b border-border md:grid-cols-2 md:gap-x-8">
+          <ul className="grid grid-cols-1 border-b border-border md:grid-cols-2 md:gap-x-8">
             {list.map((s) => (
               <li key={s.id}>
                 <SetupCard setup={s} onEdit={() => setEditing(s)} onShare={() => setSharing(s)} />

@@ -27,7 +27,7 @@ export function StringsCard({ racket }: { racket: Racket }) {
   return (
     <Card label={t.strings.title}>
       <CardTitle>{t.strings.title}</CardTitle>
-      <div className="grid gap-5 @container sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 @container sm:grid-cols-2">
         <StringbedEditor value={bed} onChange={(strings) => setConfig({ strings })} />
         <StringbedSummary frame={racket} bed={bed} />
       </div>
@@ -57,7 +57,7 @@ export function GripCard() {
       >
         {t.grip.title}
       </CardTitle>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Select
           label={t.grip.base}
           value={String(grip.base)}

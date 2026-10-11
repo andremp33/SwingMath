@@ -37,7 +37,7 @@ export function StringCalc() {
     <>
       <PageTitle>{t.stringCalc.title}</PageTitle>
       <p className="-mt-2 mb-4 max-w-2xl text-sm text-muted">{t.stringCalc.intro}</p>
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
         <div className="space-y-4">
           <Card label={t.stringCalc.from}>
             <CardTitle>{t.stringCalc.from}</CardTitle>

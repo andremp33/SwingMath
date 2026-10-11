@@ -49,7 +49,7 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
     <>
       <PageTitle>{t.share.imported}</PageTitle>
       <p className="-mt-2 mb-4 text-sm text-muted">{t.share.importHint}</p>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="text-lg font-bold">{payload.setup.name}</h2>
           <p className="mb-3 text-sm text-muted">{racketLabel(racket)}</p>

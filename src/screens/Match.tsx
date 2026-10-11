@@ -248,7 +248,7 @@ function Smart() {
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
       <div className="space-y-4">
         <p className="text-sm text-muted">{t.match.smartIntro}</p>
         <Card className="space-y-4" label={t.match.from}>
@@ -436,7 +436,7 @@ function Batch() {
     <div className="space-y-4">
       <p className="text-sm text-muted">{t.match.batchIntro}</p>
       <p className="text-xs text-muted">{t.match.sameRacketTwice}</p>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {slots.map((s, i) => (
           <BatchSlot
             key={s.key}
@@ -483,7 +483,7 @@ function Batch() {
               {res.target.twistweight !== undefined && <Stat label={t.spec.twistweight} value={fmtNum(res.target.twistweight, 2, lang)} />}
             </dl>
           </Card>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {res.plans.map((p, i) => (
               <PlanCard key={slots[i].key} res={p} title={fmt(t.match.racketN, { n: i + 1 })} />
             ))}

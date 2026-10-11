@@ -8,7 +8,7 @@ import { useLanding } from '../i18n/landing'
 import { useLegal } from '../i18n/legal'
 import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
-import { PRICING } from '../lib/entitlement'
+import { PRICING, PRO_BETA } from '../lib/entitlement'
 import { usePrice } from './Pro'
 
 const FEATURE_ICONS = [Scale, CircleCheck, Target, NotebookPen, Globe, Wifi]
@@ -116,7 +116,7 @@ export function Landing() {
 
   return (
     <SiteFrame>
-      <section className="mx-auto grid max-w-[1080px] items-center gap-10 px-4 pt-10 lg:grid-cols-[1.05fr_1fr] lg:px-8 lg:pt-16">
+      <section className="mx-auto grid grid-cols-1 max-w-[1080px] items-center gap-10 px-4 pt-10 lg:grid-cols-[1.05fr_1fr] lg:px-8 lg:pt-16">
         <div>
           <h1 className="text-[34px] font-semibold leading-[1.08] tracking-[-0.02em] sm:text-[44px] lg:text-[52px] lg:leading-[1.04]">{t.heroTitle}</h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{t.heroSub}</p>
@@ -137,7 +137,7 @@ export function Landing() {
       </section>
 
       <Section title={t.problemTitle}>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {t.problems.map(([h, p]) => (
             <div key={h} className="border-t border-border pt-4">
               <h3 className="font-semibold">{h}</h3>
@@ -148,7 +148,7 @@ export function Landing() {
       </Section>
 
       <Section title={t.howTitle}>
-        <ol className="grid gap-4 md:grid-cols-3">
+        <ol className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {t.how.map(([h, p], i) => (
             <li key={h} className="border-t border-border pt-4">
               <span className="num text-sm text-accent-text">0{i + 1}</span>
@@ -160,7 +160,7 @@ export function Landing() {
       </Section>
 
       <Section title={t.featuresTitle}>
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {t.features.map(([h, p], i) => {
             const Icon = FEATURE_ICONS[i]
             return (
@@ -173,7 +173,7 @@ export function Landing() {
           })}
         </ul>
         <h3 className="mb-3 mt-10 text-sm text-muted">{t.alsoTitle}</h3>
-        <ul className="grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
           {t.also.map((x) => (
             <li key={x} className="flex gap-2 text-sm">
               <Check className="mt-0.5 size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
@@ -184,7 +184,7 @@ export function Landing() {
       </Section>
 
       <Section title={t.pricingTitle}>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="rounded-lg border border-border p-6">
             <h3 className="text-lg font-semibold">{t.free}</h3>
             <p className="text-sm text-muted">{t.freeFor}</p>
@@ -201,11 +201,23 @@ export function Landing() {
           <div className="rounded-lg border border-text/60 p-6">
             <h3 className="text-lg font-semibold">{t.pro}</h3>
             <p className="text-sm text-muted">{t.proFor}</p>
-            <p className="mt-4 flex items-baseline gap-1">
-              <span className="readout text-[36px] leading-none">{price(PRICING.monthly)}</span>
-              <span className="text-muted">{t.proPer}</span>
-            </p>
-            <p className="mt-1 text-sm text-muted">{fmt(t.proTerms, { annual: price(PRICING.annual), days: PRICING.trialDays })}</p>
+            {PRO_BETA ? (
+              <>
+                <p className="mt-4 flex items-baseline gap-2">
+                  <span className="readout text-[36px] leading-none">{t.betaPrice}</span>
+                  <span className="text-muted">{t.betaPer}</span>
+                </p>
+                <p className="mt-1 text-sm text-muted">{fmt(t.betaAfter, { monthly: price(PRICING.monthly), annual: price(PRICING.annual) })}</p>
+              </>
+            ) : (
+              <>
+                <p className="mt-4 flex items-baseline gap-1">
+                  <span className="readout text-[36px] leading-none">{price(PRICING.monthly)}</span>
+                  <span className="text-muted">{t.proPer}</span>
+                </p>
+                <p className="mt-1 text-sm text-muted">{fmt(t.proTerms, { annual: price(PRICING.annual), days: PRICING.trialDays })}</p>
+              </>
+            )}
             <ul className="mt-4 space-y-2">
               {t.proItems.map((x) => (
                 <li key={x} className="flex gap-2 text-sm">

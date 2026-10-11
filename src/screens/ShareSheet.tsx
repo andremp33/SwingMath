@@ -73,7 +73,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
         <div className="mx-auto aspect-[4/5] w-full max-w-[320px] overflow-hidden rounded-md bg-surface-2">
           {img && <img src={img.url} alt={setup?.name} className="size-full object-contain" />}
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {canShareFile ? (
             <Button variant="primary" icon={Share2} onClick={() => navigator.share({ files: [file!], title: setup!.name, url: link }).catch(() => {})}>
               {t.share.shareImage}

@@ -119,7 +119,7 @@ export function Journal() {
           {current.length > 0 && (
             <Card label={t.journal.rackets}>
               <CardTitle>{t.journal.rackets}</CardTitle>
-              <ul className="grid gap-x-8 gap-y-6 md:grid-cols-2">
+              <ul className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
                 {current.map((st) => {
                   const life = lifeOf(st, sessions, now)
                   const racket = rackets.find((r) => r.id === st.racketId)
@@ -154,7 +154,7 @@ export function Journal() {
             </Card>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
             <WeeklyCard sessions={sessions} />
             <Card label={t.journal.insights}>
               <CardTitle>{t.journal.insights}</CardTitle>
@@ -195,7 +195,7 @@ export function Journal() {
             {!pro && sessions.length > FREE_SESSIONS && <p className="mt-3 text-sm text-muted">{fmt(t.journal.historyLocked, { n: FREE_SESSIONS })}</p>}
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
             <RemindersCard />
             <Card>
               <Link to="/cordas" className="flex items-center justify-between gap-3 text-sm font-semibold">
@@ -222,7 +222,7 @@ function WeeklyCard({ sessions }: { sessions: Session[] }) {
   return (
     <Card label={t.journal.weekly}>
       <CardTitle>{t.journal.weekly}</CardTitle>
-      <ul className="flex h-32 items-end gap-2">
+      <ul className="flex h-32 items-end gap-1 sm:gap-2">
         {weeks.map((h, i) => {
           const start = now - (weeks.length - 1 - i) * 7 * DAY
           return (
@@ -231,7 +231,8 @@ function WeeklyCard({ sessions }: { sessions: Session[] }) {
                 {h > 0 ? fmtNum(h, h < 10 ? 1 : 0, lang) : ''}
               </span>
               <span className={cx('block rounded-t-sm', h > 0 ? 'bg-[var(--c-area-journal)]' : 'bg-border')} style={{ height: h > 0 ? `${(h / max) * 70}%` : 2, minHeight: 2 }} aria-hidden />
-              <span className="num mt-1.5 text-center text-[10px] text-muted" aria-hidden>
+              {/* Every other date on phones, so the dates fit. */}
+              <span className={cx('num mt-1.5 text-center text-[10px] text-muted', i % 2 === 1 && 'invisible sm:visible')} aria-hidden>
                 {new Date(start).getDate()}/{new Date(start).getMonth() + 1}
               </span>
             </li>

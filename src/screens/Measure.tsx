@@ -81,7 +81,7 @@ export function Measure() {
       </PageTitle>
       <p className="-mt-2 mb-4 max-w-2xl text-sm text-muted">{t.measure.intro}</p>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <div className="space-y-4">
           <Card label={t.measure.step1}>
             <CardTitle>{t.measure.step1}</CardTitle>

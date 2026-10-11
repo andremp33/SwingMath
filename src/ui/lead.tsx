@@ -93,7 +93,7 @@ export function RacketDiagram({
   const t = useT()
   const lang = useStore((s) => s.lang)
   return (
-    <div className="relative mx-auto aspect-[200/420] w-full max-w-[180px]">
+    <div className="relative mx-auto aspect-[200/420] w-full max-w-[150px] @lg:max-w-[180px]">
       <RacketOutline />
       {sweetSpot && (
         <div

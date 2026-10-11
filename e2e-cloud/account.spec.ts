@@ -58,7 +58,7 @@ async function saveSetup(page: Page, name: string) {
   await expect(page.getByText(`A editar: ${name}`)).toBeVisible()
 }
 
-test('wrong code is refused; a free account cannot sync', async ({ browser }) => {
+test('wrong code is refused; during the beta every account has Pro', async ({ browser }) => {
   const page = await open(browser)
   const email = emailOf('free')
   await page.goto('/settings')
@@ -70,8 +70,8 @@ test('wrong code is refused; a free account cannot sync', async ({ browser }) =>
   await expect(card.getByText('Código errado ou expirado.')).toBeVisible()
   await card.getByRole('button', { name: 'Usar outro email' }).click()
   await signIn(page, email)
-  await expect(card).toContainText('Esta conta não tem subscrição')
-  await expect(card).toContainText('É uma função Pro')
+  await expect(card).toContainText('Pro grátis durante a beta')
+  await expect(card.getByRole('button', { name: 'Sincronizar agora' })).toBeVisible()
 })
 
 test('Pro through the account syncs setups to a second device', async ({ browser }) => {

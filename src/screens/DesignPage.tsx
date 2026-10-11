@@ -19,7 +19,7 @@ export function DesignPage() {
   return (
     <>
       <PageTitle>{t.design.title}</PageTitle>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardTitle>Colour roles</CardTitle>
           <div className="grid grid-cols-3 gap-2 text-xs">

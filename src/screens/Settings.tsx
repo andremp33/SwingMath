@@ -6,7 +6,7 @@ import { deleteAll, exportAll, importAll } from '../data/db'
 import { isPro, useStore, type Theme } from '../data/store'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, useT, type Lang } from '../i18n'
-import { deactivateLicense, PORTAL_URL, PRICING } from '../lib/entitlement'
+import { deactivateLicense, PORTAL_URL, PRICING, PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { Badge, Button, NumberField, PageTitle, Segmented, SettingsGroup, SettingsRow } from '../ui/basics'
 import { useToast } from '../ui/overlay'
@@ -99,6 +99,13 @@ function ProGroup() {
   // Pro may come from a key on this device or from the account.
   const keyActive = l !== null && (l.status ?? 'active') === 'active'
 
+  if (PRO_BETA) {
+    return (
+      <SettingsGroup title={t.pro.title} action={<Badge tone="pro">Beta</Badge>}>
+        <SettingsRow label={t.settings.beta} hint={t.settings.betaHint} />
+      </SettingsGroup>
+    )
+  }
   if (!pro) {
     return (
       <SettingsGroup title={t.pro.title}>

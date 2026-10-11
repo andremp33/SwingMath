@@ -4,6 +4,7 @@ import { AccountError, deleteAccount, sendCode, signOut, syncNow, verifyCode } f
 import { accountProActive, useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { cloudConfigured } from '../lib/cloud'
+import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { Badge, Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
@@ -69,7 +70,7 @@ function SignInForm() {
         }}
       >
         <p className="text-sm text-muted">{t.account.intro}</p>
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <TextField label={t.account.email} value={email} onChange={setEmail} error={error} placeholder="nome@exemplo.com" maxLength={120} />
           <Button type="submit" variant="primary" icon={UserRound} loading={busy} disabled={!email.trim()} className="h-11">
             {t.account.sendCode}
@@ -122,14 +123,17 @@ function SignedIn() {
   const sync = useStore((s) => s.sync)
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState(false)
-  const pro = accountProActive(accountPro)
+  // During the beta every account has Pro, sync included.
+  const pro = PRO_BETA || accountProActive(accountPro)
 
   return (
     <>
       <SettingsRow
         label={fmt(t.account.signedInAs, { email: account.email })}
         hint={
-          pro
+          PRO_BETA
+            ? t.account.betaPro
+            : pro
             ? accountPro?.status === 'cancelled' && accountPro.endsAt
               ? fmt(t.account.proUntil, { date: fmtDate(Date.parse(accountPro.endsAt), lang) })
               : t.account.proActive

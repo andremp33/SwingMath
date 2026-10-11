@@ -9,6 +9,7 @@ import {
   type SetupConfig,
 } from '../domain/types'
 import { DEFAULT_STRINGBED } from '../domain/strings'
+import { PRO_BETA } from '../lib/entitlement'
 import type { Lang } from '../i18n'
 import { STOCK_RACKETS } from './rackets'
 
@@ -178,6 +179,7 @@ export function accountProActive(p: AccountPro | null, now = Date.now()) {
 }
 
 export const isPro = (s: { license: License | null; accountPro?: AccountPro | null }) =>
+  PRO_BETA ||
   (s.license !== null && (s.license.status ?? 'active') === 'active') || accountProActive(s.accountPro ?? null)
 export const FREE_SETUP_LIMIT = 3
 export const FREE_PRO_RUNS = 3

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { createClient } from '@supabase/supabase-js'
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { openDb } from '../src/data/db'
 import { enqueueAll, supabaseRemote, syncOnce, SyncError, trackChanges } from '../src/data/sync'
 import type { Setup } from '../src/domain/types'
@@ -27,7 +27,12 @@ const setup = (id: string, name: string, updatedAt: number): Setup => ({
 })
 const settle = () => new Promise((r) => setTimeout(r, 20))
 
+beforeAll(async () => {
+  await admin.from('app_flags').update({ enabled: false }).eq('name', 'pro_beta')
+})
+
 afterAll(async () => {
+  await admin.from('app_flags').update({ enabled: true }).eq('name', 'pro_beta')
   for (const id of made) await admin.auth.admin.deleteUser(id)
   await admin.from('subscriptions').delete().like('email', `%-${stamp}@example.test`)
 })

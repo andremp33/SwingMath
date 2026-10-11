@@ -29,6 +29,8 @@ let free: Awaited<ReturnType<typeof user>>
 let pro: Awaited<ReturnType<typeof user>>
 
 beforeAll(async () => {
+  // These rules are about selling Pro; the beta switch is tested on its own.
+  await admin.from('app_flags').update({ enabled: false }).eq('name', 'pro_beta')
   free = await user('free')
   pro = await user('pro')
   const { error } = await admin.from('subscriptions').insert({ email: pro.email, status: 'active' })
@@ -36,6 +38,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await admin.from('app_flags').update({ enabled: true }).eq('name', 'pro_beta')
   for (const id of made) await admin.auth.admin.deleteUser(id)
   await admin.from('subscriptions').delete().like('email', `%-${stamp}@example.test`)
 })
@@ -82,6 +85,23 @@ describe('sync needs Pro', () => {
   it('players cannot grant themselves Pro', async () => {
     const { error } = await free.db.from('subscriptions').insert({ email: free.email, status: 'active' })
     expect(error).not.toBeNull()
+  })
+})
+
+describe('Pro beta', () => {
+  it('with the beta switch on, a free account syncs too', async () => {
+    await admin.from('app_flags').update({ enabled: true }).eq('name', 'pro_beta')
+    try {
+      expect((await free.db.from('items').upsert(item('beta', 1))).error).toBeNull()
+    } finally {
+      await admin.from('app_flags').update({ enabled: false }).eq('name', 'pro_beta')
+    }
+  })
+
+  it('players cannot flip the switch', async () => {
+    await free.db.from('app_flags').update({ enabled: true }).eq('name', 'pro_beta')
+    const { data } = await admin.from('app_flags').select('enabled').eq('name', 'pro_beta').single()
+    expect(data?.enabled).toBe(false)
   })
 })
 
