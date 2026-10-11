@@ -26,6 +26,20 @@ npx playwright test -c playwright.cloud.config.ts   # sign-in, sync, community i
 - `.github/workflows/deploy.yml` — builds and publishes to GitHub Pages on every push to `main`
 - `.env.example` — store, accounts and contact settings
 
+## Store apps (Android, iOS)
+
+The apps wrap the same web build with Capacitor (`android/`, `ios/`).
+
+```bash
+npm run android     # build, sync, open in Android Studio (needs the Android SDK)
+npm run ios         # build, sync, open in Xcode (needs a Mac)
+npm run app:assets  # regenerate icons and splash screens from the logo
+```
+
+In the apps: native status bar and back button, restring reminders as
+local notifications, and the sign-in link opens the app
+(`app.swingmath://auth`, allowed in Supabase's redirect URLs).
+
 ## Going live
 
 **Payments (Lemon Squeezy).** One subscription product with a monthly and an

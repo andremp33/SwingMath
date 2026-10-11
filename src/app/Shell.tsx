@@ -53,7 +53,7 @@ export function Shell() {
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-on-accent">
         Skip to content
       </a>
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-bg/85 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b border-border/60 bg-bg/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
         <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
           <Logo className="size-6" />
           {t.appName}

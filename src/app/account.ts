@@ -4,6 +4,7 @@ import { db } from '../data/db'
 import { accountProActive, useStore, type AccountPro } from '../data/store'
 import { enqueueAll, supabaseRemote, syncOnce, SyncError, trackChanges } from '../data/sync'
 import { cloudConfigured, getCloud } from '../lib/cloud'
+import { IS_APP } from '../lib/platform'
 
 /**
  * Optional account: sign-in with a code by email, the subscription the
@@ -31,7 +32,7 @@ async function client() {
 
 export async function sendCode(email: string) {
   const c = await client()
-  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}${import.meta.env.BASE_URL}settings` } }).catch(() => ({ error: { status: 0 } }))
+  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: IS_APP ? 'app.swingmath://auth' : `${location.origin}${import.meta.env.BASE_URL}settings` } }).catch(() => ({ error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
 }
 

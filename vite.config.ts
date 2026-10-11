@@ -5,52 +5,58 @@ import { defineConfig } from 'vitest/config'
 
 import pkg from './package.json' with { type: 'json' }
 
-// Where the app is served from: '/' locally, '/SwingMath/' on GitHub Pages.
-const base = process.env.BASE_PATH ?? '/'
 // Absolute address for link previews (og:image); empty locally.
 const siteUrl = process.env.SITE_URL ?? ''
 
-export default defineConfig({
-  base,
-  // The commit goes next to the version, so support can tell which build a
-  // player is on.
-  define: { __APP_VERSION__: JSON.stringify(process.env.GITHUB_SHA ? `${pkg.version} · ${process.env.GITHUB_SHA.slice(0, 7)}` : pkg.version) },
-  plugins: [
-    {
-      name: 'site-url',
-      transformIndexHtml: (html) => html.replaceAll('__SITE_URL__', siteUrl || base),
+// `--mode app` builds the store apps (Capacitor): served from the device's
+// root, no service worker (the app already has everything offline).
+export default defineConfig(({ mode }) => {
+  const app = mode === 'app'
+  // Where the site is served from: '/' locally, '/SwingMath/' on GitHub Pages.
+  const base = app ? '/' : (process.env.BASE_PATH ?? '/')
+  return {
+    base,
+    // The commit goes next to the version, so support can tell which build a
+    // player is on.
+    define: { __APP_VERSION__: JSON.stringify(process.env.GITHUB_SHA ? `${pkg.version} · ${process.env.GITHUB_SHA.slice(0, 7)}` : pkg.version) },
+    plugins: [
+      {
+        name: 'site-url',
+        transformIndexHtml: (html) => html.replaceAll('__SITE_URL__', siteUrl || base),
+      },
+      react(),
+      tailwindcss(),
+      VitePWA({
+        disable: app,
+        registerType: 'autoUpdate',
+        // Registered in main.tsx, which also checks for updates on return.
+        injectRegister: false,
+        includeAssets: ['favicon.svg', 'icon.svg'],
+        manifest: {
+          name: 'SwingMath',
+          short_name: 'SwingMath',
+          description: 'Customise your tennis racket with real physics: weight, balance, swingweight, twistweight.',
+          theme_color: '#0e1210',
+          background_color: '#0e1210',
+          display: 'standalone',
+          start_url: '.',
+          scope: '.',
+          icons: [
+            { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+            { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+          globIgnores: ['**/og.png', '**/landing/*.png'],
+          navigateFallback: `${base}index.html`,
+        },
+      }),
+    ],
+    test: {
+      include: ['src/**/*.test.ts'],
+      environment: 'node',
     },
-    react(),
-    tailwindcss(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      // Registered in main.tsx, which also checks for updates on return.
-      injectRegister: false,
-      includeAssets: ['favicon.svg', 'icon.svg'],
-      manifest: {
-        name: 'SwingMath',
-        short_name: 'SwingMath',
-        description: 'Customise your tennis racket with real physics: weight, balance, swingweight, twistweight.',
-        theme_color: '#0e1210',
-        background_color: '#0e1210',
-        display: 'standalone',
-        start_url: '.',
-        scope: '.',
-        icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        globIgnores: ['**/og.png', '**/landing/*.png'],
-        navigateFallback: `${base}index.html`,
-      },
-    }),
-  ],
-  test: {
-    include: ['src/**/*.test.ts'],
-    environment: 'node',
-  },
+  }
 })

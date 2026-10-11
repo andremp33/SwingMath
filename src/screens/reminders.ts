@@ -4,20 +4,31 @@ import { isPro, useStore } from '../data/store'
 import { dueForRestring, hoursOn } from '../domain/journal'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
+import { IS_APP } from '../lib/platform'
 
-const supported = () => typeof window !== 'undefined' && 'Notification' in window
+const supported = () => IS_APP || (typeof window !== 'undefined' && 'Notification' in window)
+const permissionNow = (): NotificationPermission => (IS_APP ? 'default' : supported() ? Notification.permission : 'denied')
 
 /** Notification permission for the reminders card. */
 export function useReminders() {
-  const [permission, setPermission] = useState<NotificationPermission>(supported() ? Notification.permission : 'denied')
+  const [permission, setPermission] = useState<NotificationPermission>(permissionNow)
+  useEffect(() => {
+    if (IS_APP) void import('../lib/native').then((n) => n.nativeNotifyPermission(false)).then(setPermission)
+  }, [])
   return {
     supported: supported(),
     permission,
-    enable: async () => setPermission(await Notification.requestPermission()),
+    enable: async () =>
+      setPermission(IS_APP ? await import('../lib/native').then((n) => n.nativeNotifyPermission(true)) : await Notification.requestPermission()),
   }
 }
 
 async function notify(title: string, body: string, tag: string) {
+  if (IS_APP) {
+    // A stable number per stringing, so a reminder is not shown twice.
+    const id = [...tag].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7) & 0x7fffffff
+    return import('../lib/native').then((n) => n.notifyNative(id, title, body))
+  }
   // Android Chrome only allows notifications through the service worker.
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => undefined)
   if (reg) await reg.showNotification(title, { body, icon: `${import.meta.env.BASE_URL}icon-192.png`, tag })
@@ -42,7 +53,7 @@ export function useRestringReminders(): number {
   const key = fresh.map((s) => s.id).join()
 
   useEffect(() => {
-    if (!pro || !key || !supported() || Notification.permission !== 'granted') return
+    if (!pro || !key || !supported() || (!IS_APP && Notification.permission !== 'granted')) return
     for (const s of fresh) {
       notify(t.journal.notifyTitle, fmt(t.journal.notifyBody, { label: s.label, h: fmtNum(hoursOn(s.id, sessions ?? []), 1, lang), date: fmtDate(s.date, lang) }), s.id).catch(() => {})
     }

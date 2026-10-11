@@ -10,9 +10,20 @@
     "test": "vitest run",
     "e2e": "npm run build && playwright test",
     "preview": "vite preview",
-    "test:cloud": "vitest run --config vitest.cloud.config.ts"
+    "test:cloud": "vitest run --config vitest.cloud.config.ts",
+    "build:app": "tsc -b && vite build --mode app",
+    "android": "npm run build:app && npx cap sync android && npx cap open android",
+    "ios": "npm run build:app && npx cap sync ios && npx cap open ios",
+    "app:assets": "node scripts/app-assets.mjs && capacitor-assets generate --android --ios --iconBackgroundColor '#1c1a17' --iconBackgroundColorDark '#1c1a17' --splashBackgroundColor '#f5f3ee' --splashBackgroundColorDark '#141312'"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@supabase/supabase-js": "^2.117.3",
     "dexie": "^4.4.6",
@@ -27,6 +38,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.3",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
