@@ -25,7 +25,7 @@ test.describe('F13 custom lead positions', () => {
     await page.getByRole('button', { name: '+ 0,5 g 11h e 1h' }).click()
     await expect(page.getByText('Chumbo total:')).toContainText('2,0 g')
     // 323 measured strung + 6 overgrip + 2
-    await expect(resultCard(page)).toContainText('331,0')
+    await expect(resultCard(page)).toContainText('330,0')
     await expect(page.getByRole('button', { name: '11h e 1h: 2,0 g' }).first()).toBeVisible()
     await a11y(page)
   })

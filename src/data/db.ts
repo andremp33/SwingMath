@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { SESSION_KINDS, type Session, type Stringing } from '../domain/journal'
 import { MATERIALS } from '../domain/strings'
 import { POSITIONS, type Racket, type Setup } from '../domain/types'
-import { STOCK_RACKETS } from './rackets'
+import { RENAMED, STOCK_RACKETS } from './rackets'
 
 /** A change waiting to be synced: the item is read again when it is sent,
  *  and a missing item means it was deleted. */
@@ -185,7 +185,8 @@ export async function deleteRacket(id: string) {
 
 export function findRacket(id: string | undefined, custom: Racket[] | undefined): Racket | undefined {
   if (!id) return undefined
-  return STOCK_RACKETS.find((r) => r.id === id) ?? custom?.find((r) => r.id === id)
+  const stock = RENAMED[id] ?? id
+  return STOCK_RACKETS.find((r) => r.id === stock) ?? custom?.find((r) => r.id === id)
 }
 
 export async function exportAll() {

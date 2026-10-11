@@ -1,5 +1,6 @@
 import { accessoryElements, applyMasses, geometry } from '../domain/physics'
 import { DEFAULT_ACCESSORY_MASSES, type Racket } from '../domain/types'
+import { OFFICIAL, officialHref, TOLERANCE } from './official'
 
 /**
  * Stock library, confirmed on 2026-10-08 against each racket's page on
@@ -45,9 +46,7 @@ export const ROWS: Row[] = [
   { brand: 'Babolat', model: 'Pure Drive 98', year: 2025, type: 'tweener', head: 98, lengthCm: 68.5, weight: 323, balanceCm: 33.48, sw: 326, ra: 69, pattern: '16x20', url: T + 'Babolat_Pure_Drive_98_2025_Racket/descpageRCQBA-PD98R-EN.html', nominal: [305, 32.5] },
   { brand: 'Babolat', model: 'Pure Drive Plus', year: 2025, type: 'power', head: 100, lengthCm: 69.9, weight: 318, balanceCm: 33.02, sw: 325, ra: 69, pattern: '16x19', url: T + 'Babolat_Pure_Drive_Plus_2025_Racket_/descpageRCQBA-BPDPR-EN.html', nominal: [300, 32] },
   { brand: 'Babolat', model: 'Pure Drive Team', year: 2025, type: 'power', head: 100, lengthCm: 68.5, weight: 301, balanceCm: 32.64, sw: 308, ra: 69, pattern: '16x19', url: T + 'Babolat_Pure_Drive_Team_2025_Racket_/descpageRCQBA-BRPTR-EN.html', nominal: [285, 32] },
-  { brand: 'Babolat', model: 'Pure Strike 100', year: 2025, type: 'control', head: 100, lengthCm: 68.58, weight: 318, balanceCm: 32.99, sw: 324, ra: 63, pattern: '16x19', url: T + 'Babolat_Pure_Strike_100_2025_Racket/descpageRCQBA-PS1019-EN.html' },
-  { brand: 'Babolat', model: 'Pure Strike 98 16x19', year: 2025, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 330, ra: 64, pattern: '16x19', url: T + 'Babolat_Pure_Strike_16x19_2025_Racket/descpageRCQBA-PS9816-EN.html' },
-  { brand: 'Babolat', model: 'Pure Strike 98 18x20', year: 2025, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 332, ra: 63, pattern: '18x20', url: T + 'Babolat_Pure_Strike_18x20_2025_Racket/descpageRCQBA-PS9818-EN.html' },
+  { brand: 'Babolat', model: 'Pure Strike 98 18x20', year: 2024, type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 332, ra: 63, pattern: '18x20', url: T + 'Babolat_Pure_Strike_18x20_2025_Racket/descpageRCQBA-PS9818-EN.html' },
   // Head
   { brand: 'Head', model: 'Speed MP', year: 2026, type: 'tweener', head: 100, lengthCm: 68.5, weight: 318, balanceCm: 33.02, sw: 329, ra: 60, pattern: '16x19', url: T + 'Head_Speed_MP_2026_Racket/descpageRCHEAD-HSPMP6-EN.html', nominal: [300, 32] },
   { brand: 'Head', model: 'Speed Pro', year: 2026, type: 'control', head: 100, lengthCm: 68.5, weight: 326, balanceCm: 31.98, sw: 328, ra: 61, pattern: '18x20', url: T + 'Head_Speed_Pro_2026_Racket/descpageRCHEAD-HSPDP6-EN.html', nominal: [310, 31] },
@@ -75,12 +74,12 @@ export const ROWS: Row[] = [
   { brand: 'Yonex', model: 'EZONE 100 (300g)', year: 2025, type: 'power', head: 100, lengthCm: 68.5, weight: 318, balanceCm: 33.02, sw: 315, ra: 68, pattern: '16x19', url: T + 'Yonex_EZONE_100_300g_Blast_Blue_Racket/descpageRCYONEX-EZ10BB-EN.html', nominal: [300, 32] },
   { brand: 'Yonex', model: 'VCORE 98 (305g)', year: 2026, type: 'tweener', head: 98, lengthCm: 68.5, weight: 323, balanceCm: 32.49, sw: 321, ra: 63, pattern: '16x19', url: T + 'Yonex_VCORE_98_Ruby_Red_305g_Racket/descpageRCYONEX-YVC986-EN.html', nominal: [305, 31.5] },
   { brand: 'Yonex', model: 'VCORE 100 (300g)', year: 2026, type: 'power', head: 100, lengthCm: 68.5, weight: 318, balanceCm: 33.02, sw: 325, ra: 65, pattern: '16x19', url: T + 'Yonex_VCORE_100_Ruby_Red_300g_Racket/descpageRCYONEX-YVC106-EN.html', nominal: [300, 32] },
-  { brand: 'Yonex', model: 'Percept 97', type: 'control', head: 97, lengthCm: 68.58, weight: 326, balanceCm: 31.98, sw: 315, ra: 60, pattern: '16x19', url: T + 'Yonex_Percept_97_Midnight_Navy_Racket/descpageRCYONEX-YPER97-EN.html' },
-  { brand: 'Yonex', model: 'Percept 100', type: 'tweener', head: 100, lengthCm: 68.58, weight: 315, balanceCm: 33.02, sw: 318, ra: 66, pattern: '16x19', url: T + 'Yonex_Percept_100_Midnight_Navy_Racket/descpageRCYONEX-YPER10-EN.html' },
+  { brand: 'Yonex', model: 'Percept 97', year: 2023, type: 'control', head: 97, lengthCm: 68.58, weight: 326, balanceCm: 31.98, sw: 315, ra: 60, pattern: '16x19', url: T + 'Yonex_Percept_97_Midnight_Navy_Racket/descpageRCYONEX-YPER97-EN.html' },
+  { brand: 'Yonex', model: 'Percept 100', year: 2023, type: 'tweener', head: 100, lengthCm: 68.58, weight: 315, balanceCm: 33.02, sw: 318, ra: 66, pattern: '16x19', url: T + 'Yonex_Percept_100_Midnight_Navy_Racket/descpageRCYONEX-YPER10-EN.html' },
   // Tecnifibre
   { brand: 'Tecnifibre', model: 'TF40 305 16x19', type: 'control', head: 98, lengthCm: 68.5, weight: 320, balanceCm: 33.2, sw: 320, ra: 64, pattern: '16x19', url: T + 'Tecnifibre_TF40_305g_16x19_Racket/descpageRCTECNIH-TF40R1-EN.html', nominal: [305, 32.5] },
   { brand: 'Tecnifibre', model: 'TF40 305 18x20', type: 'control', head: 98, lengthCm: 68.5, weight: 323, balanceCm: 33.32, sw: 330, ra: 64, pattern: '18x20', url: T + 'Tecnifibre_TF40_305g_18x20_Racket/descpageRCTECNIH-TF40R2-EN.html', nominal: [305, 32.5] },
-  { brand: 'Tecnifibre', model: 'TFight 305S', type: 'control', head: 98, lengthCm: 68.5, weight: 320, balanceCm: 32.49, sw: 324, ra: 63, pattern: '18x19', url: T + 'Tecnifibre_TFight_305S_Racket/descpageRCTECNIH-TF305S-EN.html', nominal: [305, 31.5] },
+  { brand: 'Tecnifibre', model: 'TFight 305S', year: 2025, type: 'control', head: 98, lengthCm: 68.5, weight: 320, balanceCm: 32.49, sw: 324, ra: 63, pattern: '18x19', url: T + 'Tecnifibre_TFight_305S_Racket/descpageRCTECNIH-TF305S-EN.html', nominal: [305, 31.5] },
   // Solinco
   { brand: 'Solinco', model: 'Whiteout 305 v2', type: 'control', head: 98, lengthCm: 68.58, weight: 323, balanceCm: 33.02, sw: 328, ra: 65, pattern: '16x19', url: T + 'Solinco_Whiteout_305_V2_Camo_Racket_/descpageRCNOASOLH-WTOCAH-EN.html' },
   { brand: 'Solinco', model: 'Blackout 300 v2', type: 'power', head: 100, lengthCm: 68.58, weight: 320, balanceCm: 32.51, sw: 317, ra: 66, pattern: '16x19', url: T + 'Solinco_Blackout_300_v2_Camo_Racket_/descpageRCNOASOLH-BKOCAH-EN.html' },
@@ -202,10 +201,34 @@ export function predictStrung(r: Row) {
 const r1 = (n: number) => Math.round(n * 10) / 10
 const r2 = (n: number) => Math.round(n * 100) / 100
 
+const idOf = (brand: string, model: string, year?: number) =>
+  `stock-${brand}-${model}-${year ?? ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '')
+
+/** Ids that changed when a model's year was corrected, so saved setups
+ *  and shared links keep working. */
+export const RENAMED: Record<string, string> = {
+  'stock-babolat-pure-strike-100-2025': 'stock-babolat-pure-strike-100-2024',
+  'stock-babolat-pure-strike-98-16x19-2025': 'stock-babolat-pure-strike-98-16x19-2024',
+  'stock-babolat-pure-strike-98-18x20-2025': 'stock-babolat-pure-strike-98-18x20-2024',
+  'stock-yonex-percept-97': 'stock-yonex-percept-97-2023',
+  'stock-yonex-percept-100': 'stock-yonex-percept-100-2023',
+  'stock-tecnifibre-tfight-305s': 'stock-tecnifibre-tfight-305s-2025',
+}
+
 export const STOCK_RACKETS: Racket[] = ROWS.map((r) => {
   const u = unstrungFromStrung(r)
+  const o = OFFICIAL[`${r.brand}|${r.model}|${r.year ?? ''}`]
+  // The maker's figures where its page gives them; the measurement otherwise.
+  const weightG = o?.weightG ?? u.weightG
+  const balanceCm = o?.balanceMm !== undefined ? o.balanceMm / 10 : u.balanceCm
+  const swingweight = o?.swingweight ?? u.swingweight
+  const agrees =
+    o &&
+    Math.abs(u.weightG - o.weightG) <= TOLERANCE.weightG &&
+    (o.balanceMm === undefined || Math.abs(u.balanceCm * 10 - o.balanceMm) <= TOLERANCE.balanceMm) &&
+    (o.swingweight === undefined || Math.abs(u.swingweight - o.swingweight) <= TOLERANCE.swingweight)
   return {
-    id: `stock-${r.brand}-${r.model}-${r.year ?? ''}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, ''),
+    id: idOf(r.brand, r.model, r.year),
     brand: r.brand,
     model: r.model,
     year: r.year,
@@ -213,14 +236,22 @@ export const STOCK_RACKETS: Racket[] = ROWS.map((r) => {
     isStock: true,
     lengthCm: r.lengthCm,
     headSizeSqIn: r.head,
-    weightG: r1(u.weightG),
-    balanceCm: r2(u.balanceCm),
-    swingweight: r1(u.swingweight),
+    weightG: r1(weightG),
+    balanceCm: r2(balanceCm),
+    swingweight: r1(swingweight),
     ra: r.ra,
     pattern: r.pattern,
     strung: { weightG: r.weight, balanceCm: r.balanceCm, swingweight: r.sw },
     source: r.url,
     approxWeight: r.approx || undefined,
+    specFrom: {
+      weight: o ? 'official' : 'measured',
+      balance: o?.balanceMm !== undefined ? 'official' : 'measured',
+      swingweight: o?.swingweight !== undefined ? 'official' : 'measured',
+    },
+    official: o && { weightG: o.weightG, balanceMm: o.balanceMm, swingweight: o.swingweight, ra: o.ra, href: officialHref(o), archived: !!o.archived },
+    measured: { weightG: r1(u.weightG), balanceCm: r2(u.balanceCm), swingweight: r1(u.swingweight) },
+    agrees: o ? !!agrees : undefined,
     createdAt: 0,
     updatedAt: 0,
   }

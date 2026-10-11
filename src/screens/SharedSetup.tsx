@@ -5,7 +5,7 @@ import { feel } from '../domain/feel'
 import { compute } from '../domain/physics'
 import type { Racket } from '../domain/types'
 import { db, saveRacket, saveSetup, uid } from '../data/db'
-import { STOCK_RACKETS } from '../data/rackets'
+import { RENAMED, STOCK_RACKETS } from '../data/rackets'
 import { useStore } from '../data/store'
 import { useT } from '../i18n'
 import { leadParts, racketLabel } from '../lib/format'
@@ -36,7 +36,8 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
 
   /** Makes sure the frame exists locally; stock frames already do. */
   const ensureRacket = async (): Promise<string> => {
-    if (STOCK_RACKETS.some((r) => r.id === racket.id)) return racket.id
+    const stockId = RENAMED[racket.id] ?? racket.id
+    if (STOCK_RACKETS.some((r) => r.id === stockId)) return stockId
     if (await db.rackets.get(racket.id)) return racket.id
     const now = Date.now()
     await saveRacket({ ...racket, isStock: false, createdAt: now, updatedAt: now })

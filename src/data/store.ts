@@ -11,7 +11,7 @@ import {
 import { DEFAULT_STRINGBED } from '../domain/strings'
 import { PRO_BETA } from '../lib/entitlement'
 import type { Lang } from '../i18n'
-import { STOCK_RACKETS } from './rackets'
+import { RENAMED, STOCK_RACKETS } from './rackets'
 
 export type Theme = 'system' | 'dark' | 'light'
 
@@ -149,7 +149,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'swingmath',
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
       // v2: the stock library was replaced by verified frames with new ids.
       migrate: (persisted, version) => {
@@ -160,6 +160,8 @@ export const useStore = create<State>()(
           s.config = { ...s.config, racketId: STOCK_RACKETS[0].id }
           s.loadedSetupId = null
         }
+        // v4: a few stock ids changed with corrected years.
+        if (version < 4 && s.config?.racketId && RENAMED[s.config.racketId]) s.config = { ...s.config, racketId: RENAMED[s.config.racketId] }
         // v3: a sleeve mass was added; keep the user's own masses.
         if (version < 3 && s.masses) s.masses = { ...DEFAULT_ACCESSORY_MASSES, ...s.masses }
         return s as State

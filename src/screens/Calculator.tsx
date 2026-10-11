@@ -19,6 +19,7 @@ import { CommunityCard } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { usePaywall } from './Pro'
 import { InfoTip } from '../ui/disclosure'
+import { RacketSources } from './RacketSources'
 
 export function Calculator() {
   const t = useT()
@@ -104,13 +105,9 @@ export function Calculator() {
                   <div className="mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-sm text-muted">
                       {t.calc.reference}
-                      {racket.isStock && racket.source?.startsWith('http') && (
-                        <InfoTip title={t.calc.reference}>
-                          <p>{t.calc.sourceNote}</p>
-                          {racket.approxWeight && <p>{t.calc.approxNote}</p>}
-                          <a href={racket.source} target="_blank" rel="noopener noreferrer" className="inline-block font-semibold text-accent-text underline underline-offset-2">
-                            {t.calc.sourceLink}
-                          </a>
+                      {racket.isStock && (
+                        <InfoTip title={t.sources.title}>
+                          <RacketSources racket={racket} />
                         </InfoTip>
                       )}
                     </span>

@@ -47,8 +47,8 @@ test.describe('F06 hit a target', () => {
     await page.getByRole('button', { name: 'Calcular', exact: true }).click()
     await page.getByRole('button', { name: 'Abrir na calculadora' }).click()
     await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
-    // The frame starts at 306 g unstrung, so 315 g needs 9 g of lead.
-    await expect(page.getByText('Chumbo total:')).toContainText('9,0 g')
+    // The frame starts at 305 g unstrung (Babolat's figure), so 315 g needs 10 g of lead.
+    await expect(page.getByText('Chumbo total:')).toContainText('10,0 g')
   })
 })
 

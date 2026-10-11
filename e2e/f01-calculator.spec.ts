@@ -3,13 +3,13 @@ import { a11y, expect, resultCard, start, test } from './fixtures'
 test.describe('F01 see the effect of adding lead', () => {
   test('F01-H1 lead at the tip raises weight and swingweight', async ({ page }) => {
     await start(page)
-    // Default: Pure Aero 98 2026, measured strung 323 g, + overgrip 6 = 329 g.
-    await expect(resultCard(page)).toContainText('329,0')
+    // Default: Pure Aero 98 2026, Babolat's 305 g + strings 17 + overgrip 6 = 328 g.
+    await expect(resultCard(page)).toContainText('328,0')
     const plus = page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' })
     for (let i = 0; i < 4; i++) await plus.click()
     await expect(page.getByText('Chumbo total:')).toContainText('2,0 g')
-    await expect(resultCard(page)).toContainText('331,0')
-    // vs the unstrung frame (306 g): strings 17 + overgrip 6 + lead 2.
+    await expect(resultCard(page)).toContainText('330,0')
+    // vs the unstrung frame (305 g): strings 17 + overgrip 6 + lead 2.
     await expect(resultCard(page)).toContainText('+25,0')
     await a11y(page)
   })
@@ -76,8 +76,10 @@ test.describe('Fixes from user reviews', () => {
     await start(page)
     const row = resultCard(page).locator('div').filter({ hasText: /^Ponto doce/ })
     await expect(row).toContainText('do fundo do cabo')
+    const cm = async () => Number((await row.locator('.readout').textContent())!.replace(',', '.'))
+    const before = await cm()
     for (let i = 0; i < 6; i++) await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
-    await expect(row).toContainText('+')
+    await expect(async () => expect(await cm()).toBeGreaterThan(before)).toPass()
   })
 
   test('FIX-1 check the prediction against my measurement', async ({ page }) => {
@@ -110,13 +112,13 @@ test.describe('F02 use my own measured specs', () => {
     await expect(page.getByRole('alert')).toHaveText('Introduz um número')
     await w.fill('900')
     await expect(page.getByRole('alert')).toContainText('Entre 150 e 450')
-    await expect(resultCard(page)).toContainText('329,0')
+    await expect(resultCard(page)).toContainText('328,0')
   })
 
   test('F02-E1 blank fields fall back to the reference', async ({ page }) => {
     await start(page)
     await page.getByRole('radio', { name: 'As minhas medições' }).click()
-    await expect(resultCard(page)).toContainText('329,0')
+    await expect(resultCard(page)).toContainText('328,0')
     await a11y(page)
   })
 })
