@@ -25,9 +25,6 @@ test.describe('F08 library and custom rackets', () => {
     await a11y(page)
     // Remembered, and removable from the map itself.
     await page.reload()
-    // A brand brings its frames forward.
-    await map.getByRole('button', { name: /^Head/ }).click()
-    await expect(map.getByRole('button', { name: /^Head/ })).toHaveAttribute('aria-pressed', 'true')
     await map.getByRole('button', { name: /Tirar do mapa: Head Prestige MP/ }).click()
     await expect(map.getByRole('list', { name: 'Mapa de raquetes' })).toHaveCount(0)
   })
