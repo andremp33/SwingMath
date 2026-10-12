@@ -22,7 +22,7 @@ npx playwright test -c playwright.cloud.config.ts   # sign-in, sync, community i
 - `src/domain/` — physics, sweet spot, pendulum swingweight, strings, grip, arm comfort, journal, solvers (pure, tested)
 - `src/data/` — racket library, local database (IndexedDB), sync with the account
 - `src/screens/` — app screens; `/sobre`, `/privacidade`, `/termos` are the site pages
-- `supabase/` — database schema and rules (`migrations/`), the Lemon Squeezy webhook (`functions/ls-webhook`), sign-in email
+- `supabase/` — database schema and rules (`migrations/`), the Lemon Squeezy and RevenueCat webhooks (`functions/ls-webhook`, `functions/rc-webhook`), sign-in email
 - `.github/workflows/deploy.yml` — builds and publishes to GitHub Pages on every push to `main`
 - `.env.example` — store, accounts and contact settings
 
@@ -62,3 +62,27 @@ variables (names in `.env.example`).
    `https://<ref>.supabase.co/functions/v1/ls-webhook` with the same signing
    secret and the `subscription_*` events.
 5. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository variables.
+
+**Store subscriptions in the apps (RevenueCat).** Apple and Google require
+their own billing for subscriptions bought in the apps, so the apps sell Pro
+through the App Store and Google Play, via RevenueCat. The apps never link to
+the web checkout.
+
+1. In App Store Connect and Google Play Console, create one subscription
+   group with two products (monthly and annual) and a 7-day free trial
+   (iOS: an introductory offer; Play: a free-trial offer on each base plan).
+2. In RevenueCat, add both apps (`app.swingmath`), import the products, make
+   an entitlement `pro` with both products, and an offering `default` (set
+   as current) with the `$rc_monthly` and `$rc_annual` packages.
+3. Put the public SDK keys in `.env.local` before `npm run android` /
+   `npm run ios`: `VITE_RC_IOS_KEY=appl_...` and `VITE_RC_ANDROID_KEY=goog_...`.
+4. So Pro follows the account to the website and other devices:
+   `npx supabase db push` (table `store_subscriptions`),
+   `npx supabase functions deploy rc-webhook --no-verify-jwt`, and
+   `npx supabase secrets set RC_WEBHOOK_AUTH=<random value> RC_SECRET_KEY=sk_...`.
+   In RevenueCat → Integrations → Webhooks, point at
+   `https://<ref>.supabase.co/functions/v1/rc-webhook` with the Authorization
+   header set to the same `RC_WEBHOOK_AUTH` value.
+
+Signed in, the RevenueCat user is the account id; a purchase made signed out
+moves to the account when the player signs in.

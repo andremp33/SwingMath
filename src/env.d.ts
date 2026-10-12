@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_LS_CHECKOUT_MONTHLY?: string
   readonly VITE_LS_CHECKOUT_ANNUAL?: string
   readonly VITE_LS_PORTAL_URL?: string
+  readonly VITE_RC_IOS_KEY?: string
+  readonly VITE_RC_ANDROID_KEY?: string
   readonly VITE_PRICE_MONTHLY?: string
   readonly VITE_PRICE_ANNUAL?: string
   readonly VITE_PRICE_CURRENCY?: string

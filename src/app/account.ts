@@ -64,10 +64,11 @@ const RANK = ['on_trial', 'active', 'past_due', 'cancelled', 'paused', 'unpaid',
 
 export async function refreshSubscription(): Promise<AccountPro | null> {
   const c = await client()
-  const { data, error } = await c.from('subscriptions').select('status, ends_at')
-  if (error) return store().accountPro
+  // Bought on the website (Lemon Squeezy) or in the apps (App Store, Google Play).
+  const [web, app] = await Promise.all([c.from('subscriptions').select('status, ends_at'), c.from('store_subscriptions').select('status, ends_at')])
+  if (web.error) return store().accountPro
   // A player may have an old expired row and a new active one.
-  const best = (data ?? []).sort((a, b) => RANK.indexOf(a.status) - RANK.indexOf(b.status))[0]
+  const best = [...(web.data ?? []), ...(app.data ?? [])].sort((a, b) => RANK.indexOf(a.status) - RANK.indexOf(b.status))[0]
   const pro = best ? { status: best.status as string, endsAt: (best.ends_at as string | null) ?? null, checkedAt: Date.now() } : null
   store().setAccountPro(pro)
   return pro
@@ -106,12 +107,19 @@ const soon = () => {
   timer = setTimeout(() => void syncNow(), 3000)
 }
 
+/** Store apps: the RevenueCat user follows the account. */
+const identifyStore = (userId: string | null) => {
+  if (IS_APP) void import('../lib/purchases').then((m) => m.identify(userId))
+}
+
 async function onSession(session: Session | null) {
   if (!session?.user.email) {
     store().setAccount(null)
+    identifyStore(null)
     return
   }
   store().setAccount({ userId: session.user.id, email: session.user.email })
+  identifyStore(session.user.id)
   await refreshSubscription()
   await syncNow()
 }

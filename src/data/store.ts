@@ -16,6 +16,7 @@ import { RENAMED, STOCK_RACKETS } from './rackets'
 export type Theme = 'system' | 'dark' | 'light'
 
 export interface License {
+  /** 'store': App Store or Google Play, through RevenueCat. */
   provider: 'lemonsqueezy' | 'store' | 'dev'
   key?: string
   instanceId?: string
@@ -24,8 +25,12 @@ export interface License {
   checkedAt?: number
   /** 'ended': the subscription ended; 'offline': not confirmed for too long. */
   status?: 'active' | 'ended' | 'offline'
-  /** When the current period ends, as Lemon Squeezy reports it. */
+  /** When the current period ends, as the store reports it. */
   expiresAt?: string | null
+  /** Store subscriptions: renews at the end of the period (false: cancelled). */
+  willRenew?: boolean
+  /** Store subscriptions: still in the free trial. */
+  trial?: boolean
 }
 
 export interface Account {

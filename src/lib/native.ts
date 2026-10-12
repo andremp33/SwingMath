@@ -17,6 +17,7 @@ export async function initNative() {
   paintStatusBar()
   new MutationObserver(paintStatusBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
   SplashScreen.hide().catch(() => {})
+  void import('./purchases').then((m) => m.initPurchases())
 
   // Back closes an open sheet first, then goes back, then leaves the app.
   App.addListener('backButton', ({ canGoBack }) => {

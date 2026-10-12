@@ -8,6 +8,7 @@ import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, useT, type Lang } from '../i18n'
 import { deactivateLicense, PORTAL_URL, PRICING, PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
+import { IS_APP } from '../lib/platform'
 import { Badge, Button, NumberField, PageTitle, Segmented, SettingsGroup, SettingsRow } from '../ui/basics'
 import { useToast } from '../ui/overlay'
 import { AccountGroup } from './AccountCard'
@@ -124,13 +125,28 @@ function ProGroup() {
         label={keyActive ? t.pro.active : t.account.proActive}
         hint={
           keyActive
-            ? [fmt(t.pro.activeSince, { date: fmtDate(l.activatedAt, s.lang) }), l.expiresAt && fmt(t.pro.renews, { date: fmtDate(Date.parse(l.expiresAt), s.lang) })]
+            ? [
+                fmt(t.pro.activeSince, { date: fmtDate(l.activatedAt, s.lang) }),
+                l.expiresAt && fmt(l.willRenew === false ? t.pro.endsOn : t.pro.renews, { date: fmtDate(Date.parse(l.expiresAt), s.lang) }),
+              ]
                 .filter(Boolean)
                 .join(' · ')
             : undefined
         }
       >
-        {PORTAL_URL && (
+        {l?.provider === 'store' && keyActive ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={ExternalLink}
+            onClick={async () => {
+              const url = await import('../lib/purchases').then((m) => m.manageUrl()).catch(() => null)
+              if (url) window.open(url, '_blank')
+            }}
+          >
+            {t.pro.manage}
+          </Button>
+        ) : PORTAL_URL && !IS_APP && (
           <a
             href={PORTAL_URL}
             target="_blank"
@@ -141,7 +157,7 @@ function ProGroup() {
           </a>
         )}
       </SettingsRow>
-      {keyActive && l.provider !== 'dev' && (
+      {keyActive && l.provider === 'lemonsqueezy' && (
         <SettingsRow label={t.pro.deactivate}>
           <Button
             variant="secondary"
