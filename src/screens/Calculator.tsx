@@ -1,14 +1,15 @@
 import { ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { geometry } from '../domain/physics'
+import { DEFAULT_STRINGBED } from '../domain/strings'
 import { emptyLead, POSITIONS, type Position, type Racket, type Setup, type Specs } from '../domain/types'
-import { saveSetup, uid } from '../data/db'
-import { useComputed, useRacket, useSetups } from '../data/hooks'
+import { saveOwned, saveSetup, saveStringing, uid } from '../data/db'
+import { useComputed, useOwned, useRacket, useSetups } from '../data/hooks'
 import { FREE_SETUP_LIMIT, isPro, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum, fmtSigned } from '../lib/format'
-import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
+import { Badge, Button, Card, CardTitle, ChoiceChips, cx, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
 import { MyRacketsRow } from '../ui/MyRackets'
@@ -494,6 +495,10 @@ function SaveButtons({ loaded, onSaveNew }: { loaded: Setup | undefined; onSaveN
   )
 }
 
+/**
+ * Saves the working setup, and says which of the player's rackets it is on:
+ * one of theirs, a new one (made here, with the strings on it now), or none.
+ */
 function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () => void; count: number }) {
   const t = useT()
   const toast = useToast()
@@ -501,7 +506,19 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
   const loadConfig = useStore((s) => s.loadConfig)
   const pro = useStore(isPro)
   const paywall = usePaywall()
+  const owned = useOwned()
+  const racket = useRacket(config.racketId)
   const [name, setName] = useState('')
+  const [racketName, setRacketName] = useState('')
+  const active = (owned ?? []).filter((o) => !o.retired)
+  // Your racket of this frame if there is one; a new racket if you have none.
+  const suggested = active.find((o) => o.racketId === config.racketId)?.id ?? (active.length ? 'none' : 'new')
+  const [on, setOn] = useState<string>(suggested)
+  useEffect(() => {
+    if (open) setOn(suggested)
+    // Only when the sheet opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
   const fallback = fmt(t.setups.defaultName, { n: count + 1 })
 
   const save = async () => {
@@ -521,10 +538,30 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
       updatedAt: now,
     }
     await saveSetup(s)
+    let where: string | undefined
+    if (on === 'new') {
+      // A name of its own, never a clash with another of yours.
+      const base = racketName.trim() || racket?.model || s.name
+      const taken = new Set(active.map((o) => o.name.toLowerCase()))
+      let n = 1
+      let label = base
+      while (taken.has(label.toLowerCase())) label = `${base} #${++n}`
+      const id = uid()
+      await saveOwned({ id, name: label, racketId: config.racketId, setupId: s.id, createdAt: now, updatedAt: now + 1 })
+      await saveStringing({ id: uid(), ownedId: id, label, racketId: config.racketId, setupId: s.id, date: now, bed: structuredClone(config.strings ?? DEFAULT_STRINGBED), createdAt: now, updatedAt: now })
+      where = label
+    } else if (on !== 'none') {
+      const o = active.find((x) => x.id === on)
+      if (o) {
+        await saveOwned({ ...o, racketId: config.racketId, setupId: s.id, updatedAt: now })
+        where = o.name
+      }
+    }
     loadConfig(config, s.id)
     setName('')
+    setRacketName('')
     onClose()
-    toast(t.common.saved)
+    toast(where ? fmt(t.calc.savedOn, { name: where }) : t.common.saved)
   }
 
   return (
@@ -544,17 +581,26 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
       }
     >
       <form
+        className="space-y-5"
         onSubmit={(e) => {
           e.preventDefault()
           save()
         }}
       >
-        <TextField label={t.setups.name} value={name} onChange={setName} placeholder={fallback} maxLength={60} autoFocus />
+        <TextField label={t.calc.setupName} value={name} onChange={setName} placeholder={fallback} maxLength={60} autoFocus />
+        <ChoiceChips
+          label={t.calc.saveOn}
+          value={on}
+          onChange={setOn}
+          options={[...active.map((o) => ({ value: o.id, label: o.name })), { value: 'new', label: t.journal.addRacket }, { value: 'none', label: t.calc.saveSetupOnly }]}
+        />
+        {on === 'new' && (
+          <TextField label={t.calc.newRacketName} hint={t.calc.newRacketHint} value={racketName} onChange={setRacketName} placeholder={racket?.model ?? t.journal.racketNamePlaceholder} maxLength={40} />
+        )}
       </form>
     </Sheet>
   )
 }
-
 
 const HOURS = Array.from({ length: 23 }, (_, i) => (i + 1) / 2) // 0.5 … 11.5
 

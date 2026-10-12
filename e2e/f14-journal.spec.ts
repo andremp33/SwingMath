@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test'
 async function addRacket(page: Page, name: string) {
   await page.getByRole('button', { name: 'Nova raquete' }).first().click()
   const d = page.getByRole('dialog', { name: 'Nova raquete' })
-  await d.getByLabel('Nome').fill(name)
+  await d.getByLabel('Nome', { exact: true }).fill(name)
   await d.getByRole('button', { name: 'Guardar' }).click()
   await expect(d).toBeHidden()
 }
@@ -80,6 +80,24 @@ test.describe('F14 journal', () => {
     for (let i = 0; i < 11; i++) await logSession(page, 30)
     await expect(page.getByRole('region', { name: 'Sessões' }).getByRole('listitem')).toHaveCount(10)
     await expect(page.getByText(/Mostramos as últimas 10 sessões/)).toBeVisible()
+  })
+
+  test('F14-H4 saving a setup in the calculator puts the racket in your rackets', async ({ page }) => {
+    await start(page)
+    await page.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
+    const d = page.getByRole('dialog')
+    await d.getByLabel('Nome do setup').fill('Torneio')
+    // With no rackets yet, a new one is suggested.
+    await expect(d.getByRole('radiogroup', { name: 'Em que raquete tua está?' }).getByRole('radio', { name: 'Nova raquete' })).toHaveAttribute('aria-checked', 'true')
+    await d.getByLabel('Nome da raquete').fill('Aero de jogo')
+    await d.getByRole('button', { name: 'Guardar' }).click()
+    await expect(page.getByText('Guardado em Aero de jogo')).toBeVisible()
+    await page.goto('/rackets')
+    await expect(page.getByRole('region', { name: 'As tuas raquetes' })).toContainText('Aero de jogo')
+    await page.goto('/setups')
+    await expect(page.getByRole('article').filter({ hasText: 'Torneio' })).toContainText('Montado em Aero de jogo')
+    await page.goto('/diario')
+    await expect(page.getByRole('region', { name: 'As tuas raquetes' })).toContainText('Poli 23 kg')
   })
 
   test('F14-H3 your rackets load into the calculator', async ({ page }) => {

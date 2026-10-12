@@ -125,6 +125,12 @@ export const en: Dict = {
     tapeCm: '≈ {cm} cm of tape',
     updated: 'Setup updated',
     delta: 'vs. start',
+    saveOn: 'Which of your rackets is it on?',
+    saveSetupOnly: 'Just the setup',
+    newRacketHint: 'It goes to "Your rackets", with this setup and the strings on it now.',
+    savedOn: 'Saved on {name}',
+    newRacketName: 'Racket name',
+    setupName: 'Setup name',
   },
   feel: {
     power: 'Power',
@@ -203,6 +209,7 @@ export const en: Dict = {
     deleteConfirm: 'Delete this setup?',
     edited: 'Edited {date}',
     mountedOn: 'On {names}',
+    putOnRacket: 'Add to your rackets',
   },
   stroke: { forehand: 'Forehand', backhand: 'Backhand', serve: 'Serve', volley: 'Volley' },
   compare: {

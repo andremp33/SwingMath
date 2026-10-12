@@ -1,14 +1,16 @@
-import { Bookmark, GitCompareArrows, Pencil, Printer, Share2, SlidersHorizontal, Star, Trash2 } from 'lucide-react'
+import { Bookmark, GitCompareArrows, Pencil, Plus, Printer, Share2, SlidersHorizontal, Star, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import type { OwnedRacket } from '../domain/journal'
 import { STROKES, type Setup } from '../domain/types'
-import { db, saveSetup } from '../data/db'
+import { db, saveSetup, uid } from '../data/db'
 import { useAllRackets, useOwned, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtDate, leadParts, racketLabel } from '../lib/format'
 import { Button, cx, EmptyState, IconButton, PageTitle, Select } from '../ui/basics'
 import { useToast } from '../ui/overlay'
+import { OwnedSheet } from './JournalSheets'
 import { SetupEditSheet } from './SetupEdit'
 import { ShareSheet } from './ShareSheet'
 
@@ -93,6 +95,7 @@ function SetupCard({ setup: s, onEdit, onShare }: { setup: Setup; onEdit: () => 
   const toast = useToast()
   const racket = rackets.find((r) => r.id === s.racketId)
   const on = (owned ?? []).filter((o) => o.setupId === s.id && !o.retired).map((o) => o.name)
+  const [mounting, setMounting] = useState<OwnedRacket | null>(null)
   const picked = compare.includes(s.id)
 
   const acc = (['strings', 'overgrip', 'leatherGrip', 'dampener'] as const).filter((k) => s.accessories[k]).map((k) => t.acc[k])
@@ -116,7 +119,21 @@ function SetupCard({ setup: s, onEdit, onShare }: { setup: Setup; onEdit: () => 
           <Star className={cx('size-[18px]', s.favourite ? 'fill-accent text-accent' : 'text-muted')} strokeWidth={1.75} aria-hidden />
         </button>
       </div>
-      {on.length > 0 && <p className="mt-1 text-sm font-medium text-accent-text">{fmt(t.setups.mountedOn, { names: on.join(', ') })}</p>}
+      {on.length > 0 ? (
+        <p className="mt-1 text-sm font-medium text-accent-text">{fmt(t.setups.mountedOn, { names: on.join(', ') })}</p>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            const at = Date.now()
+            setMounting({ id: uid(), name: s.name, racketId: s.racketId, setupId: s.id, createdAt: at, updatedAt: at })
+          }}
+          className="mt-1 flex items-center gap-1 text-sm font-medium text-accent-text underline-offset-2 hover:underline"
+        >
+          <Plus className="size-3.5" aria-hidden /> {t.setups.putOnRacket}
+        </button>
+      )}
+      {mounting && <OwnedSheet value={mounting} initialBed={s.strings} onClose={() => setMounting(null)} />}
       <p className="num mt-2 text-sm">{lead.length ? lead.join(' · ') : t.setups.noLead}</p>
       {acc.length > 0 && <p className="mt-1 text-sm text-muted">{acc.join(' · ')}</p>}
       {Object.keys(s.ratings).length > 0 && (

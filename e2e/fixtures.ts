@@ -50,7 +50,7 @@ export function resultCard(page: Page) {
 export async function saveSetup(page: Page, name: string) {
   await page.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
   const dialog = page.getByRole('dialog')
-  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByLabel('Nome do setup').fill(name)
   await dialog.getByRole('button', { name: 'Guardar' }).click()
   // The save is done once the calculator says it is editing that setup.
   await expect(page.getByText(`A editar: ${name.trim().slice(0, 60) || 'Setup'}`, { exact: false })).toBeVisible()

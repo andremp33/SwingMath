@@ -123,6 +123,12 @@ export const pt = {
     tapeCm: '≈ {cm} cm de fita',
     updated: 'Setup atualizado',
     delta: 'vs. início',
+    saveOn: 'Em que raquete tua está?',
+    saveSetupOnly: 'Só o setup',
+    newRacketHint: 'Fica em «As tuas raquetes», com este setup e as cordas de agora.',
+    savedOn: 'Guardado em {name}',
+    newRacketName: 'Nome da raquete',
+    setupName: 'Nome do setup',
   },
   feel: {
     power: 'Potência',
@@ -201,6 +207,7 @@ export const pt = {
     deleteConfirm: 'Apagar este setup?',
     edited: 'Editado {date}',
     mountedOn: 'Montado em {names}',
+    putOnRacket: 'Pôr nas tuas raquetes',
   },
   stroke: { forehand: 'Direita', backhand: 'Esquerda', serve: 'Serviço', volley: 'Vólei' },
   compare: {

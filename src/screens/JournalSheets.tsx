@@ -107,20 +107,20 @@ const DURATIONS = [30, 45, 60, 90, 120] as const
  * A racket the player owns: new (with the strings it has now, so the journal
  * can start counting) or edited.
  */
-export function OwnedSheet({ value, onClose }: { value: OwnedRacket | null; onClose: () => void }) {
+export function OwnedSheet({ value, onClose, initialBed }: { value: OwnedRacket | null; onClose: () => void; initialBed?: Stringbed }) {
   const t = useT()
   const toast = useToast()
   const setups = useSetups()
   const config = useStore((s) => s.config)
   const [draft, setDraft] = useState<OwnedRacket | null>(value)
-  const [bed, setBed] = useState<Stringbed>(config.strings ?? DEFAULT_STRINGBED)
+  const [bed, setBed] = useState<Stringbed>(initialBed ?? config.strings ?? DEFAULT_STRINGBED)
   const [strungOn, setStrungOn] = useState(() => Date.now())
   const [error, setError] = useState<string>()
   const isNew = value !== null && value.createdAt === value.updatedAt
   useEffect(() => {
     setDraft(value)
     setError(undefined)
-    setBed(config.strings ?? DEFAULT_STRINGBED)
+    setBed(initialBed ?? config.strings ?? DEFAULT_STRINGBED)
     setStrungOn(Date.now())
     // Reset only when another racket opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps

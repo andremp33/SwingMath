@@ -125,6 +125,12 @@ export const es: Dict = {
     tapeCm: '≈ {cm} cm de cinta',
     updated: 'Setup actualizado',
     delta: 'vs. inicio',
+    saveOn: '¿En qué raqueta tuya está?',
+    saveSetupOnly: 'Solo el setup',
+    newRacketHint: 'Va a «Tus raquetas», con este setup y las cuerdas de ahora.',
+    savedOn: 'Guardado en {name}',
+    newRacketName: 'Nombre de la raqueta',
+    setupName: 'Nombre del setup',
   },
   feel: {
     power: 'Potencia',
@@ -203,6 +209,7 @@ export const es: Dict = {
     deleteConfirm: '¿Borrar este setup?',
     edited: 'Editado {date}',
     mountedOn: 'Montado en {names}',
+    putOnRacket: 'Poner en tus raquetas',
   },
   stroke: { forehand: 'Derecha', backhand: 'Revés', serve: 'Saque', volley: 'Volea' },
   compare: {

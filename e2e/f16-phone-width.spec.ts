@@ -31,7 +31,7 @@ test.describe('F16 phones never scroll sideways', () => {
     await start(page)
     await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
     await page.getByRole('button', { name: 'Guardar setup' }).click()
-    await page.getByRole('dialog').getByLabel('Nome').fill('Mais estabilidade e potência no serviço')
+    await page.getByRole('dialog').getByLabel('Nome do setup').fill('Mais estabilidade e potência no serviço')
     await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
     await expect(page.getByText('A editar:', { exact: false })).toBeVisible()
     expect(await sticksOut(page)).toEqual([])
