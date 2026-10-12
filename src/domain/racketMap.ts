@@ -45,7 +45,7 @@ export function mapScores(r: Racket): MapPoint {
 /**
  * Places frames on the map relative to the library: each axis is centred on
  * the library's average and scaled by its spread, so the map uses its whole
- * area. Points stay inside the circle.
+ * area. Points stay inside the square, a little in from its edges.
  */
 export function mapLayout(all: Racket[]): (r: Racket) => MapPoint {
   const raw = all.map(mapScores)
@@ -58,13 +58,7 @@ export function mapLayout(all: Racket[]): (r: Racket) => MapPoint {
   const sy = stat('y')
   return (r) => {
     const p = mapScores(r)
-    let x = (p.x - sx.mean) / (2.2 * sx.sd)
-    let y = (p.y - sy.mean) / (2.2 * sy.sd)
-    const len = Math.hypot(x, y)
-    if (len > 0.95) {
-      x = (x / len) * 0.95
-      y = (y / len) * 0.95
-    }
-    return { x, y }
+    const clamp = (v: number) => Math.max(-0.93, Math.min(0.93, v))
+    return { x: clamp((p.x - sx.mean) / (2.2 * sx.sd)), y: clamp((p.y - sy.mean) / (2.2 * sy.sd)) }
   }
 }

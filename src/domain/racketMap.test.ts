@@ -12,10 +12,10 @@ describe('racket map', () => {
     expect(openness(100, '16x19')).toBeGreaterThan(openness(98, '18x20'))
   })
 
-  it('every frame lands inside the circle', () => {
+  it('every frame lands inside the square', () => {
     for (const r of STOCK_RACKETS) {
       const p = place(r)
-      expect(Math.hypot(p.x, p.y), r.id).toBeLessThanOrEqual(0.951)
+      expect(Math.max(Math.abs(p.x), Math.abs(p.y)), r.id).toBeLessThanOrEqual(0.93)
     }
   })
 
