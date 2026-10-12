@@ -14,11 +14,6 @@ const dotLabel = (g: number, lang: string) =>
   fmtNum(g, Number.isInteger(g) ? 0 : Number.isInteger(g * 2) ? 1 : 2, lang)
 
 const DEFAULT_GEOMETRY = frameGeometry(68.58, 100)
-/** Where the throat's V closes, just above the handle, and where the handle
- *  starts (cm from the butt). */
-const THROAT_APEX = 21.5
-const HANDLE_TOP = 19.5
-const BEAM = 1.15
 
 /** The frame drawn to scale, in cm: x across (0 = centre line), y down from
  *  the tip. Lead positions then land where the physics puts them. */
@@ -49,57 +44,150 @@ const HOUR: Record<Exclude<Position, 'handle'>, number[]> = {
   throat: [Math.PI],
 }
 
+/** Where the handle starts and the throat's opening ends (cm from the butt). */
+const HANDLE_TOP = 19.5
+const THROAT_END = 23
+const BEAM = 1.15
+/** Half the handle's width, and how far the butt cap flares past it. */
+const GRIP = 1.45
+const FLARE = 0.4
+
+const f2 = (n: number) => n.toFixed(2)
+const pt = (p: { x: number; y: number }) => `${f2(p.x)} ${f2(p.y)}`
+const unit = (x: number, y: number) => {
+  const l = Math.hypot(x, y) || 1
+  return { x: x / l, y: y / l }
+}
+
+/**
+ * The frame as one piece, from standard proportions (head about half the
+ * length, throat a quarter, handle a quarter): an outer outline shaped like a
+ * drop, where the hoop flows into the throat's arms and the arms into the
+ * handle, with two openings cut out: the string bed, and the throat under
+ * the yoke. Sized from this frame's length and head, so lead lands where the
+ * physics puts it.
+ */
+function frameOutline(g: Geometry) {
+  const f = frameShape(g)
+  const w = BEAM / 2
+  const yH = f.y(HANDLE_TOP)
+  const yT = f.y(THROAT_END)
+  const yB = g.L
+
+  // Outside: round the head, leave the hoop at about 4 and 8 o'clock along
+  // its curve, and sweep into the handle.
+  const rx = g.b + w
+  const ry = g.a + w
+  const th0 = (124 / 180) * Math.PI
+  const top = { x: 0, y: f.yc - ry }
+  const side = (s: 1 | -1) => {
+    const p = f.at(s * th0, w)
+    const d = unit(s * rx * Math.cos(th0), ry * Math.sin(th0))
+    const c1 = { x: p.x + d.x * 6, y: p.y + d.y * 6 }
+    const c2 = { x: s * (GRIP + 0.25), y: yH - 6.5 }
+    return { p, c1, c2, end: { x: s * GRIP, y: yH } }
+  }
+  const r = side(1)
+  const l = side(-1)
+  const butt = (s: 1 | -1) => [
+    { x: s * GRIP, y: yB - 1.4 },
+    { x: s * GRIP, y: yB - 0.7 },
+    { x: s * (GRIP + FLARE), y: yB - 0.6 },
+    { x: s * (GRIP + FLARE), y: yB - 0.25 },
+  ]
+  const br = butt(1)
+  const bl = butt(-1)
+  const outside = [
+    `M${pt(top)}`,
+    `A${f2(rx)} ${f2(ry)} 0 0 1 ${pt(r.p)}`,
+    `C${pt(r.c1)} ${pt(r.c2)} ${pt(r.end)}`,
+    `L${pt(br[0])}`,
+    `C${pt(br[1])} ${pt(br[2])} ${pt(br[3])}`,
+    `Q${f2(GRIP + FLARE)} ${f2(yB)} ${f2(GRIP)} ${f2(yB)}`,
+    `L${f2(-GRIP)} ${f2(yB)}`,
+    `Q${f2(-GRIP - FLARE)} ${f2(yB)} ${pt(bl[3])}`,
+    `C${pt(bl[2])} ${pt(bl[1])} ${pt(bl[0])}`,
+    `L${pt(l.end)}`,
+    `C${pt(l.c2)} ${pt(l.c1)} ${pt(l.p)}`,
+    `A${f2(rx)} ${f2(ry)} 0 0 1 ${pt(top)}`,
+    'Z',
+  ].join(' ')
+
+  // The string bed.
+  const bx = g.b - w
+  const by = g.a - w
+  const bed = `M0 ${f2(f.yc - by)} A${f2(bx)} ${f2(by)} 0 1 1 0 ${f2(f.yc + by)} A${f2(bx)} ${f2(by)} 0 1 1 0 ${f2(f.yc - by)} Z`
+
+  // The throat's opening: its top follows the yoke (a bar about as thick as
+  // the hoop, under the bed), its sides run alongside the arms, its corners
+  // and tip are rounded, the tip just above the handle.
+  const yoke = 0.45
+  const phi = (23 / 180) * Math.PI
+  const at = (a: number) => f.at(a, w + yoke)
+  const cr = at(Math.PI - phi)
+  const cl = at(Math.PI + phi)
+  const ar = at(Math.PI - phi + 0.07)
+  const al = at(Math.PI + phi - 0.07)
+  const dr = { x: cr.x - 0.6, y: cr.y + 1.25 }
+  const dl = { x: cl.x + 0.6, y: cl.y + 1.25 }
+  // Corner controls pulled in, so the corners round off instead of peaking.
+  const kr = { x: cr.x - 0.2, y: cr.y + 0.35 }
+  const kl = { x: cl.x + 0.2, y: cl.y + 0.35 }
+  const orx = g.b + w + yoke
+  const ory = g.a + w + yoke
+  const throat = [
+    `M${pt(ar)}`,
+    `A${f2(orx)} ${f2(ory)} 0 0 1 ${pt(al)}`,
+    `Q${pt(kl)} ${pt(dl)}`,
+    `C${f2(dl.x + 1.6)} ${f2(dl.y + 4)} ${f2(-1.1)} ${f2(yT - 3.4)} ${f2(-0.5)} ${f2(yT - 0.6)}`,
+    `Q0 ${f2(yT + 0.15)} 0.5 ${f2(yT - 0.6)}`,
+    `C1.1 ${f2(yT - 3.4)} ${f2(dr.x - 1.6)} ${f2(dr.y + 4)} ${pt(dr)}`,
+    `Q${pt(kr)} ${pt(ar)}`,
+    'Z',
+  ].join(' ')
+
+  return { outside, bed, throat, yH, bx, by, yc: f.yc }
+}
+
 function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
   const f = frameShape(g)
+  const o = frameOutline(g)
   const [mains, crosses] = (pattern?.match(/^(\d+)\s*x\s*(\d+)/i)?.slice(1).map(Number) ?? [16, 19]) as [number, number]
-  const bedX = g.b - BEAM / 2 - 0.15
-  const bedY = g.a - BEAM / 2 - 0.15
-  const yS = f.y(THROAT_APEX)
-  const yH = f.y(HANDLE_TOP)
-  // The throat: a narrow V from just above the handle, opening until it meets
-  // the hoop near 5 and 7 o'clock, where the hoop turns in to the yoke.
-  const th = (146 / 180) * Math.PI
-  const r = f.at(th)
-  const l = f.at(-th)
   const frame = 'var(--c-text)'
   return (
     <>
       <defs>
         <clipPath id="bed">
-          <ellipse cx="0" cy={f.yc} rx={bedX} ry={bedY} />
+          <path d={o.bed} />
         </clipPath>
         <clipPath id="grip">
-          <rect x="-1.4" y={yH + 0.45} width="2.8" height={g.L - yH - 1.15} rx="0.3" />
+          <rect x={-GRIP} y={o.yH} width={GRIP * 2} height={g.L - o.yH - 1.3} />
         </clipPath>
       </defs>
       {/* String bed */}
-      <ellipse cx="0" cy={f.yc} rx={bedX} ry={bedY} fill="var(--c-surface)" />
-      <g clipPath="url(#bed)" stroke="var(--c-border-input)" strokeWidth="0.08" opacity="0.5">
+      <path d={o.bed} fill="var(--c-surface)" />
+      <g clipPath="url(#bed)" stroke="var(--c-border-input)" strokeWidth="0.08" opacity="0.55">
         {Array.from({ length: mains }, (_, i) => {
-          const x = -bedX * 0.9 + ((i + 0.5) * (2 * bedX * 0.9)) / mains
-          return <line key={`m${i}`} x1={x} y1={f.yc - g.a} x2={x} y2={f.yc + g.a} />
+          const x = -o.bx * 0.92 + ((i + 0.5) * (2 * o.bx * 0.92)) / mains
+          return <line key={`m${i}`} x1={x} y1={o.yc - g.a} x2={x} y2={o.yc + g.a} />
         })}
         {Array.from({ length: crosses }, (_, i) => {
-          const y = f.yc - bedY * 0.94 + ((i + 0.5) * (2 * bedY * 0.94)) / crosses
+          const y = o.yc - o.by * 0.95 + ((i + 0.5) * (2 * o.by * 0.95)) / crosses
           return <line key={`c${i}`} x1={-g.b} y1={y} x2={g.b} y2={y} />
         })}
       </g>
-      {/* Bumper guard over the top of the hoop */}
-      <path d={hoopArc(f, g, 0, 17, BEAM / 2 + 0.2)} fill="none" stroke="var(--c-text-muted)" strokeWidth="0.45" strokeLinecap="round" opacity="0.55" />
-      {/* Hoop (its bottom is the yoke), throat arms and shaft */}
-      <ellipse cx="0" cy={f.yc} rx={g.b} ry={g.a} fill="none" stroke={frame} strokeWidth={BEAM} />
-      <path d={`M${r.x} ${r.y} L0 ${yS} L${l.x} ${l.y}`} fill="none" stroke={frame} strokeWidth={BEAM} strokeLinejoin="round" />
-      <path d={`M-0.55 ${yS - 0.3} L0.55 ${yS - 0.3} L0.8 ${yH + 0.2} L-0.8 ${yH + 0.2} Z`} fill={frame} />
-      {/* Handle: a dark grip wrapped in overlapping turns, a collar and the butt cap */}
-      <rect x="-1.4" y={yH + 0.45} width="2.8" height={g.L - yH - 1.15} rx="0.3" fill={frame} opacity="0.88" />
-      <g clipPath="url(#grip)" stroke="var(--c-bg)" strokeWidth="0.09" opacity="0.35">
-        {Array.from({ length: Math.ceil((g.L - yH) / 1.1) + 2 }, (_, i) => {
-          const y0 = yH + 0.3 + i * 1.1
-          return <line key={i} x1="-1.5" y1={y0} x2="1.5" y2={y0 - 1} />
+      {/* The frame: one piece, the bed and the throat cut out */}
+      <path d={`${o.outside} ${o.bed} ${o.throat}`} fill={frame} fillRule="evenodd" />
+      {/* Bumper guard along the top */}
+      <path d={hoopArc(f, g, 0, 17, 0)} fill="none" stroke="var(--c-text-muted)" strokeWidth="0.35" strokeLinecap="round" opacity="0.6" />
+      {/* Grip: wrapped turns over the handle, a collar where it starts */}
+      <g clipPath="url(#grip)" stroke="var(--c-bg)" strokeWidth="0.09" opacity="0.3">
+        {Array.from({ length: Math.ceil((g.L - o.yH) / 1.1) + 2 }, (_, i) => {
+          const y0 = o.yH + 0.4 + i * 1.1
+          return <line key={i} x1={-GRIP - 0.2} y1={y0} x2={GRIP + 0.2} y2={y0 - 1} />
         })}
       </g>
-      <rect x="-1.25" y={yH} width="2.5" height="0.5" rx="0.2" fill="var(--c-text-muted)" />
-      <rect x="-1.55" y={g.L - 0.75} width="3.1" height="0.75" rx="0.3" fill={frame} />
+      <line x1={-GRIP} y1={o.yH + 0.25} x2={GRIP} y2={o.yH + 0.25} stroke="var(--c-text-muted)" strokeWidth="0.3" />
     </>
   )
 }
@@ -167,7 +255,7 @@ export function RacketDiagram({
             aria-pressed={selected === p}
             tabIndex={i === 0 ? 0 : -1}
             className={cx(
-              'num absolute flex min-h-8 min-w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-bold transition',
+              'num absolute flex min-h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-bold shadow-sm transition',
               on ? 'bg-accent text-on-accent' : 'bg-surface text-muted ring-1 ring-border-input',
               selected === p && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
             )}
