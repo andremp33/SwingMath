@@ -35,21 +35,26 @@ export function useApplyTheme() {
   }, [theme])
 }
 
+/** Inside the app the scroller is #app-scroll, not the window. */
+export function scrollToTop(behavior: ScrollBehavior = 'smooth') {
+  ;(document.getElementById('app-scroll') ?? window).scrollTo({ top: 0, behavior })
+}
+
 export function Shell() {
   const t = useT()
   const loc = useLocation()
   const due = useRestringReminders()
   useEffect(() => {
-    window.scrollTo(0, 0)
+    scrollToTop('instant')
   }, [loc.pathname])
-  // The fixed bars exist only inside the app, so the scroll margin does too.
+  // The page stands still inside the app (see #app-scroll in index.css).
   useEffect(() => {
     document.documentElement.classList.add('in-app')
     return () => document.documentElement.classList.remove('in-app')
   }, [])
 
   return (
-    <div className="min-h-dvh lg:pl-56">
+    <div id="app-scroll" className="h-dvh overflow-y-auto overscroll-y-contain lg:pl-56">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-on-accent">
         Skip to content
       </a>

@@ -19,6 +19,9 @@ export async function initNative() {
   SplashScreen.hide().catch(() => {})
   void import('./purchases').then((m) => m.initPurchases())
 
+  // iOS: a tap on the status bar scrolls to the top, as in other apps.
+  window.addEventListener('statusTap', () => document.getElementById('app-scroll')?.scrollTo({ top: 0, behavior: 'smooth' }))
+
   // Back closes an open sheet first, then goes back, then leaves the app.
   App.addListener('backButton', ({ canGoBack }) => {
     const sheet = document.querySelector<HTMLDialogElement>('dialog[open]')

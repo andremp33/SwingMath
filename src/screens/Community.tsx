@@ -1,3 +1,4 @@
+import { scrollToTop } from '../app/Shell'
 import { Flag, Send, Trash2, Upload, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useStore } from '../data/store'
@@ -127,7 +128,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
                       loadConfig({ ...p.config, racketId: racket.id }, null)
                       void countCopy(p.id)
                       toast(t.community.tried)
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      scrollToTop()
                     }}
                   >
                     {t.community.tryIt}

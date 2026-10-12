@@ -174,14 +174,25 @@ body {
   }
 }
 
+/* Inside the app the page itself never scrolls; #app-scroll does. Phone
+   browsers (Safari above all) shrink and grow their toolbars while a page
+   scrolls, and bars fixed to the bottom lag behind and lift off the edge.
+   With the page still, the bars stay put, as in a native app. */
+html.in-app,
+html.in-app body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 /* Keep focused or scrolled-to controls clear of the sticky header and of the
    fixed bars at the bottom (tab bar + the calculator's result bar). */
-html.in-app {
+#app-scroll {
   scroll-padding-top: 72px;
   scroll-padding-bottom: calc(var(--tabbar-h) + 80px + env(safe-area-inset-bottom));
 }
 @media (min-width: 1024px) {
-  html.in-app {
+  #app-scroll {
     scroll-padding-top: 16px;
     scroll-padding-bottom: 16px;
   }
