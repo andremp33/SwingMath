@@ -53,6 +53,8 @@ export const MATERIAL: Record<StringMaterial, MaterialProps> = {
   gut: { stiffness: 125, initialLoss: 0.06, perHour: 0.0015, perWeek: 0.005, lifeHours: 40, lifeWeeks: 20, snapback: 0.7, comfort: 1 },
 }
 
+const norm = (v: number, lo: number, hi: number) => Math.min(1, Math.max(0, (v - lo) / (hi - lo)))
+
 export const DEFAULT_STRINGBED: Stringbed = { mains: { material: 'poly', tensionKg: 23 } }
 
 /** "16x19" -> [16, 19]. Falls back to 16x19. */
@@ -153,29 +155,42 @@ export function stringLife(bed: Stringbed, hours: number, days: number, lifeHour
   }
 }
 
+/** How open the stringbed is, 0-1: head area per string crossing. 16x19
+ *  on 100 in² sits mid-way, 18x20 on 98 in² is dense, 16x15 very open. */
+export function openness(headSizeSqIn: number, pattern?: string): number {
+  const [m, c] = parsePattern(pattern)
+  return norm(headSizeSqIn / (m * c), 0.25, 0.4)
+}
+
 // Display order: no two similar colours side by side.
 export const STRING_FEEL_KEYS = ['power', 'spin', 'comfort', 'control'] as const
 export type StringFeelKey = (typeof STRING_FEEL_KEYS)[number]
 export type StringFeel = Record<StringFeelKey, number>
 
-const norm = (v: number, lo: number, hi: number) => Math.min(1, Math.max(0, (v - lo) / (hi - lo)))
 
 /**
  * How the stringbed plays, 5-95 %. A softer bed returns more energy and is
- * kinder to the arm; a stiffer one launches lower (control); open patterns
- * and slick polyester snap back for spin.
+ * kinder to the arm; a stiffer one launches lower (control). Open patterns
+ * let the mains slide and snap back for spin, more than the string's own
+ * slickness does (Tennis Warehouse University: 16x15 about 10 % more spin
+ * than 16x19 with the same string; poly over nylon 4-5 %). The stiffness
+ * window covers real setups, from a soft multi in a big head (~70) to a
+ * dense poly bed strung tight (~145), so one change moves a few points and
+ * nothing pins to the ends.
  */
+export const BED_SOFT = 70
+export const BED_STIFF = 145
+
 export function stringFeel(frame: FrameForStrings, bed: Stringbed): StringFeel {
-  const idx = norm(stringbedIndex(frame, bed), 80, 125)
-  const [nm, nc] = parsePattern(frame.pattern)
-  const open = norm(frame.headSizeSqIn / (nm * nc), 0.24, 0.4)
+  const idx = norm(stringbedIndex(frame, bed), BED_SOFT, BED_STIFF)
+  const open = openness(frame.headSizeSqIn, frame.pattern)
   const mains = MATERIAL[bed.mains.material]
   const soft = (MATERIAL[bed.mains.material].comfort + MATERIAL[crossesOf(bed).material].comfort) / 2
   const raw: StringFeel = {
-    power: 0.75 * (1 - idx) + 0.25 * open,
-    control: 0.7 * idx + 0.3 * (1 - open),
+    power: 0.15 + 0.6 * (1 - idx) + 0.25 * open,
+    control: 0.15 + 0.6 * idx + 0.25 * (1 - open),
     comfort: 0.55 * soft + 0.45 * (1 - idx),
-    spin: 0.5 * mains.snapback + 0.35 * open + 0.15 * (1 - idx),
+    spin: 0.3 * mains.snapback + 0.5 * open + 0.2 * (1 - idx),
   }
   const out = {} as StringFeel
   for (const k of STRING_FEEL_KEYS) out[k] = Math.round(5 + 90 * raw[k])

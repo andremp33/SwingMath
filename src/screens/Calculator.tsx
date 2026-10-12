@@ -62,7 +62,7 @@ export function Calculator() {
     )
   }
 
-  const f = feel(computed.result, racket.headSizeSqIn, racket.ra)
+  const f = feel(computed.result, racket, config.strings)
   const extra = config.extra ?? []
   const totalLead = POSITIONS.reduce((a, p) => a + config.leadG[p], 0) + extra.reduce((a, e) => a + e.grams, 0)
   const geo = racket ? geometry(racket.lengthCm, racket.headSizeSqIn) : undefined
@@ -275,7 +275,7 @@ export function Calculator() {
       </div>
 
       {/* Phones: the result (and, opened, the feel) follows you while you move the sliders. */}
-      <ResultBar result={result} base={base} feel={f} feelBase={feel(noLead?.result ?? result, racket.headSizeSqIn, racket.ra)} open={barOpen} onToggle={toggleBar} />
+      <ResultBar result={result} base={base} feel={f} feelBase={feel(noLead?.result ?? result, racket, config.strings)} open={barOpen} onToggle={toggleBar} />
       <div className={cx('lg:hidden', barOpen ? 'h-44' : 'h-12')} />
 
       <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />

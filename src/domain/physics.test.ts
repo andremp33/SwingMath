@@ -152,8 +152,8 @@ describe('physics', () => {
   it('feel: more swingweight means more power and less manoeuvrability', () => {
     const light = applyMasses(base, [])
     const heavy = applyMasses(base, [{ grams: 6, x: 67.5, y: 0 }])
-    const fl = feel(light, 98)
-    const fh = feel(heavy, 98)
+    const fl = feel(light, { headSizeSqIn: 98 })
+    const fh = feel(heavy, { headSizeSqIn: 98 })
     expect(fh.power).toBeGreaterThan(fl.power)
     expect(fh.plow).toBeGreaterThan(fl.plow)
     expect(fh.manoeuvrability).toBeLessThan(fl.manoeuvrability)

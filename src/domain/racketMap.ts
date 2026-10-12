@@ -1,4 +1,4 @@
-import { parsePattern } from './strings'
+import { openness } from './strings'
 import { feel } from './feel'
 import { compute } from './physics'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead, type Racket } from './types'
@@ -15,13 +15,6 @@ export interface MapPoint {
 
 const norm = (v: number, lo: number, hi: number) => Math.min(1, Math.max(0, (v - lo) / (hi - lo)))
 
-/** How open the string bed is: head area per string crossing. 16x19 on
- *  100 in² is open, 18x20 on 98 in² dense. */
-export function openness(headSizeSqIn: number, pattern?: string): number {
-  const [m, c] = parsePattern(pattern)
-  return norm(headSizeSqIn / (m * c), 0.26, 0.36)
-}
-
 /** The raw scores, before they are spread over the library. */
 export function mapScores(r: Racket): MapPoint {
   const { result } = compute({
@@ -32,7 +25,8 @@ export function mapScores(r: Racket): MapPoint {
     masses: DEFAULT_ACCESSORY_MASSES,
     leadG: emptyLead(),
   })
-  const f = feel(result, r.headSizeSqIn, r.ra)
+  // The pattern is in the feel now (spin, control); the map leans on it a little more.
+  const f = feel(result, r)
   const open = openness(r.headSizeSqIn, r.pattern)
   const stiff = norm(r.ra ?? 66, 58, 74)
   const head = norm(r.headSizeSqIn, 95, 105)
@@ -40,7 +34,7 @@ export function mapScores(r: Racket): MapPoint {
   const hl = norm(result.ptsHL, 2, 10)
   const power = 0.4 * head + 0.35 * stiff + 0.25 * sw
   const control = 0.35 * (1 - head) + 0.25 * (1 - open) + 0.2 * hl + 0.2 * (1 - stiff)
-  const spin = 0.6 * (f.spin / 100) + 0.4 * open
+  const spin = 0.75 * (f.spin / 100) + 0.25 * open
   const touch = 0.5 * (1 - stiff) + 0.3 * (1 - open) + 0.2 * hl
   return { x: power - control, y: spin - touch }
 }

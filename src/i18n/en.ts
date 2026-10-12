@@ -103,7 +103,7 @@ export const en: Dict = {
     perSide: 'split across both sides',
     result: 'Result',
     feel: 'Estimated feel',
-    feelHint: 'An estimate from the specs, not a measurement.',
+    feelHint: 'An estimate from the specs and the stringbed, not a measurement. Denser patterns (18x20), more tension or stiffer strings give more control and less spin and power; open patterns (16x18, 16x19) the opposite.',
     saveSetup: 'Save setup',
     updateSetup: 'Update setup',
     saveAsNew: 'Save as new',
@@ -556,7 +556,7 @@ export const en: Dict = {
       'Twistweight: inertia about the long axis. Lead at 3 and 9 adds the most because it sits far from the centre.',
       'Recoil weight: inertia about the centre of mass. More recoil = the racket gives less on impact.',
       'Sweet spot: the centre of percussion, where impact sends no shock to the hand. Distance from the axis = swingweight ÷ (weight × axis-to-balance distance). Lead high in the head moves it up.',
-      'Feel: our own estimate from swingweight, weight, twistweight, recoil, balance, head size and stiffness. Use it to compare setups; it is not a measurement.',
+      'Feel: our own estimate from swingweight, weight, twistweight, recoil, balance, head size and stiffness, and from the stringbed: pattern, tension and string. An open pattern lets the mains slide and snap back, for more spin and a higher launch (Tennis Warehouse University measured about 10 % more spin from 16x15 than 16x19 with the same string); a dense pattern launches flatter and steers better; a stiffer stringbed returns a little less energy. Good for comparing setups; it is not a measurement.',
     ],
   },
   measure: {

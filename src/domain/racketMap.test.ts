@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { STOCK_RACKETS } from '../data/rackets'
-import { mapLayout, openness } from './racketMap'
+import { mapLayout } from './racketMap'
+import { openness } from './strings'
 
 const find = (brand: string, model: string, year?: number) => STOCK_RACKETS.find((r) => r.brand === brand && r.model === model && (year === undefined || r.year === year))!
 

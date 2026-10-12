@@ -103,7 +103,7 @@ export const es: Dict = {
     perSide: 'repartido a ambos lados',
     result: 'Resultado',
     feel: 'Sensación estimada',
-    feelHint: 'Una estimación a partir de las especificaciones, no una medición.',
+    feelHint: 'Una estimación a partir de las especificaciones y del encordado, no una medición. Patrones más cerrados (18x20), más tensión o cuerdas más rígidas dan más control y menos efecto y potencia; patrones abiertos (16x18, 16x19) lo contrario.',
     saveSetup: 'Guardar setup',
     updateSetup: 'Actualizar setup',
     saveAsNew: 'Guardar como nuevo',
@@ -556,7 +556,7 @@ export const es: Dict = {
       'Twistweight: inercia respecto al eje largo. El plomo a las 3 y las 9 suma más porque está lejos del centro.',
       'Recoil weight: inercia respecto al centro de masa. Más recoil = la raqueta cede menos en el impacto.',
       'Punto dulce: el centro de percusión, donde el impacto no transmite golpe a la mano. Distancia al eje = swingweight ÷ (peso × distancia del eje al balance). El plomo alto en la cabeza lo sube.',
-      'Sensación: una estimación nuestra a partir de swingweight, peso, twistweight, recoil, balance, tamaño de cabeza y rigidez. Sirve para comparar setups; no es una medición.',
+      'Sensación: una estimación nuestra a partir de swingweight, peso, twistweight, recoil, balance, tamaño de cabeza y rigidez, y del encordado: patrón, tensión y cuerda. Un patrón abierto deja que las verticales se deslicen y vuelvan, lo que da más efecto y una salida más alta (Tennis Warehouse University midió cerca de un 10 % más de efecto con 16x15 que con 16x19 y la misma cuerda); un patrón cerrado sale más plano y controla mejor; un encordado más rígido devuelve algo menos de energía. Sirve para comparar setups; no es una medición.',
     ],
   },
   measure: {

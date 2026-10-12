@@ -118,7 +118,7 @@ function CompareView({ a, b }: { a: Setup; b: Setup }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardTitle>{t.calc.feel}</CardTitle>
-          <FeelRings feel={feel(A, ra.headSizeSqIn, ra.ra)} compare={feel(B, rb.headSizeSqIn, rb.ra)} labels={[a.name, b.name]} />
+          <FeelRings feel={feel(A, ra, a.strings)} compare={feel(B, rb, b.strings)} labels={[a.name, b.name]} />
         </Card>
         <Card>
           <CardTitle>{t.setups.ratings}</CardTitle>

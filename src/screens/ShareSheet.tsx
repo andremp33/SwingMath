@@ -24,7 +24,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
     if (!setup || !racket || !computed) return
     let alive = true
     let made: string | undefined
-    const f = feel(computed.result, racket.headSizeSqIn, racket.ra)
+    const f = feel(computed.result, racket, setup.strings)
     renderShareImage(
       {
         title: setup.name,

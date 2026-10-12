@@ -32,7 +32,7 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
   const racket: Racket = { ...payload.racket, createdAt: 0, updatedAt: 0 } as Racket
   const { base, result } = compute({ spec: racket, ...payload.setup, masses })
   const rows = useSpecRows(result, base)
-  const f = feel(result, racket.headSizeSqIn, racket.ra)
+  const f = feel(result, racket, payload.setup.strings)
 
   /** Makes sure the frame exists locally; stock frames already do. */
   const ensureRacket = async (): Promise<string> => {

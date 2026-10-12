@@ -101,7 +101,7 @@ export const pt = {
     perSide: 'repartido pelos dois lados',
     result: 'Resultado',
     feel: 'Sensação estimada',
-    feelHint: 'Uma estimativa a partir das especificações, não uma medição.',
+    feelHint: 'Uma estimativa a partir das especificações e do encordoamento, não uma medição. Padrões mais fechados (18x20), mais tensão ou cordas mais rígidas dão mais controlo e menos spin e potência; padrões abertos (16x18, 16x19) o contrário.',
     saveSetup: 'Guardar setup',
     updateSetup: 'Atualizar setup',
     saveAsNew: 'Guardar como novo',
@@ -554,7 +554,7 @@ export const pt = {
       'Twistweight: inércia em torno do eixo longo. Chumbo às 3h e 9h soma mais, porque fica longe do centro.',
       'Recoil weight: inércia em torno do centro de massa. Mais recoil = a raquete cede menos no impacto.',
       'Ponto doce: o centro de percussão, onde o impacto não manda choque para a mão. Distância ao eixo = swingweight ÷ (peso × distância do eixo ao equilíbrio). Chumbo alto na cabeça sobe-o.',
-      'Sensação: uma estimativa nossa a partir de swingweight, peso, twistweight, recoil, equilíbrio, tamanho da cabeça e rigidez. Serve para comparar setups, não é uma medição.',
+      'Sensação: uma estimativa nossa a partir de swingweight, peso, twistweight, recoil, equilíbrio, tamanho da cabeça e rigidez, e do encordoamento: padrão, tensão e corda. Um padrão aberto deixa as verticais deslizar e voltar, o que dá mais spin e uma saída mais alta (medições da Tennis Warehouse University: 16x15 cerca de 10 % mais spin que 16x19 com a mesma corda); um padrão fechado sai mais plano e controla melhor; um encordoamento mais rígido devolve um pouco menos de energia. Serve para comparar setups, não é uma medição.',
     ],
   },
   measure: {
