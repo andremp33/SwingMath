@@ -1,6 +1,6 @@
 import { Download, Link2, Share2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { feel, FEEL_KEYS } from '../domain/feel'
+import { FEEL_KEYS } from '../domain/feel'
 import type { Setup } from '../domain/types'
 import { useComputed, useRacket } from '../data/hooks'
 import { useStore } from '../data/store'
@@ -10,6 +10,7 @@ import { encodeShare, renderShareImage, shareUrl, specRowsText } from '../lib/sh
 import { Button } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { PublishSetup } from './Community'
+import { racketFeel } from '../data/racketFeel'
 
 export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: () => void }) {
   const t = useT()
@@ -24,7 +25,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
     if (!setup || !racket || !computed) return
     let alive = true
     let made: string | undefined
-    const f = feel(computed.result, racket, setup.strings)
+    const f = racketFeel(racket, computed.result, setup.strings)
     renderShareImage(
       {
         title: setup.name,

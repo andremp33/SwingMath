@@ -1,12 +1,12 @@
 import { openness } from './strings'
-import { feel } from './feel'
+import { feelTarget, racketFeel } from '../data/racketFeel'
 import { compute } from './physics'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead, type Racket } from './types'
 
 /**
- * Where a frame sits on the racket map, from its specs. Our own heuristic,
- * shown as such: x runs from control (−1) to power (+1), y from touch (−1)
- * to spin (+1). Played strung, with an overgrip, as players hold it.
+ * Where a frame sits on the racket map: from its playtest where it has one,
+ * from its specs otherwise. x runs from control (−1) to power (+1), y from
+ * touch (−1) to spin (+1). Played strung, with an overgrip.
  */
 export interface MapPoint {
   x: number
@@ -25,8 +25,11 @@ export function mapScores(r: Racket): MapPoint {
     masses: DEFAULT_ACCESSORY_MASSES,
     leadG: emptyLead(),
   })
-  // The pattern is in the feel now (spin, control); the map leans on it a little more.
-  const f = feel(result, r)
+  // Frames with a playtest: its spin, power, control and touch. The player's
+  // own frames: the specs alone.
+  const f = racketFeel(r, result)
+  const target = feelTarget(r)
+  if (target) return { x: (f.power - f.control) / 100, y: (f.spin - target.touch) / 100 }
   const open = openness(r.headSizeSqIn, r.pattern)
   const stiff = norm(r.ra ?? 66, 58, 74)
   const head = norm(r.headSizeSqIn, 95, 105)

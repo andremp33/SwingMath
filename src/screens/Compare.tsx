@@ -1,6 +1,5 @@
 import { ArrowLeft, GitCompareArrows } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { feel } from '../domain/feel'
 import { POSITIONS, STROKES, type Setup } from '../domain/types'
 import { useComputed, useRacket, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
@@ -8,6 +7,7 @@ import { useT } from '../i18n'
 import { extraLabel, fmtNum, fmtSigned, racketLabel } from '../lib/format'
 import { Button, Card, CardTitle, cx, EmptyState, PageTitle } from '../ui/basics'
 import { FeelRings } from '../ui/specs'
+import { racketFeel } from '../data/racketFeel'
 
 export function Compare() {
   const t = useT()
@@ -118,7 +118,7 @@ function CompareView({ a, b }: { a: Setup; b: Setup }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardTitle>{t.calc.feel}</CardTitle>
-          <FeelRings feel={feel(A, ra, a.strings)} compare={feel(B, rb, b.strings)} labels={[a.name, b.name]} />
+          <FeelRings feel={racketFeel(ra, A, a.strings)} compare={racketFeel(rb, B, b.strings)} labels={[a.name, b.name]} />
         </Card>
         <Card>
           <CardTitle>{t.setups.ratings}</CardTitle>

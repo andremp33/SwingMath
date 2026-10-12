@@ -1,9 +1,8 @@
 import { ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
-import { feel, FEEL_KEYS, type Feel } from '../domain/feel'
 import { geometry } from '../domain/physics'
-import { emptyLead, POSITIONS, type Position, type Setup, type Specs } from '../domain/types'
+import { emptyLead, POSITIONS, type Position, type Racket, type Setup, type Specs } from '../domain/types'
 import { saveSetup, uid } from '../data/db'
 import { useComputed, useRacket, useSetups } from '../data/hooks'
 import { FREE_SETUP_LIMIT, isPro, useStore } from '../data/store'
@@ -20,6 +19,8 @@ import { InfoSheet } from './InfoSheet'
 import { usePaywall } from './Pro'
 import { InfoTip } from '../ui/disclosure'
 import { RacketSources } from './RacketSources'
+import { racketFeel, reviewOf } from '../data/racketFeel'
+import { FEEL_KEYS, type Feel } from '../domain/feel'
 
 export function Calculator() {
   const t = useT()
@@ -62,7 +63,7 @@ export function Calculator() {
     )
   }
 
-  const f = feel(computed.result, racket, config.strings)
+  const f = racketFeel(racket, computed.result, config.strings, masses)
   const extra = config.extra ?? []
   const totalLead = POSITIONS.reduce((a, p) => a + config.leadG[p], 0) + extra.reduce((a, e) => a + e.grams, 0)
   const geo = racket ? geometry(racket.lengthCm, racket.headSizeSqIn) : undefined
@@ -267,6 +268,7 @@ export function Calculator() {
           <Card className="order-4 xl:order-none">
             <CardTitle info={<InfoTip title={t.calc.feel}>{t.calc.feelHint}</InfoTip>}>{t.calc.feel}</CardTitle>
             <FeelRings feel={f} />
+            <FeelSource racket={racket} />
           </Card>
           <div className="order-8 xl:order-none"><ComfortCard racket={racket} specs={result} /></div>
           <div className="order-9 xl:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
@@ -275,7 +277,7 @@ export function Calculator() {
       </div>
 
       {/* Phones: the result (and, opened, the feel) follows you while you move the sliders. */}
-      <ResultBar result={result} base={base} feel={f} feelBase={feel(noLead?.result ?? result, racket, config.strings)} open={barOpen} onToggle={toggleBar} />
+      <ResultBar result={result} base={base} feel={f} feelBase={racketFeel(racket, noLead?.result ?? result, config.strings, masses)} open={barOpen} onToggle={toggleBar} />
       <div className={cx('lg:hidden', barOpen ? 'h-44' : 'h-12')} />
 
       <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
@@ -612,5 +614,21 @@ function AddPositionSheet({ open, onClose, onAdded }: { open: boolean; onClose: 
         )}
       </div>
     </Sheet>
+  )
+}
+
+/** Where the feel starts: the frame's playtest, with a link to it. */
+function FeelSource({ racket }: { racket: Racket }) {
+  const t = useT()
+  const rev = reviewOf(racket)
+  if (!rev) return <p className="mt-3 text-xs text-muted">{t.calc.feelSpecsOnly}</p>
+  const like = rev.key.split('|')
+  return (
+    <p className="mt-3 text-xs text-muted">
+      {rev.own ? t.calc.feelFrom : fmt(t.calc.feelFromLike, { model: `${like[1]} ${like[2]}`.trim() })}{' '}
+      <a href={rev.review.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
+        {t.calc.feelReview}
+      </a>
+    </p>
   )
 }

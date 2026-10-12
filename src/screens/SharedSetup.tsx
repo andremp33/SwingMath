@@ -1,7 +1,6 @@
 import { Save, SlidersHorizontal, TriangleAlert } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { feel } from '../domain/feel'
 import { compute } from '../domain/physics'
 import type { Racket } from '../domain/types'
 import { db, saveRacket, saveSetup, uid } from '../data/db'
@@ -13,6 +12,7 @@ import { decodeShare } from '../lib/share'
 import { Button, Card, CardTitle, EmptyState, PageTitle } from '../ui/basics'
 import { useToast } from '../ui/overlay'
 import { FeelRings, SpecTable, useSpecRows } from '../ui/specs'
+import { racketFeel } from '../data/racketFeel'
 
 export function SharedSetup() {
   const { data = '' } = useParams()
@@ -32,7 +32,7 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
   const racket: Racket = { ...payload.racket, createdAt: 0, updatedAt: 0 } as Racket
   const { base, result } = compute({ spec: racket, ...payload.setup, masses })
   const rows = useSpecRows(result, base)
-  const f = feel(result, racket, payload.setup.strings)
+  const f = racketFeel(racket, result, payload.setup.strings, masses)
 
   /** Makes sure the frame exists locally; stock frames already do. */
   const ensureRacket = async (): Promise<string> => {
