@@ -1,5 +1,5 @@
 import { Minus, Plus, X } from 'lucide-react'
-import type { Geometry } from '../domain/physics'
+import { geometry as frameGeometry, leadPositions, type Geometry } from '../domain/physics'
 import { POSITIONS, type ExtraLead, type LeadMap, type Position } from '../domain/types'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
@@ -9,67 +9,109 @@ import { cx } from './basics'
 export const LEAD_MAX = 20
 const STEP = 0.5
 
-/** Where each position sits on the drawing, in % of its box. Two dots for
- *  positions split across both sides. */
-const DOTS: Record<Position, { x: number; y: number }[]> = {
-  tip: [{ x: 50, y: 3.5 }],
-  tenTwo: [
-    { x: 22, y: 13 },
-    { x: 78, y: 13 },
-  ],
-  threeNine: [
-    { x: 7, y: 31 },
-    { x: 93, y: 31 },
-  ],
-  throat: [{ x: 50, y: 58 }],
-  handle: [{ x: 50, y: 93 }],
-}
-
-/** Grams on one dot: 3, 2.5 or 1.25 (half of a split 2.5 g). */
+/** Grams on one side: 3, 2.5 or 1.25 (half of a split 2.5 g). */
 const dotLabel = (g: number, lang: string) =>
   fmtNum(g, Number.isInteger(g) ? 0 : Number.isInteger(g * 2) ? 1 : 2, lang)
 
-/** A plain racket outline, drawn for this app. */
-function RacketOutline() {
+const DEFAULT_GEOMETRY = frameGeometry(68.58, 100)
+/** Where the shaft meets the throat, and the handle the shaft (cm from the butt). */
+const SHAFT_TOP = 28
+const HANDLE_TOP = 19.5
+const BEAM = 1.15
+
+/** The frame drawn to scale, in cm: x across (0 = centre line), y down from
+ *  the tip. Lead positions then land where the physics puts them. */
+function frameShape(g: Geometry) {
+  const yc = g.L - g.xc
+  const at = (th: number, grow = 0) => ({ x: (g.b + grow) * Math.sin(th), y: yc - (g.a + grow) * Math.cos(th) })
+  const y = (xFromButt: number) => g.L - xFromButt
+  const pad = 1.6
+  const box = { x: -(g.b + pad), y: -0.8, w: 2 * (g.b + pad), h: g.L + 1.6 }
+  return { yc, at, y, box }
+}
+
+/** An arc along the hoop's centre line, centred on angle th, len cm long. */
+function hoopArc(f: ReturnType<typeof frameShape>, g: Geometry, th: number, len: number, grow = 0) {
+  const half = len / 2 / ((g.a + g.b) / 2)
+  const pts: string[] = []
+  for (let i = 0; i <= 16; i++) {
+    const p = f.at(th - half + (2 * half * i) / 16, grow)
+    pts.push(`${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+  }
+  return `M${pts.join('L')}`
+}
+
+const HOUR: Record<Exclude<Position, 'handle'>, number[]> = {
+  tip: [0],
+  tenTwo: [-Math.PI / 3, Math.PI / 3],
+  threeNine: [-Math.PI / 2, Math.PI / 2],
+  throat: [Math.PI],
+}
+
+function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
+  const f = frameShape(g)
+  const [mains, crosses] = (pattern?.match(/^(\d+)\s*x\s*(\d+)/i)?.slice(1).map(Number) ?? [16, 19]) as [number, number]
+  const bedX = g.b - BEAM / 2 - 0.15
+  const bedY = g.a - BEAM / 2 - 0.15
+  // The throat arms leave the hoop at 4:30 and 7:30 and run into the shaft.
+  const arm = (side: 1 | -1) => {
+    const p = f.at(side * (Math.PI * 3) / 4)
+    const yS = f.y(SHAFT_TOP)
+    return `M${p.x} ${p.y} C${p.x - side * 2.6} ${p.y + 3.4} ${side * 1.6} ${yS - 5} ${side * 1.1} ${yS}`
+  }
+  const yS = f.y(SHAFT_TOP)
+  const yH = f.y(HANDLE_TOP)
+  const frame = 'var(--c-text)'
   return (
-    <svg viewBox="0 0 200 420" className="absolute inset-0 size-full" aria-hidden>
-      <ellipse cx="100" cy="130" rx="86" ry="118" fill="none" stroke="var(--c-border-input)" strokeWidth="5" />
-      <ellipse cx="100" cy="130" rx="80" ry="112" fill="var(--c-surface-2)" opacity=".35" />
-      <g stroke="var(--c-border)" strokeWidth="1">
-        {[-56, -40, -24, -8, 8, 24, 40, 56].map((dx) => (
-          <line key={`v${dx}`} x1={100 + dx} y1={130 - Math.sqrt(1 - (dx / 74) ** 2) * 104} x2={100 + dx} y2={130 + Math.sqrt(1 - (dx / 74) ** 2) * 104} />
-        ))}
-        {[-80, -60, -40, -20, 0, 20, 40, 60, 80].map((dy) => (
-          <line key={`h${dy}`} x1={100 - Math.sqrt(1 - (dy / 106) ** 2) * 72} y1={130 + dy} x2={100 + Math.sqrt(1 - (dy / 106) ** 2) * 72} y2={130 + dy} />
-        ))}
+    <>
+      <defs>
+        <clipPath id="bed">
+          <ellipse cx="0" cy={f.yc} rx={bedX} ry={bedY} />
+        </clipPath>
+        <clipPath id="grip">
+          <rect x="-1.45" y={yH + 0.55} width="2.9" height={g.L - yH - 1.25} rx="0.35" />
+        </clipPath>
+      </defs>
+      {/* String bed */}
+      <ellipse cx="0" cy={f.yc} rx={bedX} ry={bedY} fill="var(--c-surface)" />
+      <g clipPath="url(#bed)" stroke="var(--c-border-input)" strokeWidth="0.08" opacity="0.5">
+        {Array.from({ length: mains }, (_, i) => {
+          const x = -bedX * 0.9 + ((i + 0.5) * (2 * bedX * 0.9)) / mains
+          return <line key={`m${i}`} x1={x} y1={f.yc - g.a} x2={x} y2={f.yc + g.a} />
+        })}
+        {Array.from({ length: crosses }, (_, i) => {
+          const y = f.yc - bedY * 0.94 + ((i + 0.5) * (2 * bedY * 0.94)) / crosses
+          return <line key={`c${i}`} x1={-g.b} y1={y} x2={g.b} y2={y} />
+        })}
       </g>
-      <path d="M58 228 Q100 262 100 290 Q100 262 142 228" fill="none" stroke="var(--c-border-input)" strokeWidth="5" strokeLinejoin="round" />
-      <rect x="91" y="288" width="18" height="124" rx="5" fill="var(--c-border-input)" opacity=".7" />
-      <rect x="88" y="318" width="24" height="94" rx="6" fill="var(--c-surface)" stroke="var(--c-border-input)" strokeWidth="1.5" />
-    </svg>
+      {/* Bumper guard over the top of the hoop */}
+      <path d={hoopArc(f, g, 0, 17, BEAM / 2 + 0.2)} fill="none" stroke="var(--c-text-muted)" strokeWidth="0.45" strokeLinecap="round" opacity="0.55" />
+      {/* Hoop, throat arms, shaft */}
+      <ellipse cx="0" cy={f.yc} rx={g.b} ry={g.a} fill="none" stroke={frame} strokeWidth={BEAM} />
+      <path d={`${arm(1)} ${arm(-1)}`} fill="none" stroke={frame} strokeWidth={BEAM} strokeLinecap="round" />
+      <path d={`M-1.15 ${yS - 0.2} L1.15 ${yS - 0.2} L1.4 ${yH} L-1.4 ${yH} Z`} fill={frame} />
+      {/* Handle: grip wrapped in overlapping turns, a collar and the butt cap */}
+      <rect x="-1.45" y={yH + 0.55} width="2.9" height={g.L - yH - 1.25} rx="0.35" fill="var(--c-surface)" stroke="var(--c-border-input)" strokeWidth="0.12" />
+      <g clipPath="url(#grip)" stroke="var(--c-border-input)" strokeWidth="0.1">
+        {Array.from({ length: Math.ceil((g.L - yH) / 1.15) + 2 }, (_, i) => {
+          const y0 = yH + 0.2 + i * 1.15
+          return <line key={i} x1="-1.6" y1={y0} x2="1.6" y2={y0 - 1.1} />
+        })}
+      </g>
+      <rect x="-1.55" y={yH} width="3.1" height="0.65" rx="0.2" fill={frame} />
+      <rect x="-1.62" y={g.L - 0.75} width="3.24" height="0.75" rx="0.3" fill={frame} />
+    </>
   )
 }
 
-/** Vertical position (% of the drawing) for a point x cm from the butt.
- *  The drawing is not to scale, so map piecewise through its landmarks. */
-function yPct(x: number, g: Geometry): number {
-  const tip = g.L - 1
-  if (x >= g.xc) return 31 - ((x - g.xc) / (tip - g.xc)) * (31 - 3.5)
-  if (x >= g.xc - g.a) return 31 + ((g.xc - x) / g.a) * (58 - 31)
-  return 58 + ((g.xc - g.a - x) / (g.xc - g.a - 6)) * (93 - 58)
-}
-
-/** Drawing coordinates (%) of a clock hour on the hoop. */
-function hourPct(hour: number) {
-  const th = (hour / 12) * 2 * Math.PI
-  return { x: ((100 + 86 * Math.sin(th)) / 200) * 100, y: ((130 - 118 * Math.cos(th)) / 420) * 100 }
-}
-
-/** Every dot an extra position draws: one, or two mirrored. */
-export function extraDots(e: ExtraLead, g?: Geometry): { x: number; y: number }[] {
-  if (e.kind === 'shaft') return [{ x: 50, y: g ? Math.min(97, Math.max(2, yPct(e.cm ?? 6, g))) : 80 }]
-  const h = e.hour ?? 3
-  return e.sides === 2 && h !== 6 ? [hourPct(h), hourPct(12 - h)] : [hourPct(h)]
+/** Lead tape on the frame: the strip grows with the grams on each side. */
+function Tape({ g, at, grams, tape, color }: { g: Geometry; at: { th?: number; cm?: number }; grams: number; tape?: number; color: string }) {
+  const f = frameShape(g)
+  const len = Math.min(10, Math.max(1, tape ? tapeCm(grams, tape) : grams * 1.6))
+  if (at.th !== undefined) return <path d={hoopArc(f, g, at.th, len)} fill="none" stroke={color} strokeWidth={BEAM + 0.3} />
+  const y = f.y(at.cm!)
+  const w = at.cm! < HANDLE_TOP ? 3.3 : 2.9
+  return <rect x={-w / 2} y={y - Math.min(len, 5) / 2} width={w} height={Math.min(len, 5)} rx="0.2" fill={color} opacity="0.92" />
 }
 
 export function RacketDiagram({
@@ -79,6 +121,8 @@ export function RacketDiagram({
   sweetSpot,
   extra,
   geometry,
+  pattern,
+  labels = true,
   onSelectExtra,
 }: {
   lead: LeadMap
@@ -88,68 +132,128 @@ export function RacketDiagram({
   sweetSpot?: { x: number; g: Geometry }
   extra?: ExtraLead[]
   geometry?: Geometry
+  /** String pattern, e.g. "16x19", for the string bed. */
+  pattern?: string
+  /** Grams next to each strip (off where the drawing is small). */
+  labels?: boolean
   onSelectExtra?: (id: string) => void
 }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const tape = useStore((s) => s.tapeGPer10cm)
+  const g = geometry ?? sweetSpot?.g ?? DEFAULT_GEOMETRY
+  const f = frameShape(g)
+  const pct = (p: { x: number; y: number }) => ({ left: `${((p.x - f.box.x) / f.box.w) * 100}%`, top: `${((p.y - f.box.y) / f.box.h) * 100}%` })
+  // Points for each preset: on the frame, and a little inside for the label.
+  const spots = (p: Position) => {
+    if (p === 'handle') {
+      const y = f.y(leadPositions(g).handle.x)
+      return [{ on: { x: 0, y }, label: { x: 3.6, y }, at: { cm: leadPositions(g).handle.x } }]
+    }
+    return HOUR[p].map((th) => ({ on: f.at(th), label: f.at(th, -3.2), at: { th } }))
+  }
+  const extraSpots = (e: ExtraLead) => {
+    if (e.kind === 'shaft') {
+      const cm = e.cm ?? 6
+      const y = f.y(cm)
+      return [{ on: { x: 0, y }, label: { x: 3.6, y }, at: { cm } }]
+    }
+    const th = ((e.hour ?? 3) / 12) * 2 * Math.PI
+    const ths = e.sides === 2 && e.hour !== 6 ? [th, -th] : [th]
+    return ths.map((a) => ({ on: f.at(a), label: f.at(a, -3.2), at: { th: a } }))
+  }
+  const ss = sweetSpot ? f.y(sweetSpot.x) : undefined
+
   return (
-    <div className="relative mx-auto aspect-[200/420] w-full max-w-[150px] @lg:max-w-[180px]">
-      <RacketOutline />
-      {sweetSpot && (
-        <div
-          className="pointer-events-none absolute inset-x-[18%] flex -translate-y-1/2 items-center gap-1 transition-[top] duration-200"
-          style={{ top: `${Math.min(95, Math.max(2, yPct(sweetSpot.x, sweetSpot.g)))}%` }}
-          title={t.spec.sweetSpot}
-        >
-          <span className="h-px flex-1 bg-success/70" />
-          <span className="size-2 rounded-full border-[1.5px] border-success bg-bg" aria-hidden />
-          <span className="h-px flex-1 bg-success/70" />
-        </div>
-      )}
-      {POSITIONS.flatMap((p) =>
-        DOTS[p].map((d, i) => {
-          const g = lead[p]
-          const on = g > 0
-          return (
+    <div className="relative mx-auto w-full max-w-[150px] @lg:max-w-[170px]" style={{ aspectRatio: `${f.box.w} / ${f.box.h}` }}>
+      <svg viewBox={`${f.box.x} ${f.box.y} ${f.box.w} ${f.box.h}`} className="absolute inset-0 size-full overflow-visible" aria-hidden>
+        <RacketArt g={g} pattern={pattern} />
+        {ss !== undefined && (
+          <g style={{ transform: `translateY(${ss}px)`, transition: 'transform 200ms ease-out' }}>
+            <ellipse cx="0" cy="0" rx={g.b * 0.42} ry={g.a * 0.2} fill="var(--c-success)" opacity="0.2" />
+            <circle cx="0" cy="0" r="0.45" fill="var(--c-success)" />
+          </g>
+        )}
+        {POSITIONS.map((p) => {
+          const each = spots(p)
+          const gs = lead[p] / each.length
+          return each.map((s, i) => (
+            <g key={`${p}${i}`}>
+              {selected === p && <circle cx={s.on.x} cy={s.on.y} r="2.3" fill="var(--c-accent)" fillOpacity="0.14" stroke="var(--c-accent)" strokeWidth="0.22" />}
+              {gs > 0 ? (
+                <Tape g={g} at={s.at} grams={gs} tape={tape} color="var(--c-accent)" />
+              ) : (
+                <circle cx={s.on.x} cy={s.on.y} r="0.55" fill="var(--c-bg)" stroke="var(--c-text-muted)" strokeWidth="0.2" />
+              )}
+            </g>
+          ))
+        })}
+        {extra?.map((e) => {
+          const each = extraSpots(e)
+          return each.map((s, i) => (
+            <g key={`${e.id}${i}`}>
+              {selected === e.id && <circle cx={s.on.x} cy={s.on.y} r="2.3" fill="var(--c-accent)" fillOpacity="0.14" stroke="var(--c-accent)" strokeWidth="0.22" />}
+              {e.grams > 0 ? (
+                <Tape g={g} at={s.at} grams={e.grams / each.length} tape={tape} color="var(--c-text-muted)" />
+              ) : (
+                <circle cx={s.on.x} cy={s.on.y} r="0.55" fill="var(--c-bg)" stroke="var(--c-text-muted)" strokeWidth="0.2" strokeDasharray="0.4 0.3" />
+              )}
+            </g>
+          ))
+        })}
+      </svg>
+
+      {POSITIONS.flatMap((p) => {
+        const each = spots(p)
+        const gs = lead[p] / each.length
+        return each.map((s, i) => (
+          <div key={`${p}${i}`}>
             <button
-              key={`${p}${i}`}
               type="button"
               onClick={() => onSelect(p)}
-              aria-label={`${t.pos[p]}: ${fmtNum(g, 1, lang)} g`}
+              aria-label={`${t.pos[p]}: ${fmtNum(lead[p], 1, lang)} g`}
               aria-pressed={selected === p}
               tabIndex={i === 0 ? 0 : -1}
-              className={cx(
-                'num absolute flex min-h-8 min-w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-bold transition',
-                on ? 'bg-accent text-on-accent' : 'bg-surface text-muted ring-1 ring-border-input',
-                selected === p && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
-              )}
-              style={{ left: `${d.x}%`, top: `${d.y}%` }}
-            >
-              {on ? dotLabel(DOTS[p].length > 1 ? g / 2 : g, lang) : '+'}
-            </button>
-          )
-        }),
-      )}
-      {extra?.flatMap((e) =>
-        extraDots(e, geometry).map((d, i, all) => (
-          <button
-            key={`${e.id}${i}`}
-            type="button"
-            onClick={() => onSelectExtra?.(e.id)}
-            aria-label={`${extraLabel(e, t, lang)}: ${fmtNum(e.grams, 1, lang)} g`}
-            aria-pressed={selected === e.id}
-            tabIndex={i === 0 ? 0 : -1}
-            className={cx(
-              'num absolute flex min-h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md px-1 text-[10px] font-bold transition',
-              e.grams > 0 ? 'bg-bar text-bg' : 'bg-surface text-muted ring-1 ring-dashed ring-border-input',
-              selected === e.id && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
+              className="absolute size-11 -translate-x-1/2 -translate-y-1/2 rounded-full focus-visible:outline-offset-[-4px]"
+              style={pct(s.on)}
+            />
+            {labels && gs > 0 && (
+              <span
+                className="num pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-accent px-1.5 py-px text-[11px] font-bold text-on-accent shadow-sm"
+                style={pct(s.label)}
+                aria-hidden
+              >
+                {dotLabel(gs, lang)}
+              </span>
             )}
-            style={{ left: `${d.x}%`, top: `${d.y}%` }}
-          >
-            {e.grams > 0 ? dotLabel(e.grams / all.length, lang) : '+'}
-          </button>
-        )),
-      )}
+          </div>
+        ))
+      })}
+      {extra?.flatMap((e) => {
+        const each = extraSpots(e)
+        return each.map((s, i) => (
+          <div key={`${e.id}${i}`}>
+            <button
+              type="button"
+              onClick={() => onSelectExtra?.(e.id)}
+              aria-label={`${extraLabel(e, t, lang)}: ${fmtNum(e.grams, 1, lang)} g`}
+              aria-pressed={selected === e.id}
+              tabIndex={i === 0 ? 0 : -1}
+              className="absolute size-11 -translate-x-1/2 -translate-y-1/2 rounded-full focus-visible:outline-offset-[-4px]"
+              style={pct(s.on)}
+            />
+            {labels && e.grams > 0 && (
+              <span
+                className="num pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-text px-1.5 py-px text-[11px] font-bold text-bg shadow-sm"
+                style={pct(s.label)}
+                aria-hidden
+              >
+                {dotLabel(e.grams / each.length, lang)}
+              </span>
+            )}
+          </div>
+        ))
+      })}
     </div>
   )
 }

@@ -200,6 +200,7 @@ export function Calculator() {
               <RacketDiagram
                 sweetSpot={{ x: result.sweetSpotCm, g: geo! }}
                 geometry={geo}
+                pattern={racket.pattern}
                 lead={config.leadG}
                 extra={extra}
                 selected={selected}

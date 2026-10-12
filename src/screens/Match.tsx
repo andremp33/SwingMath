@@ -383,7 +383,7 @@ function PlanCard({ res, onOpen, title }: { res: MatchResult; onOpen?: () => voi
         </p>
       )}
       <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-4">
-        <RacketDiagram lead={res.lead} selected={sel} onSelect={setSel} />
+        <RacketDiagram lead={res.lead} selected={sel} onSelect={setSel} labels={false} />
         <dl className="num space-y-1.5 text-sm">
           {POSITIONS.map((p) => (
             <div key={p} className={cx('flex justify-between gap-2', res.lead[p] === 0 && 'text-muted')}>

@@ -1,4 +1,4 @@
-import { Copy, Pencil, Plus, Search, SearchX, SlidersHorizontal } from 'lucide-react'
+import { CircleCheck, Copy, Pencil, Plus, Ruler, Search, SearchX, SlidersHorizontal } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Racket, RacketType } from '../domain/types'
@@ -19,6 +19,17 @@ const TYPE_COLOR: Record<RacketType, string> = {
   junior: 'var(--c-manoeuvrability)',
 }
 
+type Sort = 'brand' | 'weight' | 'balance' | 'swingweight'
+const SORTS: Sort[] = ['brand', 'weight', 'balance', 'swingweight']
+
+const byBrand = (a: Racket, b: Racket) => a.brand.localeCompare(b.brand) || (b.year ?? 0) - (a.year ?? 0) || a.model.localeCompare(b.model)
+const SORT_BY: Record<Sort, (a: Racket, b: Racket) => number> = {
+  brand: byBrand,
+  weight: (a, b) => a.weightG - b.weightG || byBrand(a, b),
+  balance: (a, b) => a.balanceCm - b.balanceCm || byBrand(a, b),
+  swingweight: (a, b) => a.swingweight - b.swingweight || byBrand(a, b),
+}
+
 export function Library() {
   const t = useT()
   const nav = useNavigate()
@@ -26,12 +37,23 @@ export function Library() {
   const [q, setQ] = useState('')
   const [type, setType] = useState<RacketType | 'all'>('all')
   const [brand, setBrand] = useState('all')
+  const [sort, setSort] = useState<Sort>('brand')
 
   const brands = useMemo(() => [...new Set(all.map((r) => r.brand))].sort(), [all])
   const list = useMemo(
-    () => all.filter((r) => (type === 'all' || r.type === type) && (brand === 'all' || r.brand === brand) && matchesQuery(r, q)),
-    [all, q, type, brand],
+    () => all.filter((r) => (type === 'all' || r.type === type) && (brand === 'all' || r.brand === brand) && matchesQuery(r, q)).sort(SORT_BY[sort]),
+    [all, q, type, brand, sort],
   )
+  // Sorted by brand, the list reads as one section per brand.
+  const groups = useMemo(() => {
+    if (sort !== 'brand') return [{ name: '', items: list }]
+    const out: { name: string; items: Racket[] }[] = []
+    for (const r of list) {
+      if (out.at(-1)?.name !== r.brand) out.push({ name: r.brand, items: [] })
+      out.at(-1)!.items.push(r)
+    }
+    return out
+  }, [list, sort])
   const filtered = q || type !== 'all' || brand !== 'all'
 
   return (
@@ -46,8 +68,8 @@ export function Library() {
         {t.library.title}
       </PageTitle>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,2fr)_1fr_1fr]">
-        <div className="col-span-2 sm:col-span-1">
+      <div className="mb-3 grid grid-cols-3 gap-2 md:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr] md:gap-3">
+        <div className="col-span-3 md:col-span-1">
           <label htmlFor="lib-q" className="mb-1.5 block text-sm text-muted">
             {t.library.search}
           </label>
@@ -72,9 +94,13 @@ export function Library() {
           ]}
         />
         <Select label={t.library.brand} value={brand} onChange={setBrand} options={[{ value: 'all', label: t.library.all }, ...brands.map((b) => ({ value: b, label: b }))]} />
+        <Select label={t.library.sort} value={sort} onChange={setSort} options={SORTS.map((s) => ({ value: s, label: t.library.sorts[s] }))} />
       </div>
 
-      <p className="mb-3 text-sm text-muted md:hidden">{t.library.strungNote}</p>
+      <p className="mb-4 flex items-center gap-1.5 text-sm text-muted">
+        <Ruler className="size-4 shrink-0" aria-hidden />
+        {t.library.stockNote}
+      </p>
       <p className="sr-only" aria-live="polite">
         {fmt(t.library.count, { n: list.length })}
       </p>
@@ -98,30 +124,31 @@ export function Library() {
           }
         />
       ) : (
-        <div className="border-b border-border">
-          <div aria-hidden className="hidden grid-cols-[minmax(0,1fr)_repeat(5,72px)_auto] gap-x-4 pb-2 text-right text-xs text-muted md:grid">
-            <span className="text-left">{t.library.strungNote}</span>
-            <span>{t.spec.weight}</span>
-            <span>{t.spec.balance}</span>
-            <span>SW</span>
-            <span>{t.spec.headSize}</span>
-            <span>{t.library.pattern}</span>
-            <span className="w-[76px]" />
-          </div>
-          <ul>
-            {list.map((r) => (
-              <li key={r.id}>
-                <RacketCard racket={r} />
-              </li>
-            ))}
-          </ul>
+        <div className="space-y-8">
+          {groups.map((grp) => (
+            <section key={grp.name || 'all'} aria-label={grp.name || undefined}>
+              {grp.name && (
+                <h2 className="mb-3 flex items-baseline gap-2 text-lg font-semibold tracking-tight">
+                  {grp.name}
+                  <span className="num text-sm font-normal text-muted">{grp.items.length}</span>
+                </h2>
+              )}
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {grp.items.map((r) => (
+                  <li key={r.id} className="flex">
+                    <RacketCard racket={r} showBrand={!grp.name} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
       )}
     </>
   )
 }
 
-function RacketCard({ racket: r }: { racket: Racket }) {
+function RacketCard({ racket: r, showBrand }: { racket: Racket; showBrand: boolean }) {
   const t = useT()
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
@@ -140,43 +167,73 @@ function RacketCard({ racket: r }: { racket: Racket }) {
     nav(`/rackets/${copy.id}`)
   }
 
-  const spec = r.strung ?? { weightG: r.weightG, balanceCm: r.balanceCm, swingweight: r.swingweight }
-  const cells = [
-    `${fmtNum(spec.weightG, 0, lang)} g`,
-    `${fmtNum(spec.balanceCm * 10, 0, lang)} mm`,
-    fmtNum(spec.swingweight, 0, lang),
-    `${r.headSizeSqIn} in²`,
-    r.pattern ?? '—',
-  ]
+  // Stock specs: unstrung, no overgrip, as the frame leaves the factory.
+  const pts = (r.lengthCm / 2 - r.balanceCm) / 0.3175
+  const official = r.specFrom?.weight === 'official'
+  const facts = [`${r.headSizeSqIn} in²`, r.pattern, r.ra && `RA ${r.ra}`, Math.abs(r.lengthCm - 68.58) > 0.3 && `${fmtNum(r.lengthCm, 1, lang)} cm`].filter(Boolean)
 
   return (
-    <article className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t border-border py-3 md:grid-cols-[minmax(0,1fr)_repeat(5,72px)_auto]">
-      <div className="min-w-0">
-        <h3 className="truncate leading-snug">
-          <span className="text-muted">{r.brand} </span>
-          <span className="font-medium">{r.model}</span>
-          {r.year && <span className="text-muted"> {r.year}</span>}
-        </h3>
-        <p className="mt-0.5 flex items-center gap-2 text-xs text-muted">
-          <span className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2 rounded-full" style={{ background: TYPE_COLOR[r.type] }} />
+    <article className="flex w-full flex-col rounded-lg border border-border bg-surface p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-xs text-muted">
+            <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: TYPE_COLOR[r.type] }} />
+            {showBrand ? `${r.brand} · ` : ''}
             {t.library.types[r.type]}
+          </p>
+          <h3 className="mt-0.5 font-semibold leading-snug">
+            {!showBrand && <span className="sr-only">{r.brand} </span>}
+            {r.model}
+            {r.year && <span className="num font-normal text-muted"> {r.year}</span>}
+          </h3>
+        </div>
+        {!r.isStock ? (
+          <Badge tone="accent">{t.library.custom}</Badge>
+        ) : official ? (
+          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-success" title={t.library.officialHint}>
+            <CircleCheck className="size-3.5" aria-hidden />
+            {t.library.official}
           </span>
-          {!r.isStock && <Badge tone="accent">{t.library.custom}</Badge>}
-        </p>
-        <p className="num mt-1 text-sm text-muted md:hidden">{[cells[0], cells[1], `${cells[2]} SW`, cells[3], cells[4]].join(' · ')}</p>
+        ) : (
+          <span className="shrink-0 text-xs text-muted" title={t.library.measuredHint}>
+            {t.library.measured}
+          </span>
+        )}
       </div>
-      {cells.map((c, i) => (
-        <span key={i} className="num hidden text-right text-sm md:block">
-          {c}
-        </span>
-      ))}
-      <div className="flex justify-end gap-1">
-        <IconButton icon={SlidersHorizontal} label={t.library.useInCalc} onClick={openInCalc} />
+
+      <dl className="num my-3 grid grid-cols-3 gap-2 border-y border-border py-3">
+        <div>
+          <dt className="text-xs text-muted">{t.spec.weight}</dt>
+          <dd className="readout text-lg">
+            {fmtNum(r.weightG, 0, lang)}
+            <span className="ml-0.5 text-xs font-normal text-muted">g</span>
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted">{t.spec.balance}</dt>
+          <dd className="readout text-lg">
+            {fmtNum(r.balanceCm * 10, 0, lang)}
+            <span className="ml-0.5 text-xs font-normal text-muted">mm</span>
+          </dd>
+          <dd className="text-xs text-muted">
+            {fmtNum(Math.abs(pts), 1, lang)} {pts >= 0 ? t.units.pts : t.units.ptsHH}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted">SW</dt>
+          <dd className="readout text-lg">{fmtNum(r.swingweight, 0, lang)}</dd>
+        </div>
+      </dl>
+
+      <p className="num mb-3 text-sm text-muted">{facts.join(' · ')}</p>
+
+      <div className="mt-auto flex items-center gap-1">
+        <Button variant="secondary" size="sm" icon={SlidersHorizontal} className="mr-auto" onClick={openInCalc}>
+          {t.library.useInCalc}
+        </Button>
         <IconButton icon={Copy} label={t.common.duplicate} onClick={duplicate} />
         {!r.isStock && <IconButton icon={Pencil} label={t.common.edit} onClick={() => nav(`/rackets/${r.id}`)} />}
       </div>
     </article>
   )
 }
-
