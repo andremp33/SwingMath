@@ -1,4 +1,4 @@
-import { a11y, expect, resultCard, start, test } from './fixtures'
+import { a11y, expand, expect, resultCard, start, test } from './fixtures'
 
 test.describe('F01 see the effect of adding lead', () => {
   test('F01-H1 lead at the tip raises weight and swingweight', async ({ page }) => {
@@ -68,6 +68,24 @@ test.describe('F01 see the effect of adding lead', () => {
     await expect(page.getByRole('dialog', { name: 'Como calculamos' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toBeHidden()
+  })
+})
+
+test.describe('Sweet spot', () => {
+  test('SS-H1 lead at 4 and 8 lowers the sweet spot', async ({ page }) => {
+    await start(page)
+    await expand(page, 'Ponto doce')
+    const card = page.getByRole('region', { name: 'Ponto doce' })
+    // Above it raises it, below it lowers it.
+    await expect(card.getByRole('listitem').filter({ hasText: '12h (ponta)' })).toContainText('+')
+    await expect(card.getByRole('listitem').filter({ hasText: '4h e 8h' })).toContainText('−')
+    await card.getByRole('button', { name: 'Adicionar' }).click()
+    const slider = page.getByRole('slider', { name: '4h e 8h' })
+    await expect(slider).toBeFocused()
+    for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight')
+    await expect(card).toContainText(/O teu chumbo moveu-o [\d,]+ mm para baixo/)
+    await expect(card.getByRole('button', { name: 'Adicionar' })).toHaveCount(0)
+    await a11y(page)
   })
 })
 

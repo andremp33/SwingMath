@@ -14,7 +14,7 @@ import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
-import { ComfortCard, GripCard, StringsCard } from './CalcExtras'
+import { ComfortCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
 import { CommunityCard } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { usePaywall } from './Pro'
@@ -41,6 +41,7 @@ export function Calculator() {
   const [addOpen, setAddOpen] = useState(false)
   const updateExtra = useStore((s) => s.updateExtra)
   const removeExtra = useStore((s) => s.removeExtra)
+  const addExtra = useStore((s) => s.addExtra)
   const [infoOpen, setInfoOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
 
@@ -198,7 +199,7 @@ export function Calculator() {
             <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
             <div className="@container"><div className="grid grid-cols-1 items-center gap-4 @lg:grid-cols-[150px_minmax(0,1fr)]">
               <RacketDiagram
-                sweetSpot={{ x: result.sweetSpotCm, g: geo! }}
+                sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
                 geometry={geo}
                 pattern={racket.pattern}
                 lead={config.leadG}
@@ -241,6 +242,18 @@ export function Calculator() {
               )}
             </div>
           </Card>
+          <div className="order-2 xl:order-none">
+            <SweetSpotCard
+              racket={racket}
+              result={result}
+              noLead={noLead?.result ?? result}
+              geo={geo!}
+              onAdd={(e) => {
+                addExtra(e)
+                setTimeout(() => focusSlider(e.id), 50)
+              }}
+            />
+          </div>
           <div className="order-6 xl:order-none"><StringsCard racket={racket} /></div>
           <div className="order-7 xl:order-none"><GripCard /></div>
           <div className="order-11 xl:order-none"><CommunityCard racket={racket} /></div>

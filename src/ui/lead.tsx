@@ -14,8 +14,9 @@ const dotLabel = (g: number, lang: string) =>
   fmtNum(g, Number.isInteger(g) ? 0 : Number.isInteger(g * 2) ? 1 : 2, lang)
 
 const DEFAULT_GEOMETRY = frameGeometry(68.58, 100)
-/** Where the shaft meets the throat, and the handle the shaft (cm from the butt). */
-const SHAFT_TOP = 28
+/** Where the throat's V closes, just above the handle, and where the handle
+ *  starts (cm from the butt). */
+const THROAT_APEX = 21.5
 const HANDLE_TOP = 19.5
 const BEAM = 1.15
 
@@ -53,13 +54,13 @@ function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
   const [mains, crosses] = (pattern?.match(/^(\d+)\s*x\s*(\d+)/i)?.slice(1).map(Number) ?? [16, 19]) as [number, number]
   const bedX = g.b - BEAM / 2 - 0.15
   const bedY = g.a - BEAM / 2 - 0.15
-  const yS = f.y(SHAFT_TOP)
+  const yS = f.y(THROAT_APEX)
   const yH = f.y(HANDLE_TOP)
-  // The throat: two straight arms leave the hoop at 4:30 and 7:30, along its
-  // curve, and meet in a narrow V where the shaft starts (the tangent there
-  // lands on the shaft's top for a standard frame).
-  const r = f.at((Math.PI * 3) / 4)
-  const l = f.at((-Math.PI * 3) / 4)
+  // The throat: a narrow V from just above the handle, opening until it meets
+  // the hoop near 5 and 7 o'clock, where the hoop turns in to the yoke.
+  const th = (146 / 180) * Math.PI
+  const r = f.at(th)
+  const l = f.at(-th)
   const frame = 'var(--c-text)'
   return (
     <>
@@ -88,7 +89,7 @@ function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
       {/* Hoop (its bottom is the yoke), throat arms and shaft */}
       <ellipse cx="0" cy={f.yc} rx={g.b} ry={g.a} fill="none" stroke={frame} strokeWidth={BEAM} />
       <path d={`M${r.x} ${r.y} L0 ${yS} L${l.x} ${l.y}`} fill="none" stroke={frame} strokeWidth={BEAM} strokeLinejoin="round" />
-      <path d={`M-0.6 ${yS - 0.4} L0.6 ${yS - 0.4} L0.85 ${yH + 0.2} L-0.85 ${yH + 0.2} Z`} fill={frame} />
+      <path d={`M-0.55 ${yS - 0.3} L0.55 ${yS - 0.3} L0.8 ${yH + 0.2} L-0.8 ${yH + 0.2} Z`} fill={frame} />
       {/* Handle: a dark grip wrapped in overlapping turns, a collar and the butt cap */}
       <rect x="-1.4" y={yH + 0.45} width="2.8" height={g.L - yH - 1.15} rx="0.3" fill={frame} opacity="0.88" />
       <g clipPath="url(#grip)" stroke="var(--c-bg)" strokeWidth="0.09" opacity="0.35">
@@ -116,8 +117,9 @@ export function RacketDiagram({
   lead: LeadMap
   selected: Position | string
   onSelect: (p: Position) => void
-  /** Sweet spot in cm from the butt, with the frame geometry to place it. */
-  sweetSpot?: { x: number; g: Geometry }
+  /** Sweet spot in cm from the butt, with the frame geometry to place it;
+   *  `from` is where it was without lead, drawn as an outline. */
+  sweetSpot?: { x: number; g: Geometry; from?: number }
   extra?: ExtraLead[]
   geometry?: Geometry
   /** String pattern, e.g. "16x19", for the string bed. */
@@ -142,6 +144,9 @@ export function RacketDiagram({
     <div className="relative mx-auto w-full max-w-[150px] @lg:max-w-[170px]" style={{ aspectRatio: `${f.box.w} / ${f.box.h}` }}>
       <svg viewBox={`${f.box.x} ${f.box.y} ${f.box.w} ${f.box.h}`} className="absolute inset-0 size-full overflow-visible" aria-hidden>
         <RacketArt g={g} pattern={pattern} />
+        {sweetSpot?.from !== undefined && Math.abs(sweetSpot.from - sweetSpot.x) >= 0.05 && (
+          <ellipse cx="0" cy={f.y(sweetSpot.from)} rx={g.b * 0.42} ry={g.a * 0.2} fill="none" stroke="var(--c-success)" strokeWidth="0.15" strokeDasharray="0.5 0.4" opacity="0.8" />
+        )}
         {ss !== undefined && (
           <g style={{ transform: `translateY(${ss}px)`, transition: 'transform 200ms ease-out' }}>
             <ellipse cx="0" cy="0" rx={g.b * 0.42} ry={g.a * 0.2} fill="var(--c-success)" opacity="0.2" />

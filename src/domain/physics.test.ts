@@ -12,6 +12,7 @@ import {
   type Base,
 } from './physics'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead, type RacketSpec } from './types'
+import { sweetSpotEffects } from './sweetSpot'
 
 const base: Base = {
   lengthCm: 68.58,
@@ -160,5 +161,30 @@ describe('physics', () => {
       expect(v).toBeGreaterThanOrEqual(5)
       expect(v).toBeLessThanOrEqual(95)
     }
+  })
+})
+
+describe('sweet spot and lead', () => {
+  const input = {
+    spec: { lengthCm: 68.58, headSizeSqIn: 98, weightG: 305, balanceCm: 31.5, swingweight: 295, twistweight: 13.4 },
+    baseMode: 'reference' as const,
+    measured: {},
+    accessories: { strings: true, overgrip: true, leatherGrip: false, dampener: false },
+    masses: DEFAULT_ACCESSORY_MASSES,
+    leadG: emptyLead(),
+  }
+  const fx = Object.fromEntries(sweetSpotEffects(input).map((e) => [e.key, e]))
+
+  it('lead above the sweet spot raises it, below it lowers it, in the butt raises it a little', () => {
+    expect(fx.tip.mm).toBeGreaterThan(3)
+    expect(fx.fourEight.mm).toBeLessThan(-1.5)
+    expect(fx.throat.mm).toBeLessThan(fx.fourEight.mm)
+    expect(fx.handle.mm).toBeGreaterThan(0)
+  })
+
+  it('3 and 9 barely move it but widen it most', () => {
+    expect(Math.abs(fx.threeNine.mm)).toBeLessThan(1.5)
+    expect(fx.threeNine.widerPct).toBeGreaterThan(fx.fourEight.widerPct)
+    expect(fx.fourEight.widerPct).toBeGreaterThan(fx.throat.widerPct)
   })
 })

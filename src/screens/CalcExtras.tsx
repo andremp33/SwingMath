@@ -1,13 +1,16 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowDown, ArrowRight, ArrowUp, Minus, Plus } from 'lucide-react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { armComfort } from '../domain/comfort'
 import { GRIP_SIZES, gripInches, gripMm, gripSize } from '../domain/grip'
 import { DEFAULT_STRINGBED, stringbedIndex } from '../domain/strings'
-import type { GripConfig, Racket, Specs } from '../domain/types'
+import type { Geometry } from '../domain/physics'
+import { PROBES, sweetSpotEffects, type ProbeKey } from '../domain/sweetSpot'
+import type { ExtraLead, GripConfig, Racket, Specs } from '../domain/types'
 import { useStore } from '../data/store'
-import { useT } from '../i18n'
-import { fmtNum, gripLabel } from '../lib/format'
-import { Segmented, Select } from '../ui/basics'
+import { fmt, useT } from '../i18n'
+import { fmtNum, fmtSigned, gripLabel } from '../lib/format'
+import { Button, cx, Segmented, Select } from '../ui/basics'
 import { Ring } from '../ui/specs'
 import { bedLabel, StringbedEditor, StringbedSummary } from '../ui/strings'
 import { CollapsibleCard, InfoTip } from '../ui/disclosure'
@@ -119,6 +122,79 @@ export function ComfortCard({ racket, specs }: { racket: Racket; specs: Specs })
           )}
         </div>
       </div>
+    </CollapsibleCard>
+  )
+}
+
+/**
+ * The sweet spot (centre of percussion) for this setup, and what 5 g more at
+ * each spot would do to it: higher or lower on the frame, and wider.
+ */
+export function SweetSpotCard({ racket, result, noLead, geo, onAdd }: { racket: Racket; result: Specs; noLead: Specs; geo: Geometry; onAdd: (e: ExtraLead) => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const config = useStore((s) => s.config)
+  const masses = useStore((s) => s.masses)
+  const effects = useMemo(() => sweetSpotEffects({ spec: racket, ...config, masses }).sort((a, b) => b.mm - a.mm), [racket, config, masses])
+  const centre = result.sweetSpotCm - geo.xc
+  const moved = (result.sweetSpotCm - noLead.sweetSpotCm) * 10
+  const dir = centre >= 0 ? t.sweet.above : t.sweet.below
+  const has48 = (config.extra ?? []).some((e) => e.kind === 'hoop' && e.sides === 2 && (e.hour === 4 || e.hour === 8))
+  const max = Math.max(4, ...effects.map((e) => Math.abs(e.mm)))
+  const label = (k: ProbeKey) => (k === 'fourEight' ? fmt(t.custom.hoopBoth, { a: t.custom.hour(4), b: t.custom.hour(8) }) : t.pos[k])
+  return (
+    <CollapsibleCard
+      id="sweet-spot"
+      title={t.sweet.title}
+      summary={fmt(t.sweet.summary, { cm: fmtNum(result.sweetSpotCm, 1, lang), d: fmtNum(Math.abs(centre), 1, lang), dir })}
+      info={<InfoTip title={t.sweet.title}>{t.sweet.info}</InfoTip>}
+    >
+      <p className="text-sm">
+        {fmt(t.sweet.where, { cm: fmtNum(result.sweetSpotCm, 1, lang), d: fmtNum(Math.abs(centre), 1, lang), dir })}
+        {Math.abs(moved) >= 0.5 && <> {fmt(t.sweet.moved, { mm: fmtNum(Math.abs(moved), 1, lang), dir: moved > 0 ? t.sweet.up : t.sweet.down })}</>}
+      </p>
+
+      <h3 className="mb-1 mt-4 text-sm font-semibold">{t.sweet.effectsTitle}</h3>
+      <ul className="divide-y divide-border">
+        {effects.map((e) => {
+          const up = e.mm >= 0.25
+          const down = e.mm <= -0.25
+          const Icon = up ? ArrowUp : down ? ArrowDown : Minus
+          return (
+            <li key={e.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]">
+              <span className="text-sm">{label(e.key)}</span>
+              <span className="num order-3 col-span-2 flex items-center gap-2 text-xs text-muted sm:order-none sm:col-span-1">
+                {/* A bar either side of the centre line: up the frame to the right. */}
+                <span aria-hidden className="relative h-1.5 w-24 shrink-0 rounded-full bg-surface-2">
+                  <span className="absolute inset-y-0 left-1/2 w-px bg-border-input" />
+                  <span
+                    className="absolute inset-y-0 rounded-full"
+                    style={{
+                      background: up ? 'var(--c-power)' : 'var(--c-stability)',
+                      left: e.mm >= 0 ? '50%' : `${50 - (Math.abs(e.mm) / max) * 50}%`,
+                      width: `${(Math.abs(e.mm) / max) * 50}%`,
+                    }}
+                  />
+                </span>
+                {e.widerPct >= 0.5 && fmt(t.sweet.wider, { n: fmtNum(e.widerPct, 0, lang) })}
+              </span>
+              <span className="flex items-center justify-end gap-2">
+                <span className={cx('num flex items-center gap-1 text-sm font-semibold', !up && !down && 'text-muted')}>
+                  <Icon className="size-3.5" aria-hidden />
+                  {fmtSigned(e.mm, 1, lang)} mm
+                  <span className="sr-only">{up ? t.sweet.up : down ? t.sweet.down : ''}</span>
+                </span>
+                {e.key === 'fourEight' && !has48 && (
+                  <Button size="sm" variant="ghost" icon={Plus} onClick={() => onAdd({ id: crypto.randomUUID().slice(0, 8), grams: 0, ...PROBES.fourEight })}>
+                    {t.sweet.add}
+                  </Button>
+                )}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-3 text-sm text-muted">{t.sweet.rule}</p>
     </CollapsibleCard>
   )
 }
