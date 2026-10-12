@@ -1,9 +1,9 @@
-import { CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
+import { ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
-import { feel } from '../domain/feel'
+import { useMemo, useState } from 'react'
+import { feel, FEEL_KEYS, type Feel } from '../domain/feel'
 import { geometry } from '../domain/physics'
-import { POSITIONS, type Position, type Setup, type Specs } from '../domain/types'
+import { emptyLead, POSITIONS, type Position, type Setup, type Specs } from '../domain/types'
 import { saveSetup, uid } from '../data/db'
 import { useComputed, useRacket, useSetups } from '../data/hooks'
 import { FREE_SETUP_LIMIT, isPro, useStore } from '../data/store'
@@ -32,6 +32,9 @@ export function Calculator() {
   const loadedSetupId = useStore((s) => s.loadedSetupId)
   const racket = useRacket(config.racketId)
   const computed = useComputed(config, racket)
+  // The same setup without lead: what the feel bar compares against.
+  const noLeadConfig = useMemo(() => ({ ...config, leadG: emptyLead(), extra: [] }), [config])
+  const noLead = useComputed(noLeadConfig, racket)
   const setups = useSetups()
   const loaded = setups?.find((s) => s.id === loadedSetupId)
   const [selected, setSelected] = useState<Position | string>('tip')
@@ -43,6 +46,11 @@ export function Calculator() {
 
   const baseRows = useSpecRows(computed?.base ?? emptySpecs, undefined, { recoil: false })
   const resultRows = useSpecRows(computed?.result ?? emptySpecs, computed?.base)
+  const [barOpen, setBarOpen] = useState(() => readOpen(BAR_KEY))
+  const toggleBar = () => {
+    setBarOpen(!barOpen)
+    writeOpen(BAR_KEY, !barOpen)
+  }
 
   if (!racket || !computed) {
     return (
@@ -252,16 +260,9 @@ export function Calculator() {
         </div>
       </div>
 
-      {/* Phones: the result follows you while you move the sliders. */}
-      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 py-2 backdrop-blur lg:hidden result-bar" aria-hidden>
-        <div className="num mx-auto flex max-w-lg justify-between text-center text-xs">
-          <Mini label={t.spec.weight} value={fmtNum(result.weightG, 1, lang)} delta={result.weightG - base.weightG} lang={lang} />
-          <Mini label={t.spec.balance} value={fmtNum(result.balanceCm * 10, 1, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
-          <Mini label="SW" value={fmtNum(result.swingweight, 1, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
-          <Mini label="TW" value={fmtNum(result.twistweight, 2, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} digits={2} lang={lang} />
-        </div>
-      </div>
-      <div className="h-12 lg:hidden" />
+      {/* Phones: the result (and, opened, the feel) follows you while you move the sliders. */}
+      <ResultBar result={result} base={base} feel={f} feelBase={feel(noLead?.result ?? result, racket.headSizeSqIn, racket.ra)} open={barOpen} onToggle={toggleBar} />
+      <div className={cx('lg:hidden', barOpen ? 'h-44' : 'h-12')} />
 
       <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
       <AddPositionSheet
@@ -349,6 +350,87 @@ function VerifyCard({ predicted }: { predicted: Specs }) {
         </Button>
       )}
     </Card>
+  )
+}
+
+const BAR_KEY = 'swingmath-open:result-bar'
+const readOpen = (k: string) => {
+  try {
+    return localStorage.getItem(k) === '1'
+  } catch {
+    return false
+  }
+}
+const writeOpen = (k: string, v: boolean) => {
+  try {
+    localStorage.setItem(k, v ? '1' : '0')
+  } catch {
+    // Private mode: it just won't be remembered.
+  }
+}
+
+/** The bar above the tabs: the four numbers; a tap opens the feel above
+ *  them, with how much the lead moved each one. */
+function ResultBar({ result, base, feel: f, feelBase, open, onToggle }: { result: Specs; base: Specs; feel: Feel; feelBase: Feel; open: boolean; onToggle: () => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  return (
+    <div className="result-bar fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 backdrop-blur lg:hidden">
+      {open && (
+        <ul id="result-bar-feel" aria-label={t.calc.feel} className="mx-auto grid max-w-lg grid-cols-3 gap-x-2 gap-y-2 border-b border-border pb-2 pt-3">
+          {FEEL_KEYS.map((k) => (
+            <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} />
+          ))}
+        </ul>
+      )}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="result-bar-feel"
+        aria-label={t.calc.feel}
+        onClick={onToggle}
+        className="num mx-auto flex w-full max-w-lg items-center py-2 text-center text-xs"
+      >
+        <Mini label={t.spec.weight} value={fmtNum(result.weightG, 1, lang)} delta={result.weightG - base.weightG} lang={lang} />
+        <Mini label={t.spec.balance} value={fmtNum(result.balanceCm * 10, 1, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
+        <Mini label="SW" value={fmtNum(result.swingweight, 1, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
+        <Mini label="TW" value={fmtNum(result.twistweight, 2, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} digits={2} lang={lang} />
+        <ChevronUp className={cx('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
+      </button>
+    </div>
+  )
+}
+
+function MiniRing({ label, value, delta, color, lang }: { label: string; value: number; delta: number; color: string; lang: string }) {
+  const R = 15
+  const C = 2 * Math.PI * R
+  const d = Math.round(delta)
+  return (
+    <li className="flex min-w-0 flex-col items-center gap-0.5">
+      <div className="flex items-center">
+        <span className="w-7" aria-hidden />
+        <div className="relative size-10">
+          <svg viewBox="0 0 36 36" className="size-full -rotate-90" aria-hidden>
+            <circle cx="18" cy="18" r={R} fill="none" stroke="var(--c-border)" strokeWidth="3.5" />
+            <circle
+              cx="18"
+              cy="18"
+              r={R}
+              fill="none"
+              stroke={color}
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeDasharray={C}
+              strokeDashoffset={C * (1 - value / 100)}
+              className="transition-[stroke-dashoffset] duration-300 ease-out"
+            />
+          </svg>
+          <span className="num absolute inset-0 flex items-center justify-center text-xs font-semibold">{Math.round(value)}</span>
+        </div>
+        <span className={cx('num w-7 pl-1 text-[11px]', d === 0 ? 'text-muted' : 'font-semibold text-text')}>{d === 0 ? '·' : fmtSigned(d, 0, lang)}</span>
+      </div>
+      <span className="max-w-full truncate text-[11px] text-muted">{label}</span>
+    </li>
   )
 }
 

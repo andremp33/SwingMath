@@ -134,4 +134,21 @@ test.describe('F17 phone sections', () => {
     await expect(page.getByRole('region', { name: 'Cordas' }).getByRole('button', { name: /^Cordas/ })).toHaveAttribute('aria-expanded', 'true')
     await a11y(page)
   })
+
+  test('F17-H2 the result bar opens the feel, which follows the lead', async ({ page }) => {
+    await start(page)
+    const bar = page.getByRole('button', { name: 'Sensação estimada', exact: true })
+    await expect(bar).toHaveAttribute('aria-expanded', 'false')
+    await bar.click()
+    const feel = page.getByRole('list', { name: 'Sensação estimada' })
+    await expect(feel.getByRole('listitem')).toHaveCount(6)
+    // No lead yet: nothing moved.
+    await expect(feel.getByRole('listitem').filter({ hasText: 'Peso de bola' })).toContainText('·')
+    for (let i = 0; i < 8; i++) await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await expect(feel.getByRole('listitem').filter({ hasText: 'Peso de bola' })).toContainText('+')
+    await expect(feel.getByRole('listitem').filter({ hasText: 'Manobrabilidade' })).toContainText('−')
+    await a11y(page)
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Sensação estimada', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  })
 })
