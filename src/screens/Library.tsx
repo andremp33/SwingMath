@@ -1,4 +1,4 @@
-import { CircleCheck, Copy, Pencil, Plus, Ruler, Search, SearchX, SlidersHorizontal } from 'lucide-react'
+import { CircleCheck, Copy, Diamond, Pencil, Plus, Ruler, Search, SearchX, SlidersHorizontal } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Racket, RacketType } from '../domain/types'
@@ -7,7 +7,9 @@ import { useAllRackets } from '../data/hooks'
 import { defaultConfig, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
-import { Badge, Button, EmptyState, IconButton, PageTitle, Select } from '../ui/basics'
+import { Badge, Button, Card, CardTitle, EmptyState, IconButton, PageTitle, Select } from '../ui/basics'
+import { InfoTip } from '../ui/disclosure'
+import { RacketMap } from '../ui/RacketMap'
 import { useToast } from '../ui/overlay'
 import { matchesQuery } from '../ui/RacketPicker'
 
@@ -38,6 +40,9 @@ export function Library() {
   const [type, setType] = useState<RacketType | 'all'>('all')
   const [brand, setBrand] = useState('all')
   const [sort, setSort] = useState<Sort>('brand')
+  const mapIds = useStore((s) => s.mapIds)
+  const toggleMap = useStore((s) => s.toggleMap)
+  const picked = useMemo(() => mapIds.map((id) => all.find((r) => r.id === id)).filter((r): r is Racket => !!r), [mapIds, all])
 
   const brands = useMemo(() => [...new Set(all.map((r) => r.brand))].sort(), [all])
   const list = useMemo(
@@ -101,6 +106,11 @@ export function Library() {
         <Ruler className="size-4 shrink-0" aria-hidden />
         {t.library.stockNote}
       </p>
+      <Card label={t.library.map.title} className="mb-6">
+        <CardTitle info={<InfoTip title={t.library.map.title}>{t.library.map.info}</InfoTip>}>{t.library.map.title}</CardTitle>
+        <RacketMap all={all} picked={picked} onRemove={toggleMap} />
+      </Card>
+
       <p className="sr-only" aria-live="polite">
         {fmt(t.library.count, { n: list.length })}
       </p>
@@ -153,6 +163,8 @@ function RacketCard({ racket: r, showBrand }: { racket: Racket; showBrand: boole
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
   const loadConfig = useStore((s) => s.loadConfig)
+  const onMap = useStore((s) => s.mapIds.includes(r.id))
+  const toggleMap = useStore((s) => s.toggleMap)
   const toast = useToast()
 
   const openInCalc = () => {
@@ -231,6 +243,7 @@ function RacketCard({ racket: r, showBrand }: { racket: Racket; showBrand: boole
         <Button variant="secondary" size="sm" icon={SlidersHorizontal} className="mr-auto" onClick={openInCalc}>
           {t.library.useInCalc}
         </Button>
+        <IconButton icon={Diamond} label={onMap ? t.library.map.remove : t.library.map.add} active={onMap} aria-pressed={onMap} onClick={() => toggleMap(r.id)} />
         <IconButton icon={Copy} label={t.common.duplicate} onClick={duplicate} />
         {!r.isStock && <IconButton icon={Pencil} label={t.common.edit} onClick={() => nav(`/rackets/${r.id}`)} />}
       </div>

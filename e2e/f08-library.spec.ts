@@ -12,6 +12,23 @@ test.describe('F08 library and custom rackets', () => {
     await a11y(page)
   })
 
+  test('F08-H3 put rackets on the map and take them off', async ({ page }) => {
+    await start(page, { path: '/rackets' })
+    const map = page.getByRole('region', { name: 'Mapa de raquetes' })
+    await expect(map).toContainText('Toca em ◇ numa raquete')
+    await page.getByLabel('Procurar marca ou modelo').fill('Prestige MP')
+    const card = page.getByRole('article').first()
+    await card.getByRole('button', { name: 'Pôr no mapa' }).click()
+    await expect(card.getByRole('button', { name: 'Tirar do mapa' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(map.getByRole('img')).toHaveAttribute('aria-label', /Head Prestige MP/)
+    await expect(map.getByRole('listitem')).toHaveCount(1)
+    await a11y(page)
+    // Remembered, and removable from the map itself.
+    await page.reload()
+    await map.getByRole('button', { name: /Tirar do mapa: Head Prestige MP/ }).click()
+    await expect(map.getByRole('listitem')).toHaveCount(0)
+  })
+
   test('F08-E1 no results offers to clear filters', async ({ page }) => {
     await start(page, { path: '/rackets' })
     await page.getByLabel('Procurar marca ou modelo').fill('zzzz')

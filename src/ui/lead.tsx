@@ -9,7 +9,7 @@ import { cx } from './basics'
 export const LEAD_MAX = 20
 const STEP = 0.5
 
-/** Grams on one side: 3, 2.5 or 1.25 (half of a split 2.5 g). */
+/** Grams on one dot: 3, 2.5 or 1.25 (half of a split 2.5 g). */
 const dotLabel = (g: number, lang: string) =>
   fmtNum(g, Number.isInteger(g) ? 0 : Number.isInteger(g * 2) ? 1 : 2, lang)
 
@@ -53,14 +53,13 @@ function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
   const [mains, crosses] = (pattern?.match(/^(\d+)\s*x\s*(\d+)/i)?.slice(1).map(Number) ?? [16, 19]) as [number, number]
   const bedX = g.b - BEAM / 2 - 0.15
   const bedY = g.a - BEAM / 2 - 0.15
-  // The throat arms leave the hoop at 4:30 and 7:30 and run into the shaft.
-  const arm = (side: 1 | -1) => {
-    const p = f.at(side * (Math.PI * 3) / 4)
-    const yS = f.y(SHAFT_TOP)
-    return `M${p.x} ${p.y} C${p.x - side * 2.6} ${p.y + 3.4} ${side * 1.6} ${yS - 5} ${side * 1.1} ${yS}`
-  }
   const yS = f.y(SHAFT_TOP)
   const yH = f.y(HANDLE_TOP)
+  // The throat: two straight arms leave the hoop at 4:30 and 7:30, along its
+  // curve, and meet in a narrow V where the shaft starts (the tangent there
+  // lands on the shaft's top for a standard frame).
+  const r = f.at((Math.PI * 3) / 4)
+  const l = f.at((-Math.PI * 3) / 4)
   const frame = 'var(--c-text)'
   return (
     <>
@@ -69,7 +68,7 @@ function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
           <ellipse cx="0" cy={f.yc} rx={bedX} ry={bedY} />
         </clipPath>
         <clipPath id="grip">
-          <rect x="-1.45" y={yH + 0.55} width="2.9" height={g.L - yH - 1.25} rx="0.35" />
+          <rect x="-1.4" y={yH + 0.45} width="2.8" height={g.L - yH - 1.15} rx="0.3" />
         </clipPath>
       </defs>
       {/* String bed */}
@@ -86,32 +85,22 @@ function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
       </g>
       {/* Bumper guard over the top of the hoop */}
       <path d={hoopArc(f, g, 0, 17, BEAM / 2 + 0.2)} fill="none" stroke="var(--c-text-muted)" strokeWidth="0.45" strokeLinecap="round" opacity="0.55" />
-      {/* Hoop, throat arms, shaft */}
+      {/* Hoop (its bottom is the yoke), throat arms and shaft */}
       <ellipse cx="0" cy={f.yc} rx={g.b} ry={g.a} fill="none" stroke={frame} strokeWidth={BEAM} />
-      <path d={`${arm(1)} ${arm(-1)}`} fill="none" stroke={frame} strokeWidth={BEAM} strokeLinecap="round" />
-      <path d={`M-1.15 ${yS - 0.2} L1.15 ${yS - 0.2} L1.4 ${yH} L-1.4 ${yH} Z`} fill={frame} />
-      {/* Handle: grip wrapped in overlapping turns, a collar and the butt cap */}
-      <rect x="-1.45" y={yH + 0.55} width="2.9" height={g.L - yH - 1.25} rx="0.35" fill="var(--c-surface)" stroke="var(--c-border-input)" strokeWidth="0.12" />
-      <g clipPath="url(#grip)" stroke="var(--c-border-input)" strokeWidth="0.1">
-        {Array.from({ length: Math.ceil((g.L - yH) / 1.15) + 2 }, (_, i) => {
-          const y0 = yH + 0.2 + i * 1.15
-          return <line key={i} x1="-1.6" y1={y0} x2="1.6" y2={y0 - 1.1} />
+      <path d={`M${r.x} ${r.y} L0 ${yS} L${l.x} ${l.y}`} fill="none" stroke={frame} strokeWidth={BEAM} strokeLinejoin="round" />
+      <path d={`M-0.6 ${yS - 0.4} L0.6 ${yS - 0.4} L0.85 ${yH + 0.2} L-0.85 ${yH + 0.2} Z`} fill={frame} />
+      {/* Handle: a dark grip wrapped in overlapping turns, a collar and the butt cap */}
+      <rect x="-1.4" y={yH + 0.45} width="2.8" height={g.L - yH - 1.15} rx="0.3" fill={frame} opacity="0.88" />
+      <g clipPath="url(#grip)" stroke="var(--c-bg)" strokeWidth="0.09" opacity="0.35">
+        {Array.from({ length: Math.ceil((g.L - yH) / 1.1) + 2 }, (_, i) => {
+          const y0 = yH + 0.3 + i * 1.1
+          return <line key={i} x1="-1.5" y1={y0} x2="1.5" y2={y0 - 1} />
         })}
       </g>
-      <rect x="-1.55" y={yH} width="3.1" height="0.65" rx="0.2" fill={frame} />
-      <rect x="-1.62" y={g.L - 0.75} width="3.24" height="0.75" rx="0.3" fill={frame} />
+      <rect x="-1.25" y={yH} width="2.5" height="0.5" rx="0.2" fill="var(--c-text-muted)" />
+      <rect x="-1.55" y={g.L - 0.75} width="3.1" height="0.75" rx="0.3" fill={frame} />
     </>
   )
-}
-
-/** Lead tape on the frame: the strip grows with the grams on each side. */
-function Tape({ g, at, grams, tape, color }: { g: Geometry; at: { th?: number; cm?: number }; grams: number; tape?: number; color: string }) {
-  const f = frameShape(g)
-  const len = Math.min(10, Math.max(1, tape ? tapeCm(grams, tape) : grams * 1.6))
-  if (at.th !== undefined) return <path d={hoopArc(f, g, at.th, len)} fill="none" stroke={color} strokeWidth={BEAM + 0.3} />
-  const y = f.y(at.cm!)
-  const w = at.cm! < HANDLE_TOP ? 3.3 : 2.9
-  return <rect x={-w / 2} y={y - Math.min(len, 5) / 2} width={w} height={Math.min(len, 5)} rx="0.2" fill={color} opacity="0.92" />
 }
 
 export function RacketDiagram({
@@ -122,7 +111,6 @@ export function RacketDiagram({
   extra,
   geometry,
   pattern,
-  labels = true,
   onSelectExtra,
 }: {
   lead: LeadMap
@@ -134,33 +122,19 @@ export function RacketDiagram({
   geometry?: Geometry
   /** String pattern, e.g. "16x19", for the string bed. */
   pattern?: string
-  /** Grams next to each strip (off where the drawing is small). */
-  labels?: boolean
   onSelectExtra?: (id: string) => void
 }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
-  const tape = useStore((s) => s.tapeGPer10cm)
   const g = geometry ?? sweetSpot?.g ?? DEFAULT_GEOMETRY
   const f = frameShape(g)
   const pct = (p: { x: number; y: number }) => ({ left: `${((p.x - f.box.x) / f.box.w) * 100}%`, top: `${((p.y - f.box.y) / f.box.h) * 100}%` })
-  // Points for each preset: on the frame, and a little inside for the label.
-  const spots = (p: Position) => {
-    if (p === 'handle') {
-      const y = f.y(leadPositions(g).handle.x)
-      return [{ on: { x: 0, y }, label: { x: 3.6, y }, at: { cm: leadPositions(g).handle.x } }]
-    }
-    return HOUR[p].map((th) => ({ on: f.at(th), label: f.at(th, -3.2), at: { th } }))
-  }
+  // Where each preset sits: on the frame, one dot per side for split ones.
+  const spots = (p: Position) => (p === 'handle' ? [{ x: 0, y: f.y(leadPositions(g).handle.x) }] : HOUR[p].map((th) => f.at(th)))
   const extraSpots = (e: ExtraLead) => {
-    if (e.kind === 'shaft') {
-      const cm = e.cm ?? 6
-      const y = f.y(cm)
-      return [{ on: { x: 0, y }, label: { x: 3.6, y }, at: { cm } }]
-    }
+    if (e.kind === 'shaft') return [{ x: 0, y: f.y(e.cm ?? 6) }]
     const th = ((e.hour ?? 3) / 12) * 2 * Math.PI
-    const ths = e.sides === 2 && e.hour !== 6 ? [th, -th] : [th]
-    return ths.map((a) => ({ on: f.at(a), label: f.at(a, -3.2), at: { th: a } }))
+    return (e.sides === 2 && e.hour !== 6 ? [th, -th] : [th]).map((a) => f.at(a))
   }
   const ss = sweetSpot ? f.y(sweetSpot.x) : undefined
 
@@ -174,84 +148,49 @@ export function RacketDiagram({
             <circle cx="0" cy="0" r="0.45" fill="var(--c-success)" />
           </g>
         )}
-        {POSITIONS.map((p) => {
-          const each = spots(p)
-          const gs = lead[p] / each.length
-          return each.map((s, i) => (
-            <g key={`${p}${i}`}>
-              {selected === p && <circle cx={s.on.x} cy={s.on.y} r="2.3" fill="var(--c-accent)" fillOpacity="0.14" stroke="var(--c-accent)" strokeWidth="0.22" />}
-              {gs > 0 ? (
-                <Tape g={g} at={s.at} grams={gs} tape={tape} color="var(--c-accent)" />
-              ) : (
-                <circle cx={s.on.x} cy={s.on.y} r="0.55" fill="var(--c-bg)" stroke="var(--c-text-muted)" strokeWidth="0.2" />
-              )}
-            </g>
-          ))
-        })}
-        {extra?.map((e) => {
-          const each = extraSpots(e)
-          return each.map((s, i) => (
-            <g key={`${e.id}${i}`}>
-              {selected === e.id && <circle cx={s.on.x} cy={s.on.y} r="2.3" fill="var(--c-accent)" fillOpacity="0.14" stroke="var(--c-accent)" strokeWidth="0.22" />}
-              {e.grams > 0 ? (
-                <Tape g={g} at={s.at} grams={e.grams / each.length} tape={tape} color="var(--c-text-muted)" />
-              ) : (
-                <circle cx={s.on.x} cy={s.on.y} r="0.55" fill="var(--c-bg)" stroke="var(--c-text-muted)" strokeWidth="0.2" strokeDasharray="0.4 0.3" />
-              )}
-            </g>
-          ))
-        })}
       </svg>
-
       {POSITIONS.flatMap((p) => {
         const each = spots(p)
-        const gs = lead[p] / each.length
-        return each.map((s, i) => (
-          <div key={`${p}${i}`}>
-            <button
-              type="button"
-              onClick={() => onSelect(p)}
-              aria-label={`${t.pos[p]}: ${fmtNum(lead[p], 1, lang)} g`}
-              aria-pressed={selected === p}
-              tabIndex={i === 0 ? 0 : -1}
-              className="absolute size-11 -translate-x-1/2 -translate-y-1/2 rounded-full focus-visible:outline-offset-[-4px]"
-              style={pct(s.on)}
-            />
-            {labels && gs > 0 && (
-              <span
-                className="num pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-accent px-1.5 py-px text-[11px] font-bold text-on-accent shadow-sm"
-                style={pct(s.label)}
-                aria-hidden
-              >
-                {dotLabel(gs, lang)}
-              </span>
+        const g8 = lead[p]
+        const on = g8 > 0
+        return each.map((d, i) => (
+          <button
+            key={`${p}${i}`}
+            type="button"
+            onClick={() => onSelect(p)}
+            aria-label={`${t.pos[p]}: ${fmtNum(g8, 1, lang)} g`}
+            aria-pressed={selected === p}
+            tabIndex={i === 0 ? 0 : -1}
+            className={cx(
+              'num absolute flex min-h-8 min-w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-bold transition',
+              on ? 'bg-accent text-on-accent' : 'bg-surface text-muted ring-1 ring-border-input',
+              selected === p && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
             )}
-          </div>
+            style={pct(d)}
+          >
+            {on ? dotLabel(g8 / each.length, lang) : '+'}
+          </button>
         ))
       })}
       {extra?.flatMap((e) => {
         const each = extraSpots(e)
-        return each.map((s, i) => (
-          <div key={`${e.id}${i}`}>
-            <button
-              type="button"
-              onClick={() => onSelectExtra?.(e.id)}
-              aria-label={`${extraLabel(e, t, lang)}: ${fmtNum(e.grams, 1, lang)} g`}
-              aria-pressed={selected === e.id}
-              tabIndex={i === 0 ? 0 : -1}
-              className="absolute size-11 -translate-x-1/2 -translate-y-1/2 rounded-full focus-visible:outline-offset-[-4px]"
-              style={pct(s.on)}
-            />
-            {labels && e.grams > 0 && (
-              <span
-                className="num pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-text px-1.5 py-px text-[11px] font-bold text-bg shadow-sm"
-                style={pct(s.label)}
-                aria-hidden
-              >
-                {dotLabel(e.grams / each.length, lang)}
-              </span>
+        return each.map((d, i) => (
+          <button
+            key={`${e.id}${i}`}
+            type="button"
+            onClick={() => onSelectExtra?.(e.id)}
+            aria-label={`${extraLabel(e, t, lang)}: ${fmtNum(e.grams, 1, lang)} g`}
+            aria-pressed={selected === e.id}
+            tabIndex={i === 0 ? 0 : -1}
+            className={cx(
+              'num absolute flex min-h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md px-1 text-[10px] font-bold transition',
+              e.grams > 0 ? 'bg-bar text-bg' : 'bg-surface text-muted ring-1 ring-dashed ring-border-input',
+              selected === e.id && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
             )}
-          </div>
+            style={pct(d)}
+          >
+            {e.grams > 0 ? dotLabel(e.grams / each.length, lang) : '+'}
+          </button>
         ))
       })}
     </div>

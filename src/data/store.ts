@@ -77,6 +77,8 @@ interface State {
   loadedSetupId: string | null
   /** Setup ids picked for comparison. */
   compare: string[]
+  /** Rackets shown on the racket map. */
+  mapIds: string[]
   /** Pro tool runs used before buying (try before you pay). */
   freeRunsUsed: number
   /** Stringings we already sent a restring reminder for. */
@@ -98,6 +100,7 @@ interface State {
   loadConfig: (c: SetupConfig, setupId: string | null) => void
   resetConfig: () => void
   toggleCompare: (id: string) => void
+  toggleMap: (id: string) => void
   clearCompare: () => void
   spendFreeRun: () => void
   markReminded: (ids: string[]) => void
@@ -120,6 +123,7 @@ export const useStore = create<State>()(
       license: null,
       config: defaultConfig(),
       loadedSetupId: null,
+      mapIds: [],
       compare: [],
       freeRunsUsed: 0,
       reminded: [],
@@ -132,6 +136,7 @@ export const useStore = create<State>()(
       setMasses: (m) => set((s) => ({ masses: { ...s.masses, ...m } })),
       setTape: (tapeGPer10cm) => set({ tapeGPer10cm }),
       setLicense: (license) => set({ license }),
+      toggleMap: (id) => set((s) => ({ mapIds: s.mapIds.includes(id) ? s.mapIds.filter((x) => x !== id) : [...s.mapIds, id].slice(-MAP_MAX) })),
       setConfig: (c) => set((s) => ({ config: { ...s.config, ...c } })),
       setLead: (p, g) => set((s) => ({ config: { ...s.config, leadG: { ...s.config.leadG, [p]: g } } })),
       addExtra: (e) => set((s) => ({ config: { ...s.config, extra: [...(s.config.extra ?? []), e].slice(0, 12) } })),
@@ -188,6 +193,8 @@ export function accountProActive(p: AccountPro | null, now = Date.now()) {
 export const isPro = (s: { license: License | null; accountPro?: AccountPro | null }) =>
   PRO_BETA ||
   (s.license !== null && (s.license.status ?? 'active') === 'active') || accountProActive(s.accountPro ?? null)
+/** Rackets on the map at once; more and the labels crowd. */
+export const MAP_MAX = 8
 export const FREE_SETUP_LIMIT = 3
 export const FREE_PRO_RUNS = 3
 /** Sessions the free journal shows. */

@@ -1,0 +1,73 @@
+import { parsePattern } from './strings'
+import { feel } from './feel'
+import { compute } from './physics'
+import { DEFAULT_ACCESSORY_MASSES, emptyLead, type Racket } from './types'
+
+/**
+ * Where a frame sits on the racket map, from its specs. Our own heuristic,
+ * shown as such: x runs from control (−1) to power (+1), y from touch (−1)
+ * to spin (+1). Played strung, with an overgrip, as players hold it.
+ */
+export interface MapPoint {
+  x: number
+  y: number
+}
+
+const norm = (v: number, lo: number, hi: number) => Math.min(1, Math.max(0, (v - lo) / (hi - lo)))
+
+/** How open the string bed is: head area per string crossing. 16x19 on
+ *  100 in² is open, 18x20 on 98 in² dense. */
+export function openness(headSizeSqIn: number, pattern?: string): number {
+  const [m, c] = parsePattern(pattern)
+  return norm(headSizeSqIn / (m * c), 0.26, 0.36)
+}
+
+/** The raw scores, before they are spread over the library. */
+export function mapScores(r: Racket): MapPoint {
+  const { result } = compute({
+    spec: r,
+    baseMode: 'reference',
+    measured: {},
+    accessories: { strings: true, overgrip: true, leatherGrip: false, dampener: false },
+    masses: DEFAULT_ACCESSORY_MASSES,
+    leadG: emptyLead(),
+  })
+  const f = feel(result, r.headSizeSqIn, r.ra)
+  const open = openness(r.headSizeSqIn, r.pattern)
+  const stiff = norm(r.ra ?? 66, 58, 74)
+  const head = norm(r.headSizeSqIn, 95, 105)
+  const sw = norm(result.swingweight, 300, 345)
+  const hl = norm(result.ptsHL, 2, 10)
+  const power = 0.4 * head + 0.35 * stiff + 0.25 * sw
+  const control = 0.35 * (1 - head) + 0.25 * (1 - open) + 0.2 * hl + 0.2 * (1 - stiff)
+  const spin = 0.6 * (f.spin / 100) + 0.4 * open
+  const touch = 0.5 * (1 - stiff) + 0.3 * (1 - open) + 0.2 * hl
+  return { x: power - control, y: spin - touch }
+}
+
+/**
+ * Places frames on the map relative to the library: each axis is centred on
+ * the library's average and scaled by its spread, so the map uses its whole
+ * area. Points stay inside the circle.
+ */
+export function mapLayout(all: Racket[]): (r: Racket) => MapPoint {
+  const raw = all.map(mapScores)
+  const stat = (k: 'x' | 'y') => {
+    const mean = raw.reduce((a, p) => a + p[k], 0) / raw.length
+    const sd = Math.sqrt(raw.reduce((a, p) => a + (p[k] - mean) ** 2, 0) / raw.length) || 1
+    return { mean, sd }
+  }
+  const sx = stat('x')
+  const sy = stat('y')
+  return (r) => {
+    const p = mapScores(r)
+    let x = (p.x - sx.mean) / (2.2 * sx.sd)
+    let y = (p.y - sy.mean) / (2.2 * sy.sd)
+    const len = Math.hypot(x, y)
+    if (len > 0.95) {
+      x = (x / len) * 0.95
+      y = (y / len) * 0.95
+    }
+    return { x, y }
+  }
+}
