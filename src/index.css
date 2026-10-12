@@ -33,6 +33,11 @@
   --c-area-setups: #9085e9;
   --c-area-journal: #2f9a3c;
   --c-area-match: #c98500;
+  /* Racket map zones: one strong colour each. */
+  --zone-sc: #f0627f;
+  --zone-sp: #e5b23a;
+  --zone-tc: #5b9be8;
+  --zone-tp: #2fc4a8;
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
@@ -63,6 +68,10 @@
   --c-area-setups: #4a3aa7;
   --c-area-journal: #2f7a3a;
   --c-area-match: #a86f00;
+  --zone-sc: #c8314f;
+  --zone-sp: #9a6a00;
+  --zone-tc: #2465c2;
+  --zone-tp: #0b7d6b;
   --shadow-pop: 0 12px 32px rgba(40, 30, 20, 0.14);
   color-scheme: light;
 }
