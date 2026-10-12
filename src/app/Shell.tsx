@@ -1,4 +1,5 @@
-import { Bookmark, GitCompareArrows, Library, NotebookPen, Settings, SlidersHorizontal } from 'lucide-react'
+import { Calculator, ClipboardList, GitCompareArrows, NotebookPen, Settings } from 'lucide-react'
+import { RacketIcon } from '../ui/icons'
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useStore } from '../data/store'
@@ -9,9 +10,9 @@ import { Logo } from '../ui/Logo'
 import { useRestringReminders } from '../screens/reminders'
 
 const TABS = [
-  { to: '/', icon: SlidersHorizontal, key: 'calc', color: 'var(--c-accent)' },
-  { to: '/rackets', icon: Library, key: 'library', color: 'var(--c-area-library)' },
-  { to: '/setups', icon: Bookmark, key: 'setups', color: 'var(--c-area-setups)' },
+  { to: '/', icon: Calculator, key: 'calc', color: 'var(--c-accent)' },
+  { to: '/rackets', icon: RacketIcon, key: 'library', color: 'var(--c-area-library)' },
+  { to: '/setups', icon: ClipboardList, key: 'setups', color: 'var(--c-area-setups)' },
   { to: '/diario', icon: NotebookPen, key: 'journal', color: 'var(--c-area-journal)' },
   { to: '/match', icon: GitCompareArrows, key: 'match', color: 'var(--c-area-match)' },
 ] as const

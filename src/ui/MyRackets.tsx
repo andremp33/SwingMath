@@ -1,4 +1,4 @@
-import { Pencil, Plus, SlidersHorizontal } from 'lucide-react'
+import { Calculator, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { uid } from '../data/db'
@@ -78,7 +78,7 @@ export function MyRacketsSection() {
   return (
     <section aria-label={t.journal.myRackets} className="mb-6">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold tracking-tight">{t.journal.myRackets}</h2>
+        <h2 className="text-md font-semibold tracking-tight">{t.journal.myRackets}</h2>
         <Button size="sm" variant="ghost" icon={Plus} onClick={add}>
           {t.journal.addRacket}
         </Button>
@@ -103,7 +103,7 @@ export function MyRacketsSection() {
                   </p>
                 </div>
                 <IconButton
-                  icon={SlidersHorizontal}
+                  icon={Calculator}
                   label={`${t.library.useInCalc}: ${o.name}`}
                   onClick={() => {
                     open(o)

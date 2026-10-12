@@ -28,7 +28,7 @@ export function Settings() {
   return (
     <div className="max-w-2xl">
       <PageTitle>{t.settings.title}</PageTitle>
-      <div className="space-y-8">
+      <div className="space-y-8 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">
         <ProGroup />
         <AccountGroup />
 

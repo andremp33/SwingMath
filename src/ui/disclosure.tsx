@@ -72,7 +72,7 @@ export function CollapsibleCard({ id, title, summary, info, children }: { id: st
             className="flex w-full items-center justify-between gap-3 py-1 text-left"
           >
             <span className="min-w-0">
-              <span className="block text-[15px] font-semibold tracking-tight">{title}</span>
+              <span className="block text-md font-semibold tracking-tight">{title}</span>
               {!open && summary && <span className="num block truncate text-sm text-muted">{summary}</span>}
             </span>
             <ChevronDown className={cx('size-5 shrink-0 text-muted transition-transform duration-200', open && 'rotate-180')} strokeWidth={1.75} aria-hidden />

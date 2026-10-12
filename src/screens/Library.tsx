@@ -1,4 +1,4 @@
-import { CircleCheck, Copy, Diamond, Pencil, Plus, Ruler, Search, SearchX, SlidersHorizontal } from 'lucide-react'
+import { Calculator, CircleCheck, Copy, Diamond, Pencil, Plus, Ruler, Search, SearchX } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Racket, RacketType } from '../domain/types'
@@ -141,7 +141,7 @@ export function Library() {
           {groups.map((grp) => (
             <section key={grp.name || 'all'} aria-label={grp.name || undefined}>
               {grp.name && (
-                <h2 className="mb-3 flex items-baseline gap-2 text-lg font-semibold tracking-tight">
+                <h2 className="mb-3 flex items-baseline gap-2 text-md font-semibold tracking-tight">
                   {grp.name}
                   <span className="num text-sm font-normal text-muted">{grp.items.length}</span>
                 </h2>
@@ -243,7 +243,7 @@ function RacketCard({ racket: r, showBrand }: { racket: Racket; showBrand: boole
       <p className="num mb-3 text-sm text-muted">{facts.join(' · ')}</p>
 
       <div className="mt-auto flex items-center gap-1">
-        <Button variant="secondary" size="sm" icon={SlidersHorizontal} className="mr-auto" onClick={openInCalc}>
+        <Button variant="secondary" size="sm" icon={Calculator} className="mr-auto" onClick={openInCalc}>
           {t.library.useInCalc}
         </Button>
         <IconButton icon={Diamond} label={onMap ? t.library.map.remove : t.library.map.add} active={onMap} aria-pressed={onMap} onClick={() => toggleMap(r.id)} />

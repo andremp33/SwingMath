@@ -107,6 +107,9 @@
   --text-sm--line-height: 20px;
   --text-base: 16px;
   --text-base--line-height: 24px;
+  /* Section titles, on every page. */
+  --text-md: 17px;
+  --text-md--line-height: 24px;
   --text-lg: 19px;
   --text-lg--line-height: 26px;
   --text-xl: 26px;

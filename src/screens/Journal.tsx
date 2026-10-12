@@ -108,8 +108,7 @@ export function Journal() {
   if (active.length === 0 && sessions.length === 0)
     return (
       <>
-        <PageTitle>{t.journal.title}</PageTitle>
-        <p className="mb-5 text-muted">{t.journal.intro}</p>
+        <PageTitle subtitle={t.journal.intro}>{t.journal.title}</PageTitle>
         <ol className="space-y-3">
           <Step n={1} title={t.journal.step1} hint={t.journal.step1Hint}>
             <Button variant="primary" icon={Plus} onClick={() => setEditingOwned(newOwned())}>
@@ -131,7 +130,7 @@ export function Journal() {
       <div className="space-y-6">
         <section aria-label={t.journal.myRackets}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-1.5 font-semibold">
+            <h2 className="flex items-center gap-1.5 text-md font-semibold tracking-tight">
               {t.journal.myRackets}
               <InfoTip title={t.journal.life}>{t.journal.lifeHint}</InfoTip>
             </h2>
@@ -152,7 +151,7 @@ export function Journal() {
         <Summary sessions={sessions} stringings={stringings} owned={owned} now={now} />
 
         <section aria-label={t.journal.recent}>
-          <h2 className="mb-1 font-semibold">{t.journal.recent}</h2>
+          <h2 className="mb-1 text-md font-semibold tracking-tight">{t.journal.recent}</h2>
           {sessions.length === 0 ? (
             <p className="py-3 text-sm text-muted">{t.journal.noSessions}</p>
           ) : (

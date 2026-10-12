@@ -78,6 +78,7 @@ export function Calculator() {
   return (
     <>
       <PageTitle
+        subtitle={loaded && fmt(t.calc.fromSetup, { name: loaded.name })}
         action={
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" icon={Info} onClick={() => setInfoOpen(true)} aria-label={t.info.title}>
@@ -92,15 +93,10 @@ export function Calculator() {
         {t.calc.title}
       </PageTitle>
 
-      {loaded && (
-        <p className="-mt-2 mb-4 text-sm text-muted">
-          {fmt(t.calc.fromSetup, { name: loaded.name })}
-        </p>
-      )}
 
       <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <div className="contents xl:block xl:space-y-4">
-          <Card className="order-1 xl:order-none">
+          <Card className="order-1 border-t-0 pt-0 xl:order-none">
             <div className="space-y-4">
               <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
               <MyRacketsRow />

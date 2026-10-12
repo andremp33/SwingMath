@@ -83,7 +83,7 @@ export function CardTitle({ children, action, info }: { children: ReactNode; act
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-1.5">
-        <h2 className="text-[15px] font-semibold tracking-tight">{children}</h2>
+        <h2 className="text-md font-semibold tracking-tight">{children}</h2>
         {info}
       </div>
       {action}
@@ -403,7 +403,7 @@ export function ChoiceChips<T extends string>({
 
 export function EmptyState({ icon: Icon, text, action }: { icon: LucideIcon; text: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-start gap-3 border-t border-border py-10">
+    <div className="flex flex-col items-start gap-3 py-8">
       <Icon className="size-6 text-muted" strokeWidth={1.5} aria-hidden />
       <p className="text-sm text-muted">{text}</p>
       {action}
@@ -411,12 +411,20 @@ export function EmptyState({ icon: Icon, text, action }: { icon: LucideIcon; tex
   )
 }
 
-export function PageTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+/**
+ * The top of every page: the title on a row of fixed height (so it sits at
+ * the same place with or without a button beside it), and an optional line
+ * under it. No rule of its own: rules part the sections below.
+ */
+export function PageTitle({ children, action, subtitle }: { children: ReactNode; action?: ReactNode; subtitle?: ReactNode }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-3">
-      <h1 className="min-w-0 text-xl font-semibold tracking-tight">{children}</h1>
-      {action}
-    </div>
+    <header className="mb-5">
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-3">
+        <h1 className="min-w-0 text-xl font-semibold tracking-tight">{children}</h1>
+        {action}
+      </div>
+      {subtitle && <p className="mt-1 max-w-2xl text-sm text-muted">{subtitle}</p>}
+    </header>
   )
 }
 
@@ -453,7 +461,7 @@ export function SettingsGroup({ title, children, info, action }: { title: string
     <section aria-label={title} className="border-t border-border pt-5">
       <div className="mb-1 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5">
-          <h2 className="font-semibold">{title}</h2>
+          <h2 className="text-md font-semibold tracking-tight">{title}</h2>
           {info}
         </div>
         {action}

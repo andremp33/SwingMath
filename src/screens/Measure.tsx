@@ -71,7 +71,7 @@ export function Measure() {
 
   return (
     <>
-      <PageTitle>
+      <PageTitle subtitle={t.measure.intro}>
         <span className="flex items-center gap-2">
           <button type="button" onClick={() => nav(-1)} aria-label={t.common.back} className="rounded-full p-1.5 text-muted hover:bg-surface-2">
             <ArrowLeft className="size-5" aria-hidden />
@@ -79,7 +79,6 @@ export function Measure() {
           {t.measure.title}
         </span>
       </PageTitle>
-      <p className="-mt-2 mb-4 max-w-2xl text-sm text-muted">{t.measure.intro}</p>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <div className="space-y-4">

@@ -1,4 +1,4 @@
-import { Save, SlidersHorizontal, TriangleAlert } from 'lucide-react'
+import { Calculator, Save, TriangleAlert } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { compute } from '../domain/physics'
@@ -48,8 +48,7 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
 
   return (
     <>
-      <PageTitle>{t.share.imported}</PageTitle>
-      <p className="-mt-2 mb-4 text-sm text-muted">{t.share.importHint}</p>
+      <PageTitle subtitle={t.share.importHint}>{t.share.imported}</PageTitle>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="text-lg font-bold">{payload.setup.name}</h2>
@@ -80,7 +79,7 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
           {t.share.importSave}
         </Button>
         <Button
-          icon={SlidersHorizontal}
+          icon={Calculator}
           onClick={async () => {
             const racketId = await ensureRacket()
             loadConfig({ racketId, baseMode: config.baseMode, measured: config.measured, accessories: config.accessories, leadG: config.leadG, extra: config.extra }, null)

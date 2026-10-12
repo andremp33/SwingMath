@@ -1,4 +1,4 @@
-import { Bookmark, GitCompareArrows, Pencil, Plus, Printer, Share2, SlidersHorizontal, Star, Trash2 } from 'lucide-react'
+import { Calculator, ClipboardList, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { OwnedRacket } from '../domain/journal'
@@ -45,7 +45,7 @@ export function Setups() {
       <PageTitle>{t.setups.title}</PageTitle>
 
       {setups.length === 0 ? (
-        <EmptyState icon={Bookmark} text={t.setups.empty} action={<Button variant="primary" onClick={() => nav('/')}>{t.setups.emptyAction}</Button>} />
+        <EmptyState icon={ClipboardList} text={t.setups.empty} action={<Button variant="primary" onClick={() => nav('/')}>{t.setups.emptyAction}</Button>} />
       ) : (
         <>
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
@@ -154,7 +154,7 @@ function SetupCard({ setup: s, onEdit, onShare }: { setup: Setup; onEdit: () => 
       <div className="mt-2 flex items-center gap-1">
         <span className="mr-auto text-xs text-muted">{fmt(t.setups.edited, { date: fmtDate(s.updatedAt, lang) })}</span>
         <IconButton
-          icon={SlidersHorizontal}
+          icon={Calculator}
           label={t.common.open}
           onClick={() => {
             loadConfig(s, s.id)

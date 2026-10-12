@@ -92,7 +92,7 @@ function RacketFormInner({ existing }: { existing?: Racket }) {
         }}
         noValidate
       >
-        <Card className="space-y-4">
+        <Card className="space-y-4 border-t-0 pt-0">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField label={t.racketForm.brand} value={d.brand} onChange={(brand) => set({ brand })} error={tried && !d.brand.trim() ? t.errors.required : undefined} maxLength={40} />
             <TextField label={t.racketForm.model} value={d.model} onChange={(model) => set({ model })} error={tried && !d.model.trim() ? t.errors.required : undefined} maxLength={60} />
