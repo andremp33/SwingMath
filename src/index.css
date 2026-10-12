@@ -33,6 +33,18 @@
   --c-area-setups: #9085e9;
   --c-area-journal: #2f9a3c;
   --c-area-match: #c98500;
+  /* Brands on the racket map: a colour each, picked to stay apart. */
+  --brand-babolat: #4b8fe0;
+  --brand-head: #2fb3b0;
+  --brand-wilson: #ef6a5c;
+  --brand-yonex: #3dbb72;
+  --brand-tecnifibre: #9a86ef;
+  --brand-dunlop: #e5b23a;
+  --brand-solinco: #e06bb0;
+  --brand-prince: #a5c75a;
+  --brand-volkl: #f08a52;
+  --brand-prokennex: #c9976a;
+  --brand-ink: #141312;
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
@@ -63,6 +75,17 @@
   --c-area-setups: #4a3aa7;
   --c-area-journal: #2f7a3a;
   --c-area-match: #a86f00;
+  --brand-babolat: #2468c4;
+  --brand-head: #0e7f81;
+  --brand-wilson: #c7372a;
+  --brand-yonex: #1b8a49;
+  --brand-tecnifibre: #6347c9;
+  --brand-dunlop: #a87400;
+  --brand-solinco: #b2307e;
+  --brand-prince: #5d7f1c;
+  --brand-volkl: #c9521a;
+  --brand-prokennex: #84542a;
+  --brand-ink: #ffffff;
   --shadow-pop: 0 12px 32px rgba(40, 30, 20, 0.14);
   color-scheme: light;
 }

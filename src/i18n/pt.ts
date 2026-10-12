@@ -158,6 +158,7 @@ export const pt = {
       empty: 'Toca em ◇ numa raquete para a pôr no mapa (até 8).',
       add: 'Pôr no mapa',
       remove: 'Tirar do mapa',
+      brands: 'Marcas',
       axes: { spin: 'Spin', touch: 'Toque', control: 'Controlo', power: 'Potência' },
       zones: { spinControl: 'Spin e controlo', spinPower: 'Spin e potência', touchControl: 'Toque e controlo', touchPower: 'Toque e potência', allround: 'Polivalente' },
     },

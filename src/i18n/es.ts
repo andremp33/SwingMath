@@ -160,6 +160,7 @@ export const es: Dict = {
       empty: 'Toca ◇ en una raqueta para ponerla en el mapa (hasta 8).',
       add: 'Poner en el mapa',
       remove: 'Quitar del mapa',
+      brands: 'Marcas',
       axes: { spin: 'Efecto', touch: 'Tacto', control: 'Control', power: 'Potencia' },
       zones: { spinControl: 'Efecto y control', spinPower: 'Efecto y potencia', touchControl: 'Tacto y control', touchPower: 'Tacto y potencia', allround: 'Polivalente' },
     },

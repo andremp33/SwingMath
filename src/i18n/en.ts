@@ -160,6 +160,7 @@ export const en: Dict = {
       empty: 'Tap ◇ on a racket to put it on the map (up to 8).',
       add: 'Put on the map',
       remove: 'Take off the map',
+      brands: 'Brands',
       axes: { spin: 'Spin', touch: 'Touch', control: 'Control', power: 'Power' },
       zones: { spinControl: 'Spin and control', spinPower: 'Spin and power', touchControl: 'Touch and control', touchPower: 'Touch and power', allround: 'All-round' },
     },
