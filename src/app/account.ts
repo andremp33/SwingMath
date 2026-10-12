@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import { useEffect } from 'react'
-import { db } from '../data/db'
+import { db, ensureOwned } from '../data/db'
 import { accountProActive, useStore, type AccountPro } from '../data/store'
 import { enqueueAll, supabaseRemote, syncOnce, SyncError, trackChanges } from '../data/sync'
 import { cloudConfigured, getCloud } from '../lib/cloud'
@@ -91,6 +91,8 @@ export function syncNow(): Promise<void> {
     }
     try {
       const r = await syncOnce(db, supabaseRemote(c), cursor)
+      // Another device on an older version may have sent unlinked stringings.
+      if (r.pulled) await ensureOwned()
       setSync({ cursor: r.cursor, lastAt: Date.now(), error: undefined })
     } catch (e) {
       setSync({ error: e instanceof SyncError && e.code === '42501' ? 'nopro' : navigator.onLine ? 'other' : 'offline' })

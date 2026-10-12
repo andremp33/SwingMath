@@ -102,7 +102,7 @@ export function RacketMap({ all, picked, onRemove }: { all: Racket[]; picked: Ra
         taken.push({ x: lx, y: ty, w, h })
         return { ...d, text, lx, ly: ty + 9.5, w, moved: Math.abs(ty - (d.y - 6)) > 1 }
       })
-  }, [picked, place, m])
+  }, [picked, place])
 
   return (
     <div>

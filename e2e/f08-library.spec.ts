@@ -39,8 +39,8 @@ test.describe('F08 library and custom rackets', () => {
 
   test('F08-H2 add, edit and delete a custom racket (Pro)', async ({ page }) => {
     await start(page, { pro: true, path: '/rackets' })
-    await page.getByRole('button', { name: 'Nova raquete' }).click()
-    await expect(page.getByRole('heading', { name: 'Nova raquete' })).toBeVisible()
+    await page.getByRole('button', { name: 'Novo modelo' }).click()
+    await expect(page.getByRole('heading', { name: 'Novo modelo' })).toBeVisible()
     await page.getByLabel('Marca', { exact: true }).fill('Oficina')
     await page.getByLabel('Modelo', { exact: true }).fill('Protótipo 1')
     await page.getByLabel('Peso', { exact: true }).fill('318')
@@ -65,8 +65,8 @@ test.describe('F08 library and custom rackets', () => {
 
   test('FIX-2 free users can add their own racket', async ({ page }) => {
     await start(page, { path: '/rackets' })
-    await page.getByRole('button', { name: 'Nova raquete' }).click()
-    await expect(page.getByRole('heading', { name: 'Nova raquete' })).toBeVisible()
+    await page.getByRole('button', { name: 'Novo modelo' }).click()
+    await expect(page.getByRole('heading', { name: 'Novo modelo' })).toBeVisible()
     await expect(page.getByRole('dialog')).toBeHidden()
   })
 })

@@ -1,302 +1,379 @@
-import { ArrowRight, Bell, NotebookPen, Pencil, Plus, RotateCw, Timer, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { ArrowRight, Check, Plus, RotateCw, Timer } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { db, uid } from '../data/db'
-import { useAllRackets, useSessions, useStringings } from '../data/hooks'
+import { uid } from '../data/db'
+import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hooks'
 import { FREE_SESSIONS, isPro, useStore } from '../data/store'
-import {
-  currentStringings,
-  dueForRestring,
-  insights,
-  lifeOf,
-  SESSION_RATINGS,
-  weeklyHours,
-  type Session,
-  type Stringing,
-} from '../domain/journal'
+import { insights, latestOf, lifeOf, weeklyHours, type OwnedRacket, type Session, type Stringing } from '../domain/journal'
 import { DEFAULT_STRINGBED } from '../domain/strings'
 import { fmt, useT } from '../i18n'
-import { fmtDate, fmtNum, racketLabel } from '../lib/format'
-import { Button, Card, CardTitle, cx, EmptyState, IconButton, PageTitle } from '../ui/basics'
-import { useToast } from '../ui/overlay'
-import { Ring } from '../ui/specs'
-import { bedLabel } from '../ui/strings'
-import { SessionSheet, StringingSheet } from './JournalSheets'
-import { ProGate } from './Pro'
-import { useReminders } from './reminders'
+import { fmtDate, fmtNum } from '../lib/format'
+import { Button, Card, CardTitle, cx, PageTitle } from '../ui/basics'
 import { InfoTip } from '../ui/disclosure'
+import { bedLabel } from '../ui/strings'
+import { LifeBar, OwnedSheet, RacketSheet, SessionList, SessionSheet, StringingSheet } from './JournalSheets'
+import { ProGate } from './Pro'
 
 const DAY = 86_400_000
+const WEEK = 7 * DAY
+
+/** Monday 00:00 of the week `ms` falls in (local time). */
+function weekStart(ms: number) {
+  const d = new Date(ms)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return d.getTime()
+}
 
 export function Journal() {
   const t = useT()
-  const lang = useStore((s) => s.lang)
   const pro = useStore(isPro)
   const config = useStore((s) => s.config)
-  const loadedSetupId = useStore((s) => s.loadedSetupId)
+  const owned = useOwned()
   const stringings = useStringings()
   const sessions = useSessions()
-  const rackets = useAllRackets()
-  const toast = useToast()
-  const [editing, setEditing] = useState<Stringing | null>(null)
+  const [editingOwned, setEditingOwned] = useState<OwnedRacket | null>(null)
+  const [viewing, setViewing] = useState<OwnedRacket | null>(null)
+  const [stringing, setStringing] = useState<Stringing | null>(null)
   const [logging, setLogging] = useState<Session | null>(null)
-
-  const current = useMemo(() => currentStringings(stringings ?? []), [stringings])
   // One clock per visit keeps the page steady while it re-renders.
   const [now] = useState(() => Date.now())
-  if (stringings === undefined || sessions === undefined) return null
+
+  const loading = owned === undefined || stringings === undefined || sessions === undefined
+  const active = useMemo(() => (owned ?? []).filter((o) => !o.retired), [owned])
 
   // Built when a button is pressed, so they take the time of the click.
-  const blankStringing = (from?: Stringing, at = Date.now()): Stringing => ({
-    id: uid(),
-    label: from?.label ?? '',
-    racketId: from?.racketId ?? config.racketId,
-    setupId: from?.setupId ?? loadedSetupId ?? undefined,
-    date: at,
-    bed: structuredClone(from?.bed ?? config.strings ?? DEFAULT_STRINGBED),
-    lifeHours: from?.lifeHours,
-    createdAt: at,
-    updatedAt: at,
-  })
-  const blankSession = (at = Date.now()): Session => ({
-    id: uid(),
-    date: at,
-    minutes: 90,
-    kind: 'practice',
-    stringingId: current[0]?.id,
-    ratings: {},
-    createdAt: at,
-    updatedAt: at,
-  })
-
-  const due = dueForRestring(stringings, sessions, now)
-  const shown = pro ? sessions : sessions.slice(0, FREE_SESSIONS)
-  const byId = new Map(stringings.map((s) => [s.id, s]))
-
-  const removeSession = async (s: Session) => {
-    await db.sessions.delete(s.id)
-    toast(t.common.deleted, { label: t.common.undo, run: () => void db.sessions.put(s) })
+  const newOwned = (at = Date.now()): OwnedRacket => ({ id: uid(), name: '', racketId: config.racketId, createdAt: at, updatedAt: at })
+  const restring = (o: OwnedRacket, at = Date.now()): Stringing => {
+    const last = latestOf(o.id, stringings ?? [])
+    return {
+      id: uid(),
+      ownedId: o.id,
+      label: o.name,
+      racketId: o.racketId,
+      setupId: o.setupId,
+      date: at,
+      bed: structuredClone(last?.bed ?? config.strings ?? DEFAULT_STRINGBED),
+      lifeHours: last?.lifeHours,
+      createdAt: at,
+      updatedAt: at,
+    }
   }
+  const newSession = (at = Date.now()): Session => {
+    // The racket played last, else the first one.
+    const last = sessions?.find((s) => s.stringingId)
+    const lastOwned = last && stringings?.find((s) => s.id === last.stringingId)?.ownedId
+    const pick = active.find((o) => o.id === lastOwned) ?? active[0]
+    return { id: uid(), date: at, minutes: last?.minutes ?? 90, kind: last?.kind ?? 'practice', stringingId: pick && latestOf(pick.id, stringings ?? [])?.id, ratings: {}, createdAt: at, updatedAt: at }
+  }
+
+  const sheets = (
+    <>
+      {editingOwned && <OwnedSheet value={editingOwned} onClose={() => setEditingOwned(null)} />}
+      {stringing && <StringingSheet value={stringing} owned={owned ?? []} onClose={() => setStringing(null)} />}
+      {logging && <SessionSheet value={logging} stringings={stringings ?? []} owned={owned ?? []} onClose={() => setLogging(null)} />}
+      {viewing && (
+        <RacketSheet
+          value={(owned ?? []).find((o) => o.id === viewing.id) ?? viewing}
+          stringings={stringings ?? []}
+          sessions={sessions ?? []}
+          onClose={() => setViewing(null)}
+          onEdit={(o) => (setViewing(null), setEditingOwned(o))}
+          onRestring={(o) => (setViewing(null), setStringing(restring(o)))}
+          onEditStringing={(s) => (setViewing(null), setStringing(s))}
+          onEditSession={(s) => (setViewing(null), setLogging(s))}
+        />
+      )}
+    </>
+  )
+
+  const logButton = (
+    <Button variant="primary" icon={Timer} onClick={() => setLogging(newSession())} disabled={loading}>
+      {t.journal.logSession}
+    </Button>
+  )
+
+  if (loading)
+    return (
+      <>
+        <PageTitle>{t.journal.title}</PageTitle>
+        <div className="space-y-3" aria-busy="true">
+          <div className="h-36 animate-pulse rounded-lg bg-surface-2" />
+          <div className="h-24 animate-pulse rounded-lg bg-surface-2" />
+        </div>
+      </>
+    )
+
+  // First time: add a racket, then log a session.
+  if (active.length === 0 && sessions.length === 0)
+    return (
+      <>
+        <PageTitle>{t.journal.title}</PageTitle>
+        <p className="mb-5 text-muted">{t.journal.intro}</p>
+        <ol className="space-y-3">
+          <Step n={1} title={t.journal.step1} hint={t.journal.step1Hint}>
+            <Button variant="primary" icon={Plus} onClick={() => setEditingOwned(newOwned())}>
+              {t.journal.addRacket}
+            </Button>
+          </Step>
+          <Step n={2} title={t.journal.step2} hint={t.journal.step2Hint} muted />
+        </ol>
+        {sheets}
+      </>
+    )
+
+  const shown = pro ? sessions : sessions.slice(0, FREE_SESSIONS)
 
   return (
     <>
-      <PageTitle
-        action={
-          <div className="flex gap-2">
-            <Button icon={Plus} onClick={() => setEditing(blankStringing())}>
-              {t.journal.addStringing}
-            </Button>
-            <Button variant="primary" icon={Timer} onClick={() => setLogging(blankSession())}>
-              {t.journal.logSession}
+      <PageTitle action={<div className="hidden lg:block">{logButton}</div>}>{t.journal.title}</PageTitle>
+
+      <div className="space-y-6">
+        <section aria-label={t.journal.myRackets}>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="flex items-center gap-1.5 font-semibold">
+              {t.journal.myRackets}
+              <InfoTip title={t.journal.life}>{t.journal.lifeHint}</InfoTip>
+            </h2>
+            <Button size="sm" variant="ghost" icon={Plus} onClick={() => setEditingOwned(newOwned())}>
+              {t.journal.addRacket}
             </Button>
           </div>
-        }
-      >
-        {t.journal.title}
-      </PageTitle>
+          {/* Swipe through them on a phone; a grid on wider screens. */}
+          <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-3">
+            {active.map((o) => (
+              <li key={o.id} className="w-[82%] shrink-0 snap-start md:w-auto">
+                <RacketCard owned={o} stringings={stringings} sessions={sessions} now={now} onOpen={() => setViewing(o)} onRestring={() => setStringing(restring(o))} />
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      {stringings.length === 0 && sessions.length === 0 ? (
-        <EmptyState
-          icon={NotebookPen}
-          text={t.journal.intro}
-          action={
-            <Button variant="primary" icon={Plus} onClick={() => setEditing(blankStringing())}>
-              {t.journal.addStringing}
-            </Button>
-          }
-        />
-      ) : (
-        <div className="space-y-4">
-          {due.length > 0 && (
-            <div role="status" className="space-y-1 rounded-md bg-surface-2 px-4 py-3 text-sm">
-              {due.map((s) => (
-                <p key={s.id} className="font-semibold">
-                  {fmt(t.journal.due, { label: s.label })}
-                </p>
-              ))}
-            </div>
+        <Summary sessions={sessions} stringings={stringings} owned={owned} now={now} />
+
+        <section aria-label={t.journal.recent}>
+          <h2 className="mb-1 font-semibold">{t.journal.recent}</h2>
+          {sessions.length === 0 ? (
+            <p className="py-3 text-sm text-muted">{t.journal.noSessions}</p>
+          ) : (
+            <Timeline sessions={shown} stringings={stringings} owned={owned} now={now} onOpen={setLogging} />
           )}
+          {!pro && sessions.length > FREE_SESSIONS && <p className="mt-3 text-sm text-muted">{fmt(t.journal.historyLocked, { n: FREE_SESSIONS })}</p>}
+        </section>
 
-          {current.length > 0 && (
-            <Card label={t.journal.rackets}>
-              <CardTitle info={<InfoTip title={t.journal.life}>{t.journal.lifeHint}</InfoTip>}>{t.journal.rackets}</CardTitle>
-              <ul className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
-                {current.map((st) => {
-                  const life = lifeOf(st, sessions, now)
-                  const racket = rackets.find((r) => r.id === st.racketId)
-                  const days = Math.floor(life.days)
-                  const left = Math.round(Math.max(0, 1 - life.used) * 100)
-                  return (
-                    <li key={st.id} className="flex gap-4">
-                      <Ring value={left} label={t.journal.life} color={left > 40 ? 'var(--c-success)' : left > 15 ? 'var(--c-warning)' : 'var(--c-danger)'} />
-                      <div className="min-w-0 flex-1 space-y-0.5 text-sm">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="truncate font-semibold">{st.label}</p>
-                          <IconButton icon={Pencil} label={`${t.common.edit} ${st.label}`} className="-mr-2 -mt-1.5" onClick={() => setEditing(st)} />
-                        </div>
-                        {racket && <p className="truncate text-muted">{racketLabel(racket)}</p>}
-                        <p className="num">{bedLabel(st.bed, t, lang)}</p>
-                        <p className="num text-muted">
-                          {days === 0 ? t.journal.strungToday : fmt(t.journal.strungAgo, { n: days })} · {fmt(t.journal.hours, { h: fmtNum(life.hours, 1, lang) })}
-                        </p>
-                        <p className="num text-muted">{fmt(t.journal.tensionNow, { kg: fmtNum(life.mainsKg, 1, lang) })}</p>
-                        <p className={cx('num', life.used >= 1 && 'font-semibold')}>
-                          {life.used >= 1 ? t.journal.notifyTitle : fmt(t.journal.left, { h: fmtNum(life.hoursLeft, 0, lang) })}
-                        </p>
-                        <Button size="sm" icon={RotateCw} className="mt-2" onClick={() => setEditing(blankStringing(st))}>
-                          {t.journal.restring}
-                        </Button>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </Card>
-          )}
+        <Card label={t.journal.insights}>
+          <CardTitle info={<InfoTip title={t.journal.insights}>{t.journal.insightsHint}</InfoTip>}>{t.journal.insights}</CardTitle>
+          <ProGate title={t.journal.insights} bare>
+            <Insights stringings={stringings} sessions={sessions} owned={owned} />
+          </ProGate>
+        </Card>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
-            <WeeklyCard sessions={sessions} />
-            <Card label={t.journal.insights}>
-              <CardTitle>{t.journal.insights}</CardTitle>
-              <ProGate title={t.journal.insights} bare>
-                <Insights stringings={stringings} sessions={sessions} />
-              </ProGate>
-            </Card>
-          </div>
+        <Link to="/cordas" className="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-sm font-semibold hover:bg-surface-2">
+          {t.journal.equivalentCta}
+          <ArrowRight className="size-4 shrink-0" aria-hidden />
+        </Link>
+      </div>
 
-          <Card label={t.journal.recent}>
-            <CardTitle>{t.journal.recent}</CardTitle>
-            {sessions.length === 0 ? (
-              <p className="text-sm text-muted">{t.journal.noSessions}</p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {shown.map((s) => {
-                  const st = s.stringingId ? byId.get(s.stringingId) : undefined
-                  return (
-                    <li key={s.id} className="flex items-center gap-3 py-2.5">
-                      <div className="min-w-0 flex-1 text-sm">
-                        <p className="num">
-                          <span className="font-medium">{t.journal.kinds[s.kind]}</span> · {fmt(t.journal.minutesShort, { n: s.minutes })}
-                          {s.ratings.overall !== undefined && <> · {s.ratings.overall}/5</>}
-                          {s.armPain && <> · {t.journal.armPain}</>}
-                        </p>
-                        <p className="truncate text-muted">
-                          {fmtDate(s.date, lang)}
-                          {st && <> · {st.label}</>}
-                        </p>
-                      </div>
-                      <IconButton icon={Pencil} label={`${t.common.edit} ${t.journal.sessionTitle}`} onClick={() => setLogging(s)} />
-                      <IconButton icon={Trash2} label={`${t.common.delete} ${t.journal.sessionTitle}`} onClick={() => removeSession(s)} />
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-            {!pro && sessions.length > FREE_SESSIONS && <p className="mt-3 text-sm text-muted">{fmt(t.journal.historyLocked, { n: FREE_SESSIONS })}</p>}
-          </Card>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
-            <RemindersCard />
-            <Card>
-              <Link to="/cordas" className="flex items-center justify-between gap-3 text-sm font-semibold">
-                {t.journal.equivalentCta}
-                <ArrowRight className="size-4 shrink-0" aria-hidden />
-              </Link>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      <StringingSheet value={editing} onClose={() => setEditing(null)} />
-      <SessionSheet value={logging} stringings={stringings} onClose={() => setLogging(null)} />
+      {/* Phones: logging a session is always one tap away. */}
+      <div className="fixed bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+16px)] right-4 z-20 lg:hidden">
+        <Button variant="primary" icon={Timer} className="h-12 rounded-full px-5 shadow-pop" onClick={() => setLogging(newSession())}>
+          {t.journal.logSession}
+        </Button>
+      </div>
+      <div className="h-16 lg:hidden" />
+      {sheets}
     </>
   )
 }
 
-function WeeklyCard({ sessions }: { sessions: Session[] }) {
+function Step({ n, title, hint, muted, children }: { n: number; title: string; hint: string; muted?: boolean; children?: ReactNode }) {
+  return (
+    <li className={cx('flex gap-4 rounded-lg border border-border p-4', muted && 'opacity-60')}>
+      <span aria-hidden className="num flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 font-bold">
+        {n}
+      </span>
+      <div className="min-w-0 space-y-2">
+        <p className="font-semibold">{title}</p>
+        <p className="text-sm text-muted">{hint}</p>
+        {children}
+      </div>
+    </li>
+  )
+}
+
+/** One racket: its strings' life first, then what is on it, then restring. */
+function RacketCard({
+  owned,
+  stringings,
+  sessions,
+  now,
+  onOpen,
+  onRestring,
+}: {
+  owned: OwnedRacket
+  stringings: Stringing[]
+  sessions: Session[]
+  now: number
+  onOpen: () => void
+  onRestring: () => void
+}) {
   const t = useT()
   const lang = useStore((s) => s.lang)
-  const [now] = useState(() => Date.now())
+  const rackets = useAllRackets()
+  const racket = rackets.find((r) => r.id === owned.racketId)
+  const st = latestOf(owned.id, stringings)
+  const life = st ? lifeOf(st, sessions, now) : undefined
+  const days = life ? Math.floor(life.days) : 0
+  return (
+    <article className="relative flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+      <div className="min-w-0">
+        {/* The name opens the racket's history; its tap area covers the card. */}
+        <h3 className="truncate font-semibold">
+          <button type="button" onClick={onOpen} className="text-left before:absolute before:inset-0 before:rounded-lg">
+            {owned.name}
+          </button>
+        </h3>
+        {racket && (
+          <p className="truncate text-sm text-muted">
+            {racket.brand} {racket.model}
+          </p>
+        )}
+      </div>
+      {life && st ? (
+        <>
+          <LifeBar life={life} compact />
+          <p className="num text-sm text-muted">
+            {bedLabel(st.bed, t, lang)} · {days === 0 ? t.journal.strungToday : fmt(t.journal.strungAgo, { n: days })} · {fmt(t.journal.hours, { h: fmtNum(life.hours, 1, lang) })}
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-muted">{t.journal.noStrings}</p>
+      )}
+      <div className="relative mt-auto">
+        <Button size="sm" variant={life && life.used >= 1 ? 'primary' : 'secondary'} icon={RotateCw} onClick={onRestring}>
+          {t.journal.addStringing}
+        </Button>
+      </div>
+    </article>
+  )
+}
+
+/** This week at a glance, and the last eight weeks as bars. */
+function Summary({ sessions, stringings, owned, now }: { sessions: Session[]; stringings: Stringing[]; owned: OwnedRacket[]; now: number }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const thisWeek = sessions.filter((s) => s.date >= weekStart(now))
+  const hoursWeek = thisWeek.reduce((h, s) => h + s.minutes / 60, 0)
+  const month = sessions.filter((s) => s.date >= now - 30 * DAY)
+  const rated = month.map((s) => s.ratings.overall).filter((v): v is number => v !== undefined)
+  const best = insights(stringings, sessions).find((i) => i.avg.overall !== undefined)
+  const bestName = best && (owned.find((o) => o.id === best.stringing.ownedId)?.name ?? best.stringing.label)
   const weeks = weeklyHours(sessions, 8, now)
   const max = Math.max(1, ...weeks)
   return (
-    <Card label={t.journal.weekly}>
-      <CardTitle>{t.journal.weekly}</CardTitle>
-      <ul className="flex h-32 items-end gap-1 sm:gap-2">
+    <section aria-label={t.journal.weekly} className="rounded-lg border border-border p-4">
+      <dl className="num grid grid-cols-3 gap-3">
+        <div>
+          <dt className="text-xs text-muted">{t.journal.statWeek}</dt>
+          <dd className="readout text-2xl">{fmtNum(hoursWeek, 1, lang)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted">{t.journal.stat30}</dt>
+          <dd className="readout text-2xl">{month.length}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs text-muted">{t.journal.statAvg}</dt>
+          <dd className="readout text-2xl">{rated.length ? fmtNum(rated.reduce((a, b) => a + b, 0) / rated.length, 1, lang) : '—'}</dd>
+        </div>
+      </dl>
+      <ul className="mt-4 flex h-16 items-end gap-1.5" aria-label={t.journal.weekly}>
         {weeks.map((h, i) => {
-          const start = now - (weeks.length - 1 - i) * 7 * DAY
+          const start = weekStart(now) - (weeks.length - 1 - i) * WEEK
           return (
             <li key={i} className="flex h-full flex-1 flex-col justify-end" aria-label={fmt(t.journal.weeklyLabel, { date: fmtDate(start, lang), h: fmtNum(h, 1, lang) })}>
-              <span className="num mb-1 text-center text-[11px] text-muted" aria-hidden>
-                {h > 0 ? fmtNum(h, h < 10 ? 1 : 0, lang) : ''}
-              </span>
-              <span className={cx('block rounded-t-sm', h > 0 ? 'bg-[var(--c-area-journal)]' : 'bg-border')} style={{ height: h > 0 ? `${(h / max) * 70}%` : 2, minHeight: 2 }} aria-hidden />
-              {/* Every other date on phones, so the dates fit. */}
-              <span className={cx('num mt-1.5 text-center text-[10px] text-muted', i % 2 === 1 && 'invisible sm:visible')} aria-hidden>
-                {new Date(start).getDate()}/{new Date(start).getMonth() + 1}
-              </span>
+              <span
+                aria-hidden
+                className={cx('block rounded-sm', h > 0 ? 'bg-(--c-area-journal)' : 'bg-border', i === weeks.length - 1 && h > 0 && 'opacity-100', i !== weeks.length - 1 && 'opacity-70')}
+                style={{ height: h > 0 ? `${Math.max(8, (h / max) * 100)}%` : 3 }}
+              />
             </li>
           )
         })}
       </ul>
-    </Card>
+      <p className="mt-1.5 flex justify-between text-[11px] text-muted" aria-hidden>
+        <span>{t.journal.weeksAgo}</span>
+        <span>{t.journal.thisWeek}</span>
+      </p>
+      {bestName && (
+        <p className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-sm">
+          <Check className="size-4 shrink-0 text-success" aria-hidden />
+          {fmt(t.journal.bestSoFar, { name: bestName })}
+        </p>
+      )}
+    </section>
   )
 }
 
-function Insights({ stringings, sessions }: { stringings: Stringing[]; sessions: Session[] }) {
+/** Sessions grouped by week, newest first, each week with its totals. */
+function Timeline({ sessions, stringings, owned, now, onOpen }: { sessions: Session[]; stringings: Stringing[]; owned: OwnedRacket[]; now: number; onOpen: (s: Session) => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const groups = useMemo(() => {
+    const m = new Map<number, Session[]>()
+    for (const s of sessions) {
+      const w = weekStart(s.date)
+      m.set(w, [...(m.get(w) ?? []), s])
+    }
+    return [...m].sort((a, b) => b[0] - a[0])
+  }, [sessions])
+  const thisWeek = weekStart(now)
+  return (
+    <div className="space-y-4">
+      {groups.map(([w, list]) => {
+        const h = list.reduce((a, s) => a + s.minutes / 60, 0)
+        const title = w === thisWeek ? t.journal.thisWeek : w === thisWeek - WEEK ? t.journal.lastWeek : fmt(t.journal.weekOf, { date: fmtDate(w, lang) })
+        return (
+          <div key={w}>
+            <h3 className="num flex items-baseline justify-between gap-2 border-b border-border pb-1.5 text-sm">
+              <span className="font-semibold">{title}</span>
+              <span className="text-muted">{fmt(list.length === 1 ? t.journal.weekSummaryOne : t.journal.weekSummary, { n: list.length, h: fmtNum(h, 1, lang) })}</span>
+            </h3>
+            <SessionList sessions={list} stringings={stringings} owned={owned} onOpen={onOpen} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Which racket and strings played best, by the session ratings. */
+function Insights({ stringings, sessions, owned }: { stringings: Stringing[]; sessions: Session[]; owned: OwnedRacket[] }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const rows = insights(stringings, sessions).filter((r) => r.avg.overall !== undefined)
   if (rows.length === 0) return <p className="text-sm text-muted">{t.journal.insightsEmpty}</p>
   return (
-    <div>
-      <p className="mb-3 text-sm text-muted">{t.journal.insightsHint}</p>
-      <ol className="divide-y divide-border">
-        {rows.map((r) => (
-          <li key={r.stringing.id} className="py-2.5 text-sm">
+    <ol className="space-y-3">
+      {rows.map((r) => {
+        const name = owned.find((o) => o.id === r.stringing.ownedId)?.name ?? r.stringing.label
+        return (
+          <li key={r.stringing.id} className="text-sm">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 truncate font-medium">
-                {r.stringing.label} · <span className="num">{bedLabel(r.stringing.bed, t, lang)}</span>
+              <span className="min-w-0 truncate">
+                <span className="font-semibold">{name}</span> · <span className="num">{bedLabel(r.stringing.bed, t, lang)}</span>
               </span>
-              <span className="readout text-lg">{fmtNum(r.avg.overall, 1, lang)}</span>
+              <span className="readout shrink-0 text-lg">{fmtNum(r.avg.overall, 1, lang)}</span>
             </div>
-            <p className="num text-muted">
+            <div aria-hidden className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-2">
+              <div className="h-full rounded-full bg-accent" style={{ width: `${((r.avg.overall ?? 0) / 5) * 100}%` }} />
+            </div>
+            <p className="num mt-1 text-xs text-muted">
               {fmtDate(r.stringing.date, lang)} · {r.sessions === 1 ? t.journal.sessionOne : fmt(t.journal.sessions, { n: r.sessions })}
-              {SESSION_RATINGS.filter((k) => k !== 'overall' && r.avg[k] !== undefined).map((k) => (
-                <span key={k}>
-                  {' '}
-                  · {t.journal.ratings[k]} {fmtNum(r.avg[k], 1, lang)}
-                </span>
-              ))}
               {r.armPainShare > 0 && <> · {fmt(t.journal.pain, { n: Math.round(r.armPainShare * 100) })}</>}
             </p>
           </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
-
-function RemindersCard() {
-  const t = useT()
-  const { supported, permission, enable } = useReminders()
-  return (
-    <Card label={t.journal.reminders}>
-      <CardTitle>{t.journal.reminders}</CardTitle>
-      <ProGate title={t.journal.reminders} bare>
-        <p className="mb-3 text-sm text-muted">{t.journal.remindersHint}</p>
-        {!supported ? null : permission === 'granted' ? (
-          <p className="flex items-center gap-2 text-sm font-medium">
-            <Bell className="size-4" aria-hidden /> {t.journal.remindersOn}
-          </p>
-        ) : permission === 'denied' ? (
-          <p className="text-sm text-muted">{t.journal.remindersBlocked}</p>
-        ) : (
-          <Button icon={Bell} onClick={enable}>
-            {t.journal.remindersEnable}
-          </Button>
-        )}
-      </ProGate>
-    </Card>
+        )
+      })}
+    </ol>
   )
 }

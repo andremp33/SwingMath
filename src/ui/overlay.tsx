@@ -70,7 +70,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [msgs, setMsgs] = useState<ToastMsg[]>([])
   const push = useCallback((text: string, action?: ToastMsg['action']) => {
     const id = Date.now() + Math.random()
-    setMsgs((m) => [...m.slice(-2), { id, text, action }])
+    // The same message again replaces the last one instead of stacking.
+    setMsgs((m) => [...m.filter((x) => x.text !== text).slice(-1), { id, text, action }])
     setTimeout(() => setMsgs((m) => m.filter((x) => x.id !== id)), action ? 5000 : 3000)
   }, [])
   return (
@@ -78,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+16px)] z-50 flex flex-col items-center gap-2 px-4 lg:bottom-6"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+84px)] z-50 flex flex-col items-center gap-2 px-4 lg:bottom-6"
       >
         {msgs.map((m) => (
           <div key={m.id} className="pointer-events-auto flex items-center gap-4 rounded-full bg-text px-4 py-2.5 text-sm font-medium text-bg shadow-pop">

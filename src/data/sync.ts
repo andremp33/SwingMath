@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Table } from 'dexie'
 import type { z } from 'zod'
-import { racketSchema, sessionSchema, setupSchema, stringingSchema, type SwingDb } from './db'
+import { ownedSchema, racketSchema, sessionSchema, setupSchema, stringingSchema, type SwingDb } from './db'
 
 /**
  * Sync between this device and the account (Pro).
@@ -15,6 +15,7 @@ import { racketSchema, sessionSchema, setupSchema, stringingSchema, type SwingDb
 export const KINDS = {
   racket: { table: 'rackets', schema: racketSchema },
   setup: { table: 'setups', schema: setupSchema },
+  owned: { table: 'owned', schema: ownedSchema },
   stringing: { table: 'stringings', schema: stringingSchema },
   session: { table: 'sessions', schema: sessionSchema },
 } as const satisfies Record<string, { table: keyof SwingDb; schema: z.ZodType }>
@@ -95,11 +96,21 @@ async function push(db: SwingDb, remote: Remote) {
           : { kind: e.kind as Kind, id: e.id, data: null, deleted: true, client_updated_at: e.at },
       )
     }
-    await remote.push(rows)
-    sent += rows.length
+    // A server that does not know owned rackets yet (its migration not run)
+    // refuses the whole batch: send the rest, and keep those for later.
+    let held = new Set<string>()
+    try {
+      await remote.push(rows)
+    } catch (e) {
+      if (!(e instanceof SyncError && e.code === '23514' && rows.some((r) => r.kind === 'owned'))) throw e
+      await remote.push(rows.filter((r) => r.kind !== 'owned'))
+      held = new Set(batch.filter((b) => b.kind === 'owned').map((b) => b.key))
+    }
+    sent += rows.length - held.size
     // Drop only entries that did not change again while we were sending.
     await db.transaction('rw', db.outbox, async () => {
       for (const e of batch) {
+        if (held.has(e.key)) continue
         const now = await db.outbox.get(e.key)
         if (now && now.at === e.at) await db.outbox.delete(e.key)
       }

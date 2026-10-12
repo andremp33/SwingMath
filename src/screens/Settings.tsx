@@ -1,4 +1,4 @@
-import { Download, ExternalLink, RotateCcw, Sparkles, Trash2, Upload } from 'lucide-react'
+import { Bell, Download, ExternalLink, RotateCcw, Sparkles, Trash2, Upload } from 'lucide-react'
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { signOut } from '../app/account'
@@ -13,6 +13,7 @@ import { Badge, Button, NumberField, PageTitle, Segmented, SettingsGroup, Settin
 import { useToast } from '../ui/overlay'
 import { AccountGroup } from './AccountCard'
 import { usePaywall } from './Pro'
+import { useReminders } from './reminders'
 import { InfoTip } from '../ui/disclosure'
 
 /**
@@ -72,6 +73,8 @@ export function Settings() {
             <NumberField inline label={t.settings.tapeMass} unit="g" min={0.5} max={30} value={s.tapeGPer10cm} onChange={s.setTape} />
           </SettingsRow>
         </SettingsGroup>
+
+        <RemindersGroup />
 
         <DataGroup />
 
@@ -242,6 +245,34 @@ function DataGroup() {
         >
           {t.settings.deleteShort}
         </Button>
+      </SettingsRow>
+    </SettingsGroup>
+  )
+}
+
+/** Restring reminders (Pro): a notification when a racket's strings are spent. */
+function RemindersGroup() {
+  const t = useT()
+  const pro = useStore(isPro)
+  const paywall = usePaywall()
+  const { supported, permission, enable } = useReminders()
+  if (!supported) return null
+  return (
+    <SettingsGroup title={t.journal.reminders}>
+      <SettingsRow label={t.journal.reminders} hint={permission === 'denied' ? t.journal.remindersBlocked : t.journal.remindersHint}>
+        {!pro ? (
+          <Button size="sm" icon={Sparkles} onClick={() => paywall()}>
+            {t.pro.unlock}
+          </Button>
+        ) : permission === 'granted' ? (
+          <span className="flex items-center gap-1.5 text-sm font-medium">
+            <Bell className="size-4" aria-hidden /> {t.journal.remindersOn}
+          </span>
+        ) : permission === 'denied' ? null : (
+          <Button size="sm" icon={Bell} onClick={enable}>
+            {t.journal.remindersEnable}
+          </Button>
+        )}
       </SettingsRow>
     </SettingsGroup>
   )

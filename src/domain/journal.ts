@@ -1,13 +1,31 @@
 import { stringLife, type Stringbed, type StringLife } from './strings'
 
 /**
- * The player's journal: each physical racket's stringings, and the sessions
- * played with them. A racket is identified by its label ("Pure Aero #1"):
- * restringing adds a new stringing with the same label.
+ * The player's journal: their own rackets (the physical frames they play
+ * with), each racket's stringings, and the sessions played with them.
  */
+
+/** A racket the player owns: "Pure Aero #1", a frame model, and the setup
+ *  it is built to. Restringing adds a stringing to it. */
+export interface OwnedRacket {
+  id: string
+  name: string
+  /** Frame model (stock or custom racket id). */
+  racketId: string
+  /** Saved setup this racket is built to, if any. */
+  setupId?: string
+  notes?: string
+  /** Put away: kept with its history, out of the way. */
+  retired?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
 export interface Stringing {
   id: string
-  /** Name of the physical racket, e.g. "Pure Aero #1". */
+  /** The owned racket it was strung on. Older journals only had `label`. */
+  ownedId?: string
+  /** The racket's name when it was strung (kept for older versions). */
   label: string
   /** Frame model (stock or custom racket id). */
   racketId: string
@@ -59,10 +77,43 @@ export function lifeOf(st: Stringing, sessions: Session[], now = Date.now()): St
 export function currentStringings(all: Stringing[]): Stringing[] {
   const latest = new Map<string, Stringing>()
   for (const s of all) {
-    const prev = latest.get(s.label)
-    if (!prev || s.date > prev.date || (s.date === prev.date && s.createdAt > prev.createdAt)) latest.set(s.label, s)
+    const k = ownerKey(s)
+    const prev = latest.get(k)
+    if (!prev || s.date > prev.date || (s.date === prev.date && s.createdAt > prev.createdAt)) latest.set(k, s)
   }
   return [...latest.values()].sort((a, b) => b.date - a.date)
+}
+
+/** Which racket a stringing belongs to: its owned racket, or (older
+ *  journals) its label. */
+export const ownerKey = (s: Stringing) => s.ownedId ?? `label:${s.label.trim().toLowerCase()}`
+
+/** The latest stringing of one owned racket. */
+export function latestOf(ownedId: string, all: Stringing[]): Stringing | undefined {
+  return currentStringings(all.filter((s) => s.ownedId === ownedId))[0]
+}
+
+/**
+ * Older journals named rackets on each stringing. Gives every unlinked
+ * stringing an owned racket: one per name (an existing racket with that
+ * name, or a new one built from its latest stringing).
+ */
+export function linkOwned(stringings: Stringing[], owned: OwnedRacket[], newId: () => string, now = Date.now()) {
+  const byName = new Map(owned.map((o) => [o.name.trim().toLowerCase(), o]))
+  const created: OwnedRacket[] = []
+  const linked: Stringing[] = []
+  const loose = stringings.filter((s) => !s.ownedId).sort((a, b) => b.date - a.date)
+  for (const s of loose) {
+    const name = s.label.trim()
+    let o = byName.get(name.toLowerCase())
+    if (!o) {
+      o = { id: newId(), name, racketId: s.racketId, setupId: s.setupId, createdAt: s.createdAt, updatedAt: now }
+      byName.set(name.toLowerCase(), o)
+      created.push(o)
+    }
+    linked.push({ ...s, ownedId: o.id, updatedAt: now })
+  }
+  return { created, linked }
 }
 
 /** Rackets whose strings are at or past the end of their life. */

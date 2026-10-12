@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentStringings, dueForRestring, hoursOn, insights, lifeOf, weeklyHours, type Session, type Stringing } from './journal'
+import { currentStringings, dueForRestring, hoursOn, insights, latestOf, lifeOf, linkOwned, weeklyHours, type OwnedRacket, type Session, type Stringing } from './journal'
 
 const DAY = 86_400_000
 const NOW = Date.UTC(2026, 9, 9)
@@ -62,5 +62,33 @@ describe('journal', () => {
   it('buckets hours by week, oldest first', () => {
     const w = weeklyHours(sessions, 4, NOW)
     expect(w).toEqual([0, 1.5, 0, 4])
+  })
+})
+
+describe('owned rackets', () => {
+  const old = [stringing('a1', 'Aero #1', 30), stringing('a2', ' aero #1 ', 5), stringing('b1', 'Blade', 10)]
+  let k = 0
+  const newId = () => `o${++k}`
+
+  it('older journals get one owned racket per name, case and spaces aside', () => {
+    const { created, linked } = linkOwned(old, [], newId, NOW)
+    expect(created.map((o) => o.name).sort()).toEqual(['Blade', 'aero #1'])
+    const aero = created.find((o) => o.name === 'aero #1')!
+    expect(linked.filter((s) => s.ownedId === aero.id).map((s) => s.id).sort()).toEqual(['a1', 'a2'])
+    // The latest stringing names it and gives it its frame.
+    expect(aero.racketId).toBe('stock-x')
+  })
+
+  it('an existing racket with that name is reused', () => {
+    const mine: OwnedRacket = { id: 'mine', name: 'Blade', racketId: 'stock-y', createdAt: 0, updatedAt: 0 }
+    const { created, linked } = linkOwned(old, [mine], newId, NOW)
+    expect(created.some((o) => o.name === 'Blade')).toBe(false)
+    expect(linked.find((s) => s.id === 'b1')?.ownedId).toBe('mine')
+  })
+
+  it('each owned racket counts as one, whatever its stringings were called', () => {
+    const renamed = [{ ...stringing('x1', 'Old name', 9), ownedId: 'r' }, { ...stringing('x2', 'New name', 2), ownedId: 'r' }]
+    expect(currentStringings(renamed).map((s) => s.id)).toEqual(['x2'])
+    expect(latestOf('r', renamed)?.id).toBe('x2')
   })
 })

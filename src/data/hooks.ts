@@ -34,6 +34,11 @@ export function useComputed(config: SetupConfig | undefined, racket: Racket | un
   }, [config, racket, masses])
 }
 
+/** The player's own rackets, active first, then by name. */
+export function useOwned() {
+  return useLiveQuery(async () => (await db.owned.toArray()).sort((a, b) => Number(!!a.retired) - Number(!!b.retired) || a.name.localeCompare(b.name)), [])
+}
+
 export function useStringings() {
   return useLiveQuery(() => db.stringings.orderBy('date').reverse().toArray(), [])
 }

@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { z } from 'zod'
-import { SESSION_KINDS, type Session, type Stringing } from '../domain/journal'
+import { linkOwned, SESSION_KINDS, type OwnedRacket, type Session, type Stringing } from '../domain/journal'
 import { MATERIALS } from '../domain/strings'
 import { POSITIONS, type Racket, type Setup } from '../domain/types'
 import { RENAMED, STOCK_RACKETS } from './rackets'
@@ -18,6 +18,7 @@ export interface OutboxEntry {
 export type SwingDb = Dexie & {
   rackets: EntityTable<Racket, 'id'>
   setups: EntityTable<Setup, 'id'>
+  owned: EntityTable<OwnedRacket, 'id'>
   stringings: EntityTable<Stringing, 'id'>
   sessions: EntityTable<Session, 'id'>
   outbox: EntityTable<OutboxEntry, 'key'>
@@ -37,6 +38,8 @@ export function openDb(name: string): SwingDb {
   })
   // v3: changes waiting to sync with the account.
   d.version(3).stores({ outbox: 'key' })
+  // v4: the player's own rackets; stringings point at them.
+  d.version(4).stores({ owned: 'id, updatedAt', stringings: 'id, label, ownedId, date' })
   return d
 }
 
@@ -124,8 +127,20 @@ export const setupSchema = z.object({
 
 const rating5 = z.number().int().min(1).max(5).optional()
 
+export const ownedSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(40),
+  racketId: z.string().min(1),
+  setupId: z.string().optional(),
+  notes: z.string().max(500).optional(),
+  retired: z.boolean().optional(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+})
+
 export const stringingSchema = z.object({
   id: z.string().min(1),
+  ownedId: z.string().optional(),
   label: z.string().trim().min(1).max(40),
   racketId: z.string().min(1),
   setupId: z.string().optional(),
@@ -149,6 +164,31 @@ export const sessionSchema = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
 })
+
+export async function saveOwned(o: OwnedRacket) {
+  await db.owned.put(ownedSchema.parse(o) as OwnedRacket)
+}
+
+/** Deletes an owned racket and its stringings; the sessions stay, unlinked. */
+export async function deleteOwned(id: string) {
+  await db.transaction('rw', db.owned, db.stringings, db.sessions, async () => {
+    const ids = (await db.stringings.where('ownedId').equals(id).toArray()).map((s) => s.id)
+    for (const sid of ids) await db.sessions.where('stringingId').equals(sid).modify((s) => void delete s.stringingId)
+    await db.stringings.bulkDelete(ids)
+    await db.owned.delete(id)
+  })
+}
+
+/** Gives older journals' stringings an owned racket each (see linkOwned). */
+export async function ensureOwned(d: SwingDb = db) {
+  await d.transaction('rw', d.owned, d.stringings, async () => {
+    const loose = await d.stringings.filter((s) => !s.ownedId).toArray()
+    if (!loose.length) return
+    const { created, linked } = linkOwned(loose, await d.owned.toArray(), uid)
+    await d.owned.bulkPut(created)
+    await d.stringings.bulkPut(linked)
+  })
+}
 
 export async function saveStringing(s: Stringing) {
   await db.stringings.put(stringingSchema.parse(s) as Stringing)
@@ -190,13 +230,14 @@ export function findRacket(id: string | undefined, custom: Racket[] | undefined)
 }
 
 export async function exportAll() {
-  const [rackets, setups, stringings, sessions] = await Promise.all([
+  const [rackets, setups, owned, stringings, sessions] = await Promise.all([
     db.rackets.toArray(),
     db.setups.toArray(),
+    db.owned.toArray(),
     db.stringings.toArray(),
     db.sessions.toArray(),
   ])
-  return { app: 'swingmath', version: 2, exportedAt: new Date().toISOString(), rackets, setups, stringings, sessions }
+  return { app: 'swingmath', version: 3, exportedAt: new Date().toISOString(), rackets, setups, owned, stringings, sessions }
 }
 
 export async function importAll(data: unknown) {
@@ -208,21 +249,25 @@ export async function importAll(data: unknown) {
       // Version 1 backups have no journal.
       stringings: z.array(stringingSchema).default([]),
       sessions: z.array(sessionSchema).default([]),
+      // Version 2 backups have no owned rackets; they are rebuilt from names.
+      owned: z.array(ownedSchema).default([]),
     })
     .parse(data)
-  await db.transaction('rw', [db.rackets, db.setups, db.stringings, db.sessions], async () => {
+  await db.transaction('rw', [db.rackets, db.setups, db.owned, db.stringings, db.sessions], async () => {
     await db.rackets.bulkPut(parsed.rackets as Racket[])
     await db.setups.bulkPut(parsed.setups as Setup[])
+    await db.owned.bulkPut(parsed.owned as OwnedRacket[])
     await db.stringings.bulkPut(parsed.stringings as Stringing[])
     await db.sessions.bulkPut(parsed.sessions as Session[])
   })
+  await ensureOwned()
   return { rackets: parsed.rackets.length, setups: parsed.setups.length, sessions: parsed.sessions.length }
 }
 
 /** Wipes this device. Clearing does not queue deletions, so an account's
  *  copy in the cloud stays (signing in again brings it back). */
 export async function deleteAll() {
-  await db.transaction('rw', [db.rackets, db.setups, db.stringings, db.sessions, db.outbox], async () => {
-    await Promise.all([db.rackets.clear(), db.setups.clear(), db.stringings.clear(), db.sessions.clear(), db.outbox.clear()])
+  await db.transaction('rw', [db.rackets, db.setups, db.owned, db.stringings, db.sessions, db.outbox], async () => {
+    await Promise.all([db.rackets.clear(), db.setups.clear(), db.owned.clear(), db.stringings.clear(), db.sessions.clear(), db.outbox.clear()])
   })
 }

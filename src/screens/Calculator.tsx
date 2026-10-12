@@ -11,6 +11,7 @@ import { fmtNum, fmtSigned } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
+import { MyRacketsRow } from '../ui/MyRackets'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
 import { ComfortCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
@@ -101,6 +102,7 @@ export function Calculator() {
           <Card className="order-1 xl:order-none">
             <div className="space-y-4">
               <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
+              <MyRacketsRow />
               <Segmented
                 label={t.calc.base}
                 value={config.baseMode}

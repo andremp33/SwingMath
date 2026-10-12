@@ -1,35 +1,44 @@
 import { a11y, expand, expect, resultCard, start, test } from './fixtures'
 import type { Page } from '@playwright/test'
 
-async function addStringing(page: Page, label: string) {
-  await page.getByRole('button', { name: 'Encordei' }).first().click()
-  const d = page.getByRole('dialog', { name: 'Encordoamento' })
-  await d.getByLabel('Nome da raquete').fill(label)
+async function addRacket(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Nova raquete' }).first().click()
+  const d = page.getByRole('dialog', { name: 'Nova raquete' })
+  await d.getByLabel('Nome').fill(name)
   await d.getByRole('button', { name: 'Guardar' }).click()
   await expect(d).toBeHidden()
 }
 
+/** Logs a session through the quick sheet: a length chip (or "Outra"), a rating. */
 async function logSession(page: Page, minutes: number, overall?: number) {
-  await page.getByRole('button', { name: 'Registar sessão' }).click()
+  await page.getByRole('button', { name: 'Registar sessão' }).last().click()
   const d = page.getByRole('dialog', { name: 'Sessão' })
-  await d.getByLabel('Duração').fill(String(minutes))
-  if (overall) await d.getByRole('radiogroup', { name: 'Geral' }).getByRole('radio', { name: `${overall}/5` }).click()
+  const lengths = d.getByRole('radiogroup', { name: 'Duração' })
+  const chip = lengths.getByRole('radio', { name: `${minutes} min` })
+  if (await chip.count()) await chip.click()
+  else {
+    await lengths.getByRole('radio', { name: 'Outra' }).click()
+    await d.getByRole('textbox', { name: 'Duração' }).fill(String(minutes))
+  }
+  if (overall) await d.getByRole('radiogroup', { name: 'Como correu' }).getByRole('radio', { name: `${overall}/5` }).click()
   await d.getByRole('button', { name: 'Guardar' }).click()
   await expect(d).toBeHidden()
 }
 
 test.describe('F14 journal', () => {
-  test('F14-H1 log a stringing and a session', async ({ page }) => {
+  test('F14-H1 first time: add a racket, then log a session', async ({ page }) => {
     await start(page, { path: '/diario' })
-    await expect(page.getByText(/Regista quando encordas/)).toBeVisible()
-    await addStringing(page, 'Aero #1')
+    await expect(page.getByText('Adiciona a tua raquete')).toBeVisible()
+    await addRacket(page, 'Aero #1')
     const rackets = page.getByRole('region', { name: 'As tuas raquetes' })
     await expect(rackets).toContainText('Aero #1')
     await expect(rackets).toContainText('Poli 23 kg')
     await expect(rackets.getByRole('meter', { name: 'Vida das cordas' })).toHaveAttribute('aria-valuenow', '100')
     await logSession(page, 120, 4)
     await expect(rackets).toContainText('2,0 h jogadas')
-    await expect(page.getByRole('region', { name: 'Sessões' })).toContainText('Treino · 120 min · 4/5')
+    const sessions = page.getByRole('region', { name: 'Sessões' })
+    await expect(sessions).toContainText('Esta semana')
+    await expect(sessions.getByRole('button', { name: /Treino, 120 min, .*4\/5/ })).toBeVisible()
     // Free: the analysis is a Pro feature.
     await expect(page.getByRole('region', { name: 'O que joga melhor' }).getByRole('button', { name: 'Experimentar o Pro' })).toBeVisible()
     await a11y(page)
@@ -37,37 +46,50 @@ test.describe('F14 journal', () => {
 
   test('F14-H2 restring keeps the racket; Pro ranks stringings', async ({ page }) => {
     await start(page, { path: '/diario', pro: true })
-    await addStringing(page, 'Blade')
+    await addRacket(page, 'Blade')
     await logSession(page, 60, 3)
-    await page.getByRole('button', { name: 'Encordei de novo' }).click()
+    const rackets = page.getByRole('region', { name: 'As tuas raquetes' })
+    await rackets.getByRole('button', { name: 'Encordei' }).click()
     const d = page.getByRole('dialog', { name: 'Encordoamento' })
-    await expect(d.getByLabel('Nome da raquete')).toHaveValue('Blade')
+    await expect(d).toContainText('Blade')
     await d.getByLabel('Tensão').fill('21')
     await d.getByRole('button', { name: 'Guardar' }).click()
-    const rackets = page.getByRole('region', { name: 'As tuas raquetes' })
-    await expect(rackets.getByRole('listitem')).toHaveCount(1)
+    await expect(rackets.getByRole('article')).toHaveCount(1)
     await expect(rackets).toContainText('Poli 21 kg')
     await logSession(page, 60, 5)
     const best = page.getByRole('region', { name: 'O que joga melhor' }).getByRole('listitem')
     await expect(best).toHaveCount(2)
     await expect(best.first()).toContainText('Poli 21 kg')
+    // The racket's history has both stringings.
+    await rackets.getByRole('button', { name: 'Blade' }).click()
+    await expect(page.getByRole('dialog', { name: 'Blade' }).getByRole('region', { name: 'Encordoamentos' }).getByRole('listitem')).toHaveCount(2)
   })
 
-  test('F14-E1 strings past their life: banner and a dot on the tab', async ({ page }) => {
+  test('F14-E1 strings past their life: restring now, and a dot on the tab', async ({ page }) => {
     await start(page, { path: '/diario' })
-    await addStringing(page, 'Velha')
+    await addRacket(page, 'Velha')
     await logSession(page, 600)
     await logSession(page, 600)
-    await expect(page.getByRole('status').filter({ hasText: 'Velha: está na altura de encordar' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'As tuas raquetes' })).toContainText('Encordar já')
     await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Diário \(1\)/ })).toBeVisible()
   })
 
   test('F14-E2 free journal shows the last 10 sessions', async ({ page }) => {
     await start(page, { path: '/diario' })
-    await addStringing(page, 'X')
+    await addRacket(page, 'X')
     for (let i = 0; i < 11; i++) await logSession(page, 30)
     await expect(page.getByRole('region', { name: 'Sessões' }).getByRole('listitem')).toHaveCount(10)
     await expect(page.getByText(/Mostramos as últimas 10 sessões/)).toBeVisible()
+  })
+
+  test('F14-H3 your rackets load into the calculator', async ({ page }) => {
+    await start(page, { path: '/diario' })
+    await addRacket(page, 'Aero de jogo')
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Aero de jogo' }).click()
+    await expect(page.getByRole('button', { name: 'Aero de jogo' })).toHaveAttribute('aria-pressed', 'true')
+    await page.goto('/rackets')
+    await expect(page.getByRole('region', { name: 'As tuas raquetes' })).toContainText('Aero de jogo')
   })
 })
 

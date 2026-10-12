@@ -127,6 +127,7 @@ export function TextField({
   placeholder,
   maxLength,
   autoFocus,
+  hint,
 }: {
   label: string
   value: string
@@ -135,6 +136,8 @@ export function TextField({
   placeholder?: string
   maxLength?: number
   autoFocus?: boolean
+  /** A line under the field, when there is no error to show. */
+  hint?: string
 }) {
   const id = useId()
   return (
@@ -148,13 +151,19 @@ export function TextField({
         maxLength={maxLength}
         autoFocus={autoFocus}
         aria-invalid={!!error || undefined}
-        aria-describedby={error ? `${id}-e` : undefined}
+        aria-describedby={error ? `${id}-e` : hint ? `${id}-h` : undefined}
         onChange={(e) => onChange(e.target.value)}
       />
-      {error && (
+      {error ? (
         <p id={`${id}-e`} className="mt-1 text-xs text-danger">
           {error}
         </p>
+      ) : (
+        hint && (
+          <p id={`${id}-h`} className="mt-1 text-xs text-muted">
+            {hint}
+          </p>
+        )
       )}
     </div>
   )
@@ -351,6 +360,43 @@ export function Segmented<T extends string>({
           {o.badge}
         </button>
       ))}
+    </div>
+  )
+}
+
+/** A single choice as a wrapping row of chips (quick to tap on a phone). */
+export function ChoiceChips<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: T | undefined
+  onChange: (v: T) => void
+  options: { value: T; label: ReactNode; aria?: string }[]
+}) {
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-muted">{label}</span>
+      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={value === o.value}
+            aria-label={o.aria}
+            onClick={() => onChange(o.value)}
+            className={cx(
+              'num min-h-10 rounded-full border px-3.5 text-sm transition-colors',
+              value === o.value ? 'border-text bg-text font-semibold text-bg' : 'border-border-input text-text hover:bg-surface-2',
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

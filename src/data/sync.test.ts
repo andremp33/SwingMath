@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Setup } from '../domain/types'
-import { openDb, type SwingDb } from './db'
-import { applyRemote, enqueueAll, syncOnce, trackChanges, type Remote, type RemoteRow } from './sync'
+import { ensureOwned, openDb, type SwingDb } from './db'
+import { applyRemote, enqueueAll, SyncError, syncOnce, trackChanges, type Remote, type RemoteRow } from './sync'
 
 /** The server's rules, in memory: newest client version wins, and every
  *  write gets a later server time. */
@@ -132,5 +132,48 @@ describe('sync', () => {
     // The server still has an older copy from another device.
     await applyRemote(a.db, [{ kind: 'setup', id: 's1', data: setup('s1', 'Base', 5), deleted: false, client_updated_at: 5 }])
     expect(await a.db.setups.get('s1')).toBeUndefined()
+  })
+})
+
+describe('owned rackets and an older server', () => {
+  it('a server that refuses owned rackets still gets the rest; they wait in the queue', async () => {
+    const { remote, rows } = fakeServer()
+    const strict: Remote = {
+      ...remote,
+      async push(batch) {
+        if (batch.some((r) => r.kind === 'owned')) throw new SyncError('check', '23514')
+        return remote.push(batch)
+      },
+    }
+    const a = await device()
+    await a.db.setups.put(setup('s1', 'Mine', 5))
+    await a.db.owned.put({ id: 'o1', name: 'Aero #1', racketId: 'stock-x', createdAt: 1, updatedAt: 6 })
+    await new Promise((r) => setTimeout(r, 20))
+    await a.sync(strict)
+    expect(rows.has('setup:s1')).toBe(true)
+    expect(rows.has('owned:o1')).toBe(false)
+    expect(await a.db.outbox.get('owned:o1')).toBeDefined()
+    // Once the server knows them, they go.
+    await a.sync(remote)
+    expect(rows.has('owned:o1')).toBe(true)
+  })
+})
+
+describe('journals from before owned rackets', () => {
+  it('get an owned racket per name on start, once', async () => {
+    const d = openDb(`old-${++n}`)
+    const bed = { mains: { material: 'poly' as const, tensionKg: 23 } }
+    await d.stringings.bulkPut([
+      { id: 's1', label: 'Aero #1', racketId: 'stock-x', date: 1, bed, createdAt: 1, updatedAt: 1 },
+      { id: 's2', label: 'Aero #1', racketId: 'stock-x', date: 2, bed, createdAt: 2, updatedAt: 2 },
+      { id: 's3', label: 'Blade', racketId: 'stock-y', date: 3, bed, createdAt: 3, updatedAt: 3 },
+    ])
+    await ensureOwned(d)
+    await ensureOwned(d)
+    const owned = await d.owned.toArray()
+    expect(owned.map((o) => o.name).sort()).toEqual(['Aero #1', 'Blade'])
+    const s = await d.stringings.toArray()
+    expect(s.every((x) => x.ownedId)).toBe(true)
+    expect(new Set(s.filter((x) => x.label === 'Aero #1').map((x) => x.ownedId)).size).toBe(1)
   })
 })

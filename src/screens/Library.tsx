@@ -9,6 +9,7 @@ import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
 import { Badge, Button, Card, CardTitle, EmptyState, IconButton, PageTitle, Select } from '../ui/basics'
 import { InfoTip } from '../ui/disclosure'
+import { MyRacketsSection } from '../ui/MyRackets'
 import { RacketMap } from '../ui/RacketMap'
 import { useToast } from '../ui/overlay'
 import { matchesQuery } from '../ui/RacketPicker'
@@ -106,6 +107,8 @@ export function Library() {
         <Ruler className="size-4 shrink-0" aria-hidden />
         {t.library.stockNote}
       </p>
+      <MyRacketsSection />
+
       <Card label={t.library.map.title} className="mb-6">
         <CardTitle info={<InfoTip title={t.library.map.title}>{t.library.map.info}</InfoTip>}>{t.library.map.title}</CardTitle>
         <RacketMap all={all} picked={picked} onRemove={toggleMap} />
