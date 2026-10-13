@@ -187,12 +187,13 @@ export function Journal() {
 
 function Step({ n, title, hint, muted, children }: { n: number; title: string; hint: string; muted?: boolean; children?: ReactNode }) {
   return (
-    <li className={cx('flex gap-4 rounded-lg border border-border p-4', muted && 'opacity-60')}>
+    // A step still to come: dashed and muted, never faded below readable contrast.
+    <li className={cx('flex gap-4 rounded-lg border border-border p-4', muted && 'border-dashed')}>
       <span aria-hidden className="num flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 font-bold">
         {n}
       </span>
       <div className="min-w-0 space-y-2">
-        <p className="font-semibold">{title}</p>
+        <p className={cx('font-semibold', muted && 'text-muted')}>{title}</p>
         <p className="text-sm text-muted">{hint}</p>
         {children}
       </div>

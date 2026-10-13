@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSessions, useStringings } from '../data/hooks'
-import { isPro, useStore } from '../data/store'
+import { useStore } from '../data/store'
 import { dueForRestring, hoursOn } from '../domain/journal'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
@@ -43,7 +43,6 @@ async function notify(title: string, body: string, tag: string) {
 export function useRestringReminders(): number {
   const t = useT()
   const lang = useStore((s) => s.lang)
-  const pro = useStore(isPro)
   const reminded = useStore((s) => s.reminded)
   const markReminded = useStore((s) => s.markReminded)
   const stringings = useStringings()
@@ -53,14 +52,14 @@ export function useRestringReminders(): number {
   const key = fresh.map((s) => s.id).join()
 
   useEffect(() => {
-    if (!pro || !key || !supported() || (!IS_APP && Notification.permission !== 'granted')) return
+    if (!key || !supported() || (!IS_APP && Notification.permission !== 'granted')) return
     for (const s of fresh) {
       notify(t.journal.notifyTitle, fmt(t.journal.notifyBody, { label: s.label, h: fmtNum(hoursOn(s.id, sessions ?? []), 1, lang), date: fmtDate(s.date, lang) }), s.id).catch(() => {})
     }
     markReminded(fresh.map((s) => s.id))
     // `key` stands for `fresh`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pro, key])
+  }, [key])
 
   return due.length
 }

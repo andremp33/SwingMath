@@ -4,13 +4,13 @@ test.describe('F01 see the effect of adding lead', () => {
   test('F01-H1 lead at the tip raises weight and swingweight', async ({ page }) => {
     await start(page)
     // Default: Pure Aero 98 2026, Babolat's 305 g + strings 17 + overgrip 6 = 328 g.
-    await expect(resultCard(page)).toContainText('328,0')
+    await expect(resultCard(page)).toContainText('328')
     const plus = page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' })
     for (let i = 0; i < 4; i++) await plus.click()
     await expect(page.getByText('Chumbo total:')).toContainText('2,0 g')
-    await expect(resultCard(page)).toContainText('330,0')
-    // vs the unstrung frame (305 g): strings 17 + overgrip 6 + lead 2.
-    await expect(resultCard(page)).toContainText('+25,0')
+    await expect(resultCard(page)).toContainText('330')
+    // Counted from the racket as you play it, so the change is the lead alone.
+    await expect(resultCard(page)).toContainText('+2,0')
     await a11y(page)
   })
 
@@ -41,6 +41,7 @@ test.describe('F01 see the effect of adding lead', () => {
   test('F01-E4 clear resets lead and accessories', async ({ page }) => {
     await start(page)
     await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await page.getByRole('button', { name: /^Com cordas e overgrip/ }).click()
     await page.getByRole('switch', { name: /Antivibrador/ }).click()
     await page.getByRole('button', { name: 'Limpar alterações' }).click()
     await expect(page.getByText('Chumbo total:')).toContainText('0,0 g')
@@ -59,7 +60,7 @@ test.describe('F01 see the effect of adding lead', () => {
     await page.getByRole('dialog').getByRole('searchbox').fill('prestige')
     await page.getByRole('dialog').getByRole('button', { name: 'Head Prestige MP (2023)' }).click()
     // Prestige MP 2023: Head's 310 g + strings 17 + overgrip 6
-    await expect(resultCard(page)).toContainText('333,0')
+    await expect(resultCard(page)).toContainText('333')
   })
 
   test('F01-E7 info sheet opens and closes with Escape', async ({ page }) => {
@@ -104,9 +105,10 @@ test.describe('Fixes from user reviews', () => {
     await start(page)
     await page.getByRole('button', { name: 'Confirmar com a minha medição' }).click()
     const card = page.getByRole('region', { name: 'Confirmar com a minha medição' })
-    await card.getByLabel('Peso', { exact: true }).fill('329,5')
-    await expect(card.getByRole('status')).toHaveText('Dentro da tolerância')
-    await card.getByLabel('Peso', { exact: true }).fill('331')
+    // From catalogue specs, a production frame's spread is the tolerance.
+    await card.getByLabel('Peso', { exact: true }).fill('333')
+    await expect(card.getByRole('status')).toContainText('Dentro do que varia uma raquete de série')
+    await card.getByLabel('Peso', { exact: true }).fill('337')
     await expect(card.getByRole('status')).toContainText('Fora da tolerância')
     await a11y(page)
   })
@@ -115,28 +117,28 @@ test.describe('Fixes from user reviews', () => {
 test.describe('F02 use my own measured specs', () => {
   test('F02-H1 measured weight with a decimal comma', async ({ page }) => {
     await start(page)
-    await page.getByRole('radio', { name: 'As minhas medições' }).click()
+    await page.getByRole('button', { name: 'Usar as minhas medições' }).click()
     await page.getByLabel('Peso', { exact: true }).fill('322,5')
     // 322,5 + strings 17 + overgrip 6
-    await expect(resultCard(page)).toContainText('345,5')
+    await expect(resultCard(page)).toContainText('346')
   })
 
   test('F02-N1 text and out-of-range values show an error and are ignored', async ({ page }) => {
     await start(page)
-    await page.getByRole('radio', { name: 'As minhas medições' }).click()
+    await page.getByRole('button', { name: 'Usar as minhas medições' }).click()
     const w = page.getByLabel('Peso', { exact: true })
     await w.fill('abc')
     await w.blur()
     await expect(page.getByRole('alert')).toHaveText('Introduz um número')
     await w.fill('900')
     await expect(page.getByRole('alert')).toContainText('Entre 150 e 450')
-    await expect(resultCard(page)).toContainText('328,0')
+    await expect(resultCard(page)).toContainText('328')
   })
 
   test('F02-E1 blank fields fall back to the reference', async ({ page }) => {
     await start(page)
-    await page.getByRole('radio', { name: 'As minhas medições' }).click()
-    await expect(resultCard(page)).toContainText('328,0')
+    await page.getByRole('button', { name: 'Usar as minhas medições' }).click()
+    await expect(resultCard(page)).toContainText('328')
     await a11y(page)
   })
 })

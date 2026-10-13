@@ -1,4 +1,4 @@
-import { ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
+import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { geometry } from '../domain/physics'
@@ -8,7 +8,7 @@ import { saveOwned, saveSetup, saveStringing, uid } from '../data/db'
 import { useComputed, useOwned, useRacket, useSetups } from '../data/hooks'
 import { FREE_SETUP_LIMIT, isPro, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
-import { fmtNum, fmtSigned } from '../lib/format'
+import { fmtNum, fmtSigned, LOCALE } from '../lib/format'
 import { Badge, Button, Card, CardTitle, ChoiceChips, cx, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
@@ -48,8 +48,10 @@ export function Calculator() {
   const [infoOpen, setInfoOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
 
-  const baseRows = useSpecRows(computed?.base ?? emptySpecs, undefined, { recoil: false })
-  const resultRows = useSpecRows(computed?.result ?? emptySpecs, computed?.base)
+  const [accOpen, setAccOpen] = useState(false)
+  const playing = noLead?.result ?? computed?.base
+  const baseRows = useSpecRows(playing ?? emptySpecs, undefined, { recoil: false })
+  const resultRows = useSpecRows(computed?.result ?? emptySpecs, playing)
   const [barOpen, setBarOpen] = useState(() => readOpen(BAR_KEY))
   const toggleBar = () => {
     setBarOpen(!barOpen)
@@ -74,6 +76,12 @@ export function Calculator() {
     document.getElementById(`lead-${id}`)?.querySelector('input')?.focus({ preventScroll: true })
   }
   const { base, result } = computed
+  const play = noLead?.result ?? base
+  const ACC = ['strings', 'overgrip', 'leatherGrip', 'dampener'] as const
+  const on = ACC.filter((k) => config.accessories[k])
+  const accList = new Intl.ListFormat(LOCALE[lang] ?? 'en-GB', { type: 'conjunction' }).format(on.map((k, i) => (i === 0 ? t.acc[k] : t.acc[k].toLowerCase())))
+  const accSummary = on.length ? fmt(t.calc.accWith, { list: accList.charAt(0).toLowerCase() + accList.slice(1) }) : t.calc.accNone
+  const catalog = config.baseMode === 'reference' && racket.isStock
 
   return (
     <>
@@ -100,27 +108,18 @@ export function Calculator() {
             <div className="space-y-4">
               <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
               <MyRacketsRow />
-              <Segmented
-                label={t.calc.base}
-                value={config.baseMode}
-                onChange={(baseMode) => setConfig({ baseMode })}
-                options={[
-                  { value: 'reference', label: t.calc.baseReference },
-                  { value: 'measured', label: t.calc.baseMeasured },
-                ]}
-              />
               {config.baseMode === 'reference' ? (
                 <div>
                   <div className="mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-sm text-muted">
-                      {t.calc.reference}
-                      {racket.isStock && (
-                        <InfoTip title={t.sources.title}>
-                          <RacketSources racket={racket} />
-                        </InfoTip>
-                      )}
+                      {t.calc.playing}
+                      <InfoTip title={t.calc.playing}>
+                        <p>{t.calc.playingHint}</p>
+                        <p className="num mt-2 font-medium">{fmt(t.calc.factory, { w: fmtNum(base.weightG, 0, lang), b: fmtNum(base.balanceCm * 10, 0, lang), sw: fmtNum(base.swingweight, 0, lang) })}</p>
+                        {racket.isStock && <div className="mt-3"><RacketSources racket={racket} /></div>}
+                      </InfoTip>
                     </span>
-                    {racket.isStock ? <Badge>{t.library.stock}</Badge> : <Badge tone="accent">{t.library.custom}</Badge>}
+                    {!racket.isStock && <Badge tone="accent">{t.library.custom}</Badge>}
                   </div>
                   <div className="xl:hidden">
                     <SpecStrip rows={baseRows} />
@@ -131,6 +130,7 @@ export function Calculator() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  <span className="block text-sm text-muted">{t.calc.measuredTitle}</span>
                   <p className="text-sm text-muted">{t.calc.measuredHint}</p>
                   <Link to="/medir" className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text underline-offset-2 hover:underline">
                     <Ruler className="size-4" aria-hidden /> {t.measure.open}
@@ -174,21 +174,41 @@ export function Calculator() {
                   </div>
                 </div>
               )}
-            </div>
-          </Card>
-
-          <Card className="order-5 xl:order-none">
-            <CardTitle>{t.acc.title}</CardTitle>
-            <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-              {(['strings', 'overgrip', 'leatherGrip', 'dampener'] as const).map((k) => (
-                <Toggle
-                  key={k}
-                  label={t.acc[k]}
-                  hint={`+${fmtNum(masses[k], 0, lang)} g`}
-                  checked={config.accessories[k]}
-                  onChange={(v) => setConfig({ accessories: { ...config.accessories, [k]: v } })}
-                />
-              ))}
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <button
+                    type="button"
+                    aria-expanded={accOpen}
+                    aria-controls="acc-list"
+                    onClick={() => setAccOpen(!accOpen)}
+                    className="-mx-1 flex min-h-9 items-center gap-1 rounded-md px-1 text-sm hover:bg-surface-2"
+                  >
+                    {accSummary}
+                    <ChevronDown className={cx('size-4 text-muted transition-transform', accOpen && 'rotate-180')} aria-hidden />
+                    <span className="sr-only">: {t.acc.title}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ baseMode: config.baseMode === 'reference' ? 'measured' : 'reference' })}
+                    className="min-h-9 text-sm font-semibold text-accent-text underline-offset-2 hover:underline"
+                  >
+                    {config.baseMode === 'reference' ? t.calc.useMeasured : t.calc.useFactory}
+                  </button>
+                </div>
+                {accOpen && (
+                  <div id="acc-list" role="group" aria-label={t.acc.title} className="mt-1 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+                    {ACC.map((k) => (
+                      <Toggle
+                        key={k}
+                        label={t.acc[k]}
+                        hint={`+${fmtNum(masses[k], 0, lang)} g`}
+                        checked={config.accessories[k]}
+                        onChange={(v) => setConfig({ accessories: { ...config.accessories, [k]: v } })}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
 
@@ -263,6 +283,7 @@ export function Calculator() {
           <Card label={t.calc.result} className="order-3 xl:order-none">
             <CardTitle>{t.calc.result}</CardTitle>
             <SpecTable rows={resultRows} />
+            {catalog && <p className="mt-2 text-xs text-muted">{t.calc.catalogNote}</p>}
           </Card>
           <Card className="order-4 xl:order-none">
             <CardTitle info={<InfoTip title={t.calc.feel}>{t.calc.feelHint}</InfoTip>}>{t.calc.feel}</CardTitle>
@@ -271,12 +292,12 @@ export function Calculator() {
           </Card>
           <div className="order-8 xl:order-none"><ComfortCard racket={racket} specs={result} /></div>
           <div className="order-9 xl:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
-          <div className="order-10 xl:order-none"><VerifyCard predicted={result} /></div>
+          <div className="order-10 xl:order-none"><VerifyCard predicted={result} catalog={catalog} /></div>
         </div>
       </div>
 
       {/* Phones: the result (and, opened, the feel) follows you while you move the sliders. */}
-      <ResultBar result={result} base={base} feel={f} feelBase={racketFeel(racket, noLead?.result ?? result, config.strings, masses)} open={barOpen} onToggle={toggleBar} />
+      <ResultBar result={result} base={play} feel={f} feelBase={racketFeel(racket, noLead?.result ?? result, config.strings, masses)} open={barOpen} onToggle={toggleBar} />
       <div className={cx('lg:hidden', barOpen ? 'h-44' : 'h-12')} />
 
       <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
@@ -294,9 +315,11 @@ const emptySpecs = { weightG: 0, balanceCm: 0, ptsHL: 0, swingweight: 0, recoilW
 
 /** Tolerance of a kitchen scale and a swingweight machine. */
 const VERIFY_TOL = { weightG: 1.5, balanceMm: 2, swingweight: 2.5 }
+/** From catalogue specs: what one production frame differs from the next. */
+const CATALOG_TOL = { weightG: 7, balanceMm: 7, swingweight: 7 }
 
 /** Lets the player check the prediction against what they measure. */
-function VerifyCard({ predicted }: { predicted: Specs }) {
+function VerifyCard({ predicted, catalog }: { predicted: Specs; catalog: boolean }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const [open, setOpen] = useState(false)
@@ -307,7 +330,8 @@ function VerifyCard({ predicted }: { predicted: Specs }) {
     { k: 'swingweight' as const, label: t.spec.swingweight, unit: '', pred: predicted.swingweight, min: 150, max: 450 },
   ]
   const filled = rows.filter((r) => m[r.k] !== undefined)
-  const ok = filled.every((r) => Math.abs(m[r.k]! - r.pred) <= VERIFY_TOL[r.k])
+  const tol = catalog ? CATALOG_TOL : VERIFY_TOL
+  const ok = filled.every((r) => Math.abs(m[r.k]! - r.pred) <= tol[r.k])
   const setConfig = useStore((s) => s.setConfig)
   const toast = useToast()
   const useAsBase = () => {
@@ -345,7 +369,7 @@ function VerifyCard({ predicted }: { predicted: Specs }) {
                 <div className="font-semibold">
                   {fmtNum(r.pred, 1, lang)}
                   {d !== undefined && (
-                    <span className={cx('ml-2 text-xs', Math.abs(d) <= VERIFY_TOL[r.k] ? 'text-success' : 'text-warning')}>{fmtSigned(d, 1, lang)}</span>
+                    <span className={cx('ml-2 text-xs', Math.abs(d) <= tol[r.k] ? 'text-success' : 'text-warning')}>{fmtSigned(d, 1, lang)}</span>
                   )}
                 </div>
               </div>
@@ -356,7 +380,7 @@ function VerifyCard({ predicted }: { predicted: Specs }) {
       {filled.length > 0 && (
         <p role="status" className={cx('mt-4 flex gap-2 text-sm', ok ? 'text-success' : 'text-warning')}>
           {ok ? <CircleCheck className="size-4 shrink-0" aria-hidden /> : <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />}
-          {ok ? t.calc.verifyOk : t.calc.verifyOff}
+          {ok ? (catalog ? t.calc.verifyCatalogOk : t.calc.verifyOk) : t.calc.verifyOff}
         </p>
       )}
       {filled.length > 0 && (
@@ -406,10 +430,10 @@ function ResultBar({ result, base, feel: f, feelBase, open, onToggle }: { result
         onClick={onToggle}
         className="num mx-auto flex w-full max-w-lg items-center py-2 text-center text-xs"
       >
-        <Mini label={t.spec.weight} value={fmtNum(result.weightG, 1, lang)} delta={result.weightG - base.weightG} lang={lang} />
-        <Mini label={t.spec.balance} value={fmtNum(result.balanceCm * 10, 1, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
-        <Mini label="SW" value={fmtNum(result.swingweight, 1, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
-        <Mini label="TW" value={fmtNum(result.twistweight, 2, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} digits={2} lang={lang} />
+        <Mini label={t.spec.weight} value={fmtNum(result.weightG, 0, lang)} delta={result.weightG - base.weightG} lang={lang} />
+        <Mini label={t.spec.balance} value={fmtNum(result.balanceCm * 10, 0, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
+        <Mini label="SW" value={fmtNum(result.swingweight, 0, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
+        <Mini label="TW" value={fmtNum(result.twistweight, 1, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} lang={lang} />
         <ChevronUp className={cx('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
     </div>

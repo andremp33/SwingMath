@@ -250,21 +250,15 @@ function DataGroup() {
   )
 }
 
-/** Restring reminders (Pro): a notification when a racket's strings are spent. */
+/** Restring reminders: a notification when a racket's strings are spent. */
 function RemindersGroup() {
   const t = useT()
-  const pro = useStore(isPro)
-  const paywall = usePaywall()
   const { supported, permission, enable } = useReminders()
   if (!supported) return null
   return (
     <SettingsGroup title={t.journal.reminders}>
-      <SettingsRow label={t.journal.reminders} hint={permission === 'denied' ? t.journal.remindersBlocked : t.journal.remindersHint}>
-        {!pro ? (
-          <Button size="sm" icon={Sparkles} onClick={() => paywall()}>
-            {t.pro.unlock}
-          </Button>
-        ) : permission === 'granted' ? (
+      <SettingsRow label={t.journal.remindersRow} hint={permission === 'denied' ? t.journal.remindersBlocked : t.journal.remindersHint}>
+        {permission === 'granted' ? (
           <span className="flex items-center gap-1.5 text-sm font-medium">
             <Bell className="size-4" aria-hidden /> {t.journal.remindersOn}
           </span>

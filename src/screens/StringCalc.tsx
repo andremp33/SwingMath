@@ -1,4 +1,3 @@
-import { ArrowDown } from 'lucide-react'
 import { useState } from 'react'
 import { useRacket } from '../data/hooks'
 import { useStore } from '../data/store'
@@ -8,7 +7,6 @@ import { fmtNum, kgToLb } from '../lib/format'
 import { Card, CardTitle, PageTitle, Select, Toggle } from '../ui/basics'
 import { RacketPicker } from '../ui/RacketPicker'
 import { StringbedEditor } from '../ui/strings'
-import { ProGate } from './Pro'
 import { InfoTip } from '../ui/disclosure'
 
 /** Same stringbed stiffness in another frame, pattern or string. */
@@ -71,10 +69,8 @@ export function StringCalc() {
 
         <Card label={t.stringCalc.result}>
           <CardTitle info={<InfoTip title={t.stringCalc.title}>{t.stringCalc.hint}</InfoTip>}>{t.stringCalc.result}</CardTitle>
-          <ProGate title={t.stringCalc.title} bare>
             {eq && from && to && (
               <div className="space-y-4">
-                <ArrowDown className="size-5 text-muted lg:hidden" aria-hidden />
                 <dl className="space-y-3">
                   <div className="flex items-baseline justify-between gap-3">
                     <dt className="text-sm text-muted">{toCrosses ? t.strings.mains : t.strings.tension}</dt>
@@ -101,7 +97,6 @@ export function StringCalc() {
                 </p>
               </div>
             )}
-          </ProGate>
         </Card>
       </div>
     </>

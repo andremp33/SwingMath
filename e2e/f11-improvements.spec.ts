@@ -15,9 +15,9 @@ test.describe('F11 measuring and tuning in steps', () => {
     await a11y(page)
     await page.getByRole('button', { name: 'Usar na calculadora' }).click()
     await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
-    await expect(page.getByRole('radio', { name: 'As minhas medições' })).toHaveAttribute('aria-checked', 'true')
-    await expect(resultCard(page)).toContainText('330,0')
-    await expect(resultCard(page)).toContainText('320,0')
+    await expect(page.getByRole('button', { name: 'Usar specs de fábrica' })).toBeVisible()
+    await expect(resultCard(page)).toContainText('330')
+    await expect(resultCard(page)).toContainText('320')
   })
 
   test('F11-E1 the tap timer records a trial', async ({ page }) => {
@@ -44,8 +44,8 @@ test.describe('F11 measuring and tuning in steps', () => {
     await card.getByLabel('Peso', { exact: true }).fill('330,5')
     await card.getByRole('button', { name: 'Usar como novo ponto de partida' }).click()
     await expect(page.getByText('Chumbo total:')).toContainText('0,0 g')
-    await expect(page.getByRole('switch', { name: /Cordas/ })).toHaveAttribute('aria-checked', 'false')
-    await expect(resultCard(page)).toContainText('330,5')
+    await expect(page.getByRole('button', { name: /^Só o quadro/ })).toBeVisible()
+    await expect(resultCard(page)).toContainText('331')
   })
 })
 

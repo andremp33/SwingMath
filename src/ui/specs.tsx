@@ -21,28 +21,28 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
   const lang = useStore((x) => x.lang)
   const pts = (p: number) => `${fmtNum(Math.abs(p), 1, lang)} ${p >= 0 ? t.units.pts : t.units.ptsHH}`
   const rows: SpecRow[] = [
-    { key: 'w', label: t.spec.weight, value: fmtNum(s.weightG, 1, lang), unit: t.units.g, delta: from && s.weightG - from.weightG },
+    { key: 'w', label: t.spec.weight, value: fmtNum(s.weightG, 0, lang), unit: t.units.g, delta: from && s.weightG - from.weightG },
     {
       key: 'b',
       label: t.spec.balance,
-      value: fmtNum(s.balanceCm * 10, 1, lang),
+      value: fmtNum(s.balanceCm * 10, 0, lang),
       unit: t.units.mm,
       sub: pts(s.ptsHL),
       delta: from && (s.balanceCm - from.balanceCm) * 10,
     },
-    { key: 'sw', label: t.spec.swingweight, value: fmtNum(s.swingweight, 1, lang), delta: from && s.swingweight - from.swingweight },
+    { key: 'sw', label: t.spec.swingweight, value: fmtNum(s.swingweight, 0, lang), delta: from && s.swingweight - from.swingweight },
     {
       key: 'tw',
       label: t.spec.twistweight,
-      value: fmtNum(s.twistweight, 2, lang),
+      value: fmtNum(s.twistweight, 1, lang),
       sub: s.twistweightEstimated ? t.common.estimated : undefined,
       delta: from && s.twistweight !== undefined && from.twistweight !== undefined ? s.twistweight - from.twistweight : undefined,
-      deltaDigits: 2,
+      deltaDigits: 1,
       muted: s.twistweightEstimated,
     },
   ]
   if (opts.recoil !== false) {
-    rows.push({ key: 'rw', label: t.spec.recoil, value: fmtNum(s.recoilWeight, 1, lang), delta: from && s.recoilWeight - from.recoilWeight })
+    rows.push({ key: 'rw', label: t.spec.recoil, value: fmtNum(s.recoilWeight, 0, lang), delta: from && s.recoilWeight - from.recoilWeight })
     rows.push({
       key: 'ss',
       label: t.spec.sweetSpot,
@@ -62,7 +62,7 @@ export function SpecStrip({ rows }: { rows: SpecRow[] }) {
       {rows.slice(0, 4).map((r) => (
         <div key={r.key} className="min-w-0">
           <dt className="truncate text-xs text-muted">{r.key === 'sw' ? 'SW' : r.key === 'tw' ? 'TW' : r.label}</dt>
-          <dd className={cx('num truncate text-[15px] font-semibold', r.muted && 'text-muted')}>
+          <dd className={cx('num truncate text-base font-semibold', r.muted && 'text-muted')}>
             {r.value}
             {r.unit && <span className="ml-0.5 text-xs font-normal text-muted">{r.unit}</span>}
           </dd>
