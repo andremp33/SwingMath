@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { armComfort } from './comfort'
 import { gripInches, gripMm, gripSize } from './grip'
 import { compute } from './physics'
-import { equivalentTension, parsePattern, stringbedIndex, stringFeel, stringLife, tensionRetained, type Stringbed } from './strings'
+import { BED_SCALE, bedBand, equivalentTension, parsePattern, stringbedIndex, stringFeel, stringLife, tensionRetained, tensionTicks, type Stringbed } from './strings'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead } from './types'
 
 const f100 = { headSizeSqIn: 100, pattern: '16x19' }
@@ -50,6 +50,36 @@ describe('stringbed', () => {
     const eq = equivalentTension({ frame: f100, bed: poly(23) }, { frame: f100, bed })
     // Scaled in proportion, then rounded to half a kilo.
     expect(Math.abs(eq.mainsKg - eq.crossesKg - 2)).toBeLessThanOrEqual(0.5)
+  })
+})
+
+describe('stiffness scale', () => {
+  it('names the common setups medium, and the ends soft and firm', () => {
+    expect(bedBand(stringbedIndex({ headSizeSqIn: 98, pattern: '16x19' }, poly(23)))).toBe('medium')
+    expect(bedBand(stringbedIndex({ headSizeSqIn: 110, pattern: '16x19' }, { mains: { material: 'multi', tensionKg: 20 } }))).toBe('soft')
+    expect(bedBand(stringbedIndex({ headSizeSqIn: 98, pattern: '18x20' }, poly(26)))).toBe('firm')
+  })
+
+  it('ticks every 2 kg, on the scale, in step with the current tension', () => {
+    const bed = poly(23)
+    const now = stringbedIndex(f100, bed)
+    const ticks = tensionTicks(f100, bed)
+    expect(ticks.length).toBeGreaterThanOrEqual(5)
+    for (const t of ticks) {
+      expect(t.kg % 2).toBe(0)
+      expect(t.index).toBeGreaterThanOrEqual(BED_SCALE.min)
+      expect(t.index).toBeLessThanOrEqual(BED_SCALE.max)
+      expect(t.index).toBeCloseTo(stringbedIndex(f100, poly(t.kg)), 6)
+    }
+    expect(ticks.find((t) => t.kg === 22)!.index).toBeLessThan(now)
+    expect(ticks.find((t) => t.kg === 24)!.index).toBeGreaterThan(now)
+  })
+
+  it('a hybrid ticks by its mains and keeps the split', () => {
+    const bed: Stringbed = { mains: { material: 'poly', tensionKg: 24 }, crosses: { material: 'multi', tensionKg: 22 } }
+    const t = tensionTicks(f100, bed).find((x) => x.kg === 26)!
+    const scaled: Stringbed = { mains: { ...bed.mains, tensionKg: 26 }, crosses: { ...bed.crosses!, tensionKg: (22 * 26) / 24 } }
+    expect(t.index).toBeCloseTo(stringbedIndex(f100, scaled), 6)
   })
 })
 

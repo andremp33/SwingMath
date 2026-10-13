@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { armComfort } from '../domain/comfort'
 import { GRIP_SIZES, gripInches, gripMm, gripSize } from '../domain/grip'
-import { DEFAULT_STRINGBED, stringbedIndex } from '../domain/strings'
+import { bedBand, DEFAULT_STRINGBED, stringbedIndex } from '../domain/strings'
 import type { Geometry } from '../domain/physics'
 import { PROBES, sweetSpotEffects, type ProbeKey } from '../domain/sweetSpot'
 import type { ExtraLead, GripConfig, Racket, Specs } from '../domain/types'
@@ -29,11 +29,12 @@ export function StringsCard({ racket }: { racket: Racket }) {
   const bed = useStore((s) => s.config.strings) ?? DEFAULT_STRINGBED
   const setConfig = useStore((s) => s.setConfig)
   const lang = useStore((s) => s.lang)
+  const index = stringbedIndex(racket, bed)
   return (
     <CollapsibleCard
       id="strings"
       title={t.strings.title}
-      summary={`${bedLabel(bed, t, lang)} · ${t.strings.indexShort} ${fmtNum(stringbedIndex(racket, bed), 0, lang)}`}
+      summary={`${bedLabel(bed, t, lang)} · ${t.strings.bands[bedBand(index)].toLowerCase()} (${t.strings.indexShort} ${fmtNum(index, 0, lang)})`}
       info={<InfoTip title={t.strings.index}>{t.strings.indexHint}</InfoTip>}
     >
       <div className="grid grid-cols-1 gap-5 @container sm:grid-cols-2">

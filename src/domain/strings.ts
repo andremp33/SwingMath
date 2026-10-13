@@ -99,6 +99,36 @@ export function stringbedIndex(frame: FrameForStrings, bed: Stringbed, retained?
 }
 
 /**
+ * The index in words. Real setups run from about 80 (a soft multi in a big
+ * head) through ~106 (poly at 23 kg in a 98, the library's median) to ~130
+ * (poly at 26 kg in an 18x20), so the middle band holds the common ones.
+ */
+export const BED_BANDS = [
+  { key: 'soft', from: 75, to: 92 },
+  { key: 'medium', from: 92, to: 112 },
+  { key: 'firm', from: 112, to: 135 },
+] as const
+export type BedBand = (typeof BED_BANDS)[number]['key']
+/** The stretch of index the scale draws; values past it sit at its ends. */
+export const BED_SCALE = { min: BED_BANDS[0].from, max: BED_BANDS[BED_BANDS.length - 1].to }
+
+export function bedBand(index: number): BedBand {
+  return index < BED_BANDS[0].to ? 'soft' : index < BED_BANDS[1].to ? 'medium' : 'firm'
+}
+
+/**
+ * Where the same strings would sit at other tensions on this frame, every
+ * `step` kg of the mains (a hybrid keeps its split). Stiffness goes with
+ * tension, so the index scales with it. Only ticks inside the scale.
+ */
+export function tensionTicks(frame: FrameForStrings, bed: Stringbed, step = 2): { kg: number; index: number }[] {
+  const perKg = stringbedIndex(frame, bed) / bed.mains.tensionKg
+  const out: { kg: number; index: number }[] = []
+  for (let kg = Math.ceil(BED_SCALE.min / perKg / step) * step; kg * perKg <= BED_SCALE.max; kg += step) out.push({ kg, index: kg * perKg })
+  return out
+}
+
+/**
  * The tension that gives `to` the same stringbed stiffness `from` has.
  * Hybrids keep their mains/crosses difference.
  */
