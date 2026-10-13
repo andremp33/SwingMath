@@ -2,14 +2,17 @@ import { useStore } from '../data/store'
 import type { Lang } from '.'
 
 /**
- * Privacy policy and terms. A plain, honest starting point written for how
- * this app actually works; the owner should have a lawyer review it before
- * selling. {email} and {owner} come from VITE_SUPPORT_EMAIL / VITE_OWNER_NAME.
+ * Privacy policy and terms of the app, also published on the website with
+ * the same text and date. Written for how the app works; the owner reviews it
+ * (ideally with a lawyer) before it is published. {owner}, {address} and
+ * {email} come from VITE_OWNER_NAME, VITE_OWNER_ADDRESS and VITE_SUPPORT_EMAIL.
  */
 export interface LegalDoc {
   title: string
   updated: string
   sections: [string, string][]
+  /** Only on the website's copy: what the site itself does. */
+  web: [string, string][]
 }
 
 const PT: Record<'privacy' | 'terms', LegalDoc> = {
@@ -17,31 +20,42 @@ const PT: Record<'privacy' | 'terms', LegalDoc> = {
     title: 'Política de privacidade',
     updated: 'Atualizada a 13 de outubro de 2026',
     sections: [
-      ['Resumo', 'A conta é opcional. Sem conta, as tuas raquetes, setups, diário e definições ficam só no teu dispositivo e não recolhemos dados pessoais. Com conta, guardamos o teu email e o que escolhes sincronizar ou partilhar.'],
-      ['Responsável', '{owner}. Contacto: {email}.'],
-      ['Dados no teu dispositivo', 'Raquetes, setups, medições e definições ficam no armazenamento local do browser (IndexedDB e localStorage). Não são enviados para nenhum servidor. Podes exportá-los ou apagá-los em Definições.'],
-      ['Conta (opcional)', 'Para entrar, indicas o teu email e recebes um link ou um código. Guardamos o email e, se tiveres o Pro, as tuas raquetes, setups e diário, para os sincronizar entre os teus dispositivos. Estes dados ficam no Supabase (Supabase, Inc.), em servidores na União Europeia. Podes apagar a conta, e tudo o que está na nuvem, em Definições.'],
-      ['Comunidade', 'Se partilhares uma medição, ela entra na mediana pública dessa raquete; a medição em si e quem a fez não são públicas, e a mediana só aparece a partir de 3 jogadores. Se publicares um setup, fica visível para todos: o nome do setup, a assinatura que escolheres (ou anónimo), a receita (raquete, chumbo, cordas e specs), o objetivo, o nível e o estilo que indicares e, só se o ligares, as médias do teu diário com esse setup (sessões, horas e notas de 1 a 5). As notas escritas do diário e a dor no braço nunca são publicadas. Podes atualizar ou apagar o setup quando quiseres. Três denúncias de jogadores diferentes escondem um setup até o revermos.'],
-      ['Alojamento', 'O site é servido pelo GitHub Pages (GitHub, Inc.). Como em qualquer site, o servidor recebe o teu endereço IP e dados técnicos do pedido para entregar as páginas e proteger contra abusos. Não usamos esses dados para te identificar nem para publicidade.'],
-      ['Compras', 'Se subscreveres o Pro na web, o pagamento é feito pela Lemon Squeezy, que é o vendedor registado e trata dos dados de pagamento e de faturação segundo a política dela. Ao ativar a licença, a app envia à Lemon Squeezy a chave e um nome de dispositivo (por exemplo «SwingMath Android 2026-10-08»); depois, de poucos em poucos dias, envia a chave para confirmar que a subscrição continua ativa. Nas apps móveis, a subscrição é feita pela Google Play ou pela App Store, que tratam do pagamento. Para saber se o Pro está ativo, a app usa a RevenueCat (EUA), que recebe da loja o recibo da compra e guarda um identificador: aleatório, ou o da tua conta se tiveres sessão iniciada, para o Pro te seguir noutros dispositivos. A RevenueCat não recebe o teu email nem dados de cartão.'],
-      ['Cookies e análise', 'Não usamos cookies nem ferramentas de análise ou publicidade.'],
-      ['Partilha de setups', 'Quando partilhas um setup, os dados do setup vão dentro da própria ligação ou do código QR. Só quem tiver a ligação os vê.'],
-      ['Os teus direitos', 'Sem conta, não guardamos dados teus. Com conta, podes exportar os teus dados e apagar a conta em Definições, a qualquer momento. Para os registos de compra na Lemon Squeezy, ou qualquer outro pedido, escreve para {email}. Podes apresentar queixa à CNPD (cnpd.pt).'],
+      ['Resumo', 'Não precisas de conta para usar o SwingMath. Sem conta, o que registas fica só no teu telemóvel. Com conta, guardamos o teu email e o que escolhes sincronizar ou publicar. Os pagamentos são feitos pela App Store ou pela Google Play. Não usamos publicidade nem ferramentas de rastreio.'],
+      ['Responsável pelo tratamento', '{owner}, {address}. Contacto: {email}.'],
+      ['Dados no teu telemóvel', 'As tuas raquetes, setups, encordoamentos, diário e definições ficam guardados na área privada da app, só neste telemóvel. Sem conta, não são enviados para nenhum servidor. São apagados quando desinstalas a app. Podes exportá-los num ficheiro, a qualquer momento, em Definições.'],
+      ['Conta (opcional)', 'Para criar conta indicas o teu email e recebes um código para entrar. Guardamos o email e, se ligares a sincronização, as tuas raquetes, setups, encordoamentos e diário, para os teres em todos os teus dispositivos. Estes dados ficam no Supabase (Supabase, Inc.), em servidores na União Europeia. O email com o código é enviado por um fornecedor de envio de email, que só recebe o teu endereço e a mensagem.'],
+      ['Compras', 'As compras do SwingMath Pro são feitas na App Store (Apple) ou na Google Play (Google), que são as responsáveis pelo pagamento e tratam os teus dados de pagamento segundo as políticas delas. Nunca recebemos dados do teu cartão. Para saber se o Pro está ativo, usamos a RevenueCat, Inc., nos Estados Unidos. A RevenueCat recebe um identificador (aleatório, ou o da tua conta se tiveres sessão iniciada), os recibos das tuas compras e dados técnicos do dispositivo, como o modelo, a versão do sistema e da app e o país da loja. A transferência para os Estados Unidos faz-se com as garantias previstas no RGPD: o Quadro de Privacidade de Dados UE-EUA ou as cláusulas contratuais-tipo aprovadas pela Comissão Europeia.'],
+      ['Comunidade', 'Se publicares um setup, fica visível para todos: o nome do setup, a assinatura que escolheres (ou anónimo), a receita (raquete, chumbo, cordas e specs), o objetivo, o nível e o estilo que indicares e, só se o ligares, as médias do teu diário com esse setup (sessões, horas e notas de 1 a 5). As notas escritas do diário e a dor no braço nunca são publicadas. Se partilhares uma medição, só entra na mediana pública da raquete, e a mediana só aparece a partir de 3 jogadores. Quando denuncias um setup, guardamos qual foi, a tua conta e a data, para revermos a denúncia; quem o publicou não sabe quem o denunciou. Três denúncias de jogadores diferentes escondem um setup até o revermos.'],
+      ['Notificações', 'Os lembretes para encordar são agendados no próprio telemóvel (notificações locais). Não usamos notificações push nem enviamos dados para isso. Podes desligá-los nas Definições da app ou do telemóvel.'],
+      ['Partilha de setups', 'Quando partilhas um setup por ligação ou código QR, os dados do setup vão dentro da própria ligação. Só quem a tiver os vê.'],
+      ['Bases legais', 'Tratamos os dados da conta, da sincronização e do Pro para cumprir o contrato que fazes connosco ao usá-los; a publicação na comunidade e as notificações com o teu consentimento, que podes retirar a qualquer momento; a moderação de denúncias e a segurança do serviço no nosso interesse legítimo; e os registos de compras para cumprir obrigações legais.'],
+      ['Conservação', 'Os dados no telemóvel ficam até os apagares ou desinstalares a app. Os dados da conta ficam até apagares a conta; depois de apagada, podem ficar até 30 dias em cópias de segurança. Os setups e medições publicados ficam até os apagares ou apagares a conta. As denúncias ficam até 12 meses depois de revistas. Os registos de compras ficam o tempo que a lei exigir.'],
+      ['Os teus direitos', 'Podes aceder aos teus dados, corrigi-los, apagá-los, levá-los contigo (exportar em Definições), opor-te ao tratamento ou limitá-lo, e retirar o consentimento. A conta e tudo o que está na nuvem apagam-se em Definições. Para qualquer pedido, escreve para {email}. Podes apresentar queixa à Comissão Nacional de Proteção de Dados (cnpd.pt).'],
+      ['Menores', 'A app funciona sem conta em qualquer idade. Criar conta e publicar na comunidade só a partir dos 13 anos em Portugal e dos 14 anos em Espanha; abaixo dessa idade, só com autorização de quem exerce as responsabilidades parentais.'],
+      ['Alterações', 'Se mudarmos esta política, atualizamos a data no topo e avisamos na app quando a mudança for importante.'],
+    ],
+    web: [
+      ['Este site', 'O site é servido pelo GitHub Pages (GitHub, Inc.). Como em qualquer site, o servidor recebe o teu endereço IP e dados técnicos do pedido para entregar as páginas e proteger contra abusos. Não usamos cookies nem ferramentas de análise no site.'],
     ],
   },
   terms: {
     title: 'Termos de utilização',
     updated: 'Atualizados a 13 de outubro de 2026',
     sections: [
-      ['O serviço', 'O SwingMath calcula como acessórios e chumbo alteram as especificações de uma raquete. É uma ferramenta de estimativa.'],
-      ['Estimativas, não garantias', 'Os valores são estimativas a partir de um modelo físico e dos dados que introduzes. Os valores de catálogo das raquetes são nominais e aproximados. Confirma sempre com medições antes de alterar a tua raquete. Não somos responsáveis por danos em equipamento ou por resultados em jogo.'],
-      ['Pro', 'O Pro é uma subscrição mensal ou anual, com 7 dias grátis no início. Renova automaticamente no fim de cada período até cancelares. Cancelas a qualquer momento no portal da subscrição, num clique; o Pro continua até ao fim do período já pago. Se a subscrição terminar, os teus dados ficam todos e só as funções Pro deixam de funcionar. A licença funciona em até 3 dispositivos e podes libertar um em Definições.'],
-      ['Reembolso', 'Podes pedir o reembolso de um pagamento nos 14 dias seguintes, sem justificação, através de {email} ou da loja onde subscreveste.'],
-      ['Uso aceitável', 'Não tentes contornar a licença nem revender chaves.'],
-      ['Conta e comunidade', 'O que publicas tem de ser teu e respeitoso. Ao publicar um setup, autorizas que o mostremos no site e na app enquanto não o apagares. Não ponhas dados pessoais (teus ou de outros) no nome do setup nem na assinatura. Podemos esconder ou apagar setups denunciados ou que violem estes termos. As medições partilhadas devem ser reais.'],
-      ['Alterações', 'Podemos atualizar estes termos; a data no topo indica a última versão.'],
-      ['Contacto', '{owner} — {email}.'],
+      ['O serviço', 'O SwingMath calcula como o chumbo, os acessórios e as cordas alteram as especificações e a sensação de uma raquete, e ajuda-te a acompanhar as tuas raquetes e encordoamentos. É uma ferramenta de estimativa.'],
+      ['Estimativas, não garantias', 'Os valores são estimativas a partir de um modelo físico e dos dados que introduzes. As especificações de catálogo são nominais e cada raquete varia. Confirma sempre com medições antes de alterar a tua raquete. Não somos responsáveis por danos em equipamento nem por resultados em jogo.'],
+      ['SwingMath Pro', 'O Pro existe como subscrição mensal ou anual, que renova automaticamente no fim de cada período até cancelares, ou como compra vitalícia. O vitalício é uma compra única: não renova e podes restaurá-lo noutro dispositivo com a mesma conta da loja, em «Restaurar compras». O preço e o período aparecem antes de confirmares a compra.'],
+      ['Teste grátis', 'Quando é oferecido, o teste grátis de 7 dias é um por conta da App Store ou da Google Play. Se não cancelares pelo menos 24 horas antes do fim do teste, a subscrição começa e o primeiro período é cobrado.'],
+      ['Pagamento, renovação e cancelamento', 'O pagamento é cobrado na tua conta da App Store ou da Google Play quando confirmas a compra. A subscrição renova automaticamente, ao mesmo preço, salvo se a cancelares pelo menos 24 horas antes do fim do período. Geres e cancelas a subscrição nas definições da tua conta da loja. Desinstalar a app ou apagar a conta não cancela a subscrição. Ao cancelar, o Pro continua até ao fim do período já pago.'],
+      ['Reembolsos', 'Os pedidos de reembolso são tratados pela Apple ou pela Google, segundo as regras de cada loja, sem prejuízo dos direitos que a lei do consumidor te dá.'],
+      ['Dispositivos Apple', 'Se usas a app num dispositivo Apple, aplica-se também o Contrato de Licença de Utilizador Final padrão da Apple (Licensed Application End User License Agreement). Estes termos completam-no.'],
+      ['Regras da comunidade', 'O que publicas tem de ser teu, verdadeiro e respeitoso. Não publiques dados pessoais (teus ou de outros), conteúdo ofensivo, publicidade nem medições inventadas. Ao publicar um setup, autorizas que o mostremos na app e no site enquanto não o apagares. Podes denunciar setups e esconder autores. Podemos esconder ou apagar o que for denunciado ou violar estas regras e impedir de publicar quem as violar repetidamente.'],
+      ['Responsabilidade', 'Na medida permitida por lei, não somos responsáveis por danos indiretos, por danos em equipamento ou por perda de dados que não estivessem exportados nem sincronizados. Nada nestes termos limita a responsabilidade que a lei não permite limitar.'],
+      ['Lei e litígios', 'Estes termos regem-se pela lei portuguesa, sem prejuízo das regras de proteção do consumidor do país onde vives. Em caso de litígio de consumo, podes recorrer a uma entidade de resolução alternativa de litígios (RAL), como o CNIACC (cniacc.pt); a lista completa está em consumidor.gov.pt.'],
+      ['Alterações', 'Podemos atualizar estes termos; a data no topo indica a última versão e avisamos na app quando a mudança for importante.'],
+      ['Contacto', '{owner}, {address}. {email}.'],
     ],
+    web: [],
   },
 }
 
@@ -50,31 +64,42 @@ const EN: typeof PT = {
     title: 'Privacy policy',
     updated: 'Updated 13 October 2026',
     sections: [
-      ['Summary', 'Accounts are optional. Without one, your rackets, setups, journal and settings stay on your device and we collect no personal data. With one, we keep your email and what you choose to sync or share.'],
-      ['Who is responsible', '{owner}. Contact: {email}.'],
-      ['Data on your device', 'Rackets, setups, measurements and settings are kept in your browser’s local storage (IndexedDB and localStorage). They are not sent to any server. You can export or delete them in Settings.'],
-      ['Account (optional)', 'To sign in, you give your email and receive a link or a code. We keep the email and, if you have Pro, your rackets, setups and journal, to sync them across your devices. This data is stored with Supabase (Supabase, Inc.), on servers in the European Union. You can delete the account, and everything in the cloud, in Settings.'],
-      ['Community', 'If you share a measurement, it goes into that racket’s public median; the measurement itself and who made it are not public, and the median only shows from 3 players up. If you publish a setup, everyone can see it: the setup’s name, the signature you choose (or anonymous), the recipe (racket, lead, strings and specs), the goal, level and style you give and, only if you switch it on, your journal’s averages with that setup (sessions, hours and 1–5 ratings). Your written journal notes and arm pain are never published. You can update or delete the setup any time. Three reports from different players hide a setup until we review it.'],
-      ['Hosting', 'The site is served by GitHub Pages (GitHub, Inc.). Like any website, the server receives your IP address and technical request data to deliver pages and protect against abuse. We do not use it to identify you or for advertising.'],
-      ['Purchases', 'If you subscribe to Pro on the web, payment is handled by Lemon Squeezy, the merchant of record, under its own policy. When you activate a licence, the app sends Lemon Squeezy the key and a device name (for example “SwingMath Android 2026-10-08”); after that, every few days, it sends the key to check the subscription is still active. In the mobile apps, subscriptions go through Google Play or the App Store, which handle the payment. To know whether Pro is active, the app uses RevenueCat (USA), which receives the purchase receipt from the store and keeps an identifier: a random one, or your account’s if you are signed in, so Pro follows you to other devices. RevenueCat does not receive your email or card details.'],
-      ['Cookies and analytics', 'We use no cookies and no analytics or advertising tools.'],
-      ['Sharing setups', 'When you share a setup, its data travels inside the link or QR code itself. Only people with the link can see it.'],
-      ['Your rights', 'Without an account, we hold no data about you. With one, you can export your data and delete the account in Settings at any time. For purchase records at Lemon Squeezy, or any other request, write to {email}. You can complain to your data protection authority.'],
+      ['Summary', 'You do not need an account to use SwingMath. Without one, what you record stays on your phone only. With an account, we keep your email and what you choose to sync or publish. Payments go through the App Store or Google Play. We use no advertising and no tracking tools.'],
+      ['Controller', '{owner}, {address}. Contact: {email}.'],
+      ['Data on your phone', 'Your rackets, setups, stringings, journal and settings are kept in the app’s private storage, on this phone only. Without an account, they are not sent to any server. They are deleted when you uninstall the app. You can export them to a file at any time in Settings.'],
+      ['Account (optional)', 'To create an account you give your email and receive a code to sign in. We keep the email and, if you turn on sync, your rackets, setups, stringings and journal, so you have them on all your devices. This data is kept by Supabase (Supabase, Inc.) on servers in the European Union. The email with the code is sent by an email delivery provider, which only receives your address and the message.'],
+      ['Purchases', 'SwingMath Pro is bought on the App Store (Apple) or Google Play (Google), which are responsible for the payment and handle your payment details under their own policies. We never receive your card details. To know whether Pro is active, we use RevenueCat, Inc., in the United States. RevenueCat receives an identifier (random, or your account’s if you are signed in), the receipts of your purchases and technical data about the device, such as its model, system and app versions and store country. Transfers to the United States rely on the safeguards the GDPR provides for: the EU-US Data Privacy Framework or the standard contractual clauses approved by the European Commission.'],
+      ['Community', 'If you publish a setup, everyone can see it: the setup’s name, the signature you choose (or anonymous), the recipe (racket, lead, strings and specs), the goal, level and style you give and, only if you switch it on, your journal’s averages with that setup (sessions, hours and 1–5 ratings). Your written journal notes and arm pain are never published. If you share a measurement, it only goes into the racket’s public median, which only shows from 3 players up. When you report a setup, we keep which one, your account and the date, to review the report; whoever published it does not learn who reported it. Three reports from different players hide a setup until we review it.'],
+      ['Notifications', 'Restring reminders are scheduled on the phone itself (local notifications). We use no push notifications and send no data for them. You can turn them off in the app’s or the phone’s settings.'],
+      ['Sharing setups', 'When you share a setup by link or QR code, the setup’s data travels inside the link itself. Only people who have it can see it.'],
+      ['Legal bases', 'We process account, sync and Pro data to perform the contract you make with us by using them; community publishing and notifications with your consent, which you can withdraw at any time; report moderation and the security of the service in our legitimate interest; and purchase records to meet legal obligations.'],
+      ['Retention', 'Data on the phone stays until you delete it or uninstall the app. Account data stays until you delete the account; after that it may remain in backups for up to 30 days. Published setups and measurements stay until you delete them or your account. Reports are kept for up to 12 months after review. Purchase records are kept as long as the law requires.'],
+      ['Your rights', 'You can access, correct, delete and take your data with you (export in Settings), object to or restrict its processing, and withdraw consent. The account and everything in the cloud can be deleted in Settings. For any request, write to {email}. You can complain to the Portuguese data protection authority, CNPD (cnpd.pt), or the one where you live.'],
+      ['Children', 'The app works without an account at any age. Creating an account and publishing in the community are for ages 13 and up in Portugal and 14 and up in Spain; below that age, only with the consent of whoever holds parental responsibility.'],
+      ['Changes', 'If we change this policy, we update the date at the top and tell you in the app when the change matters.'],
+    ],
+    web: [
+      ['This website', 'The website is served by GitHub Pages (GitHub, Inc.). As with any website, the server receives your IP address and technical details of the request to deliver the pages and protect against abuse. The website uses no cookies and no analytics.'],
     ],
   },
   terms: {
     title: 'Terms of use',
     updated: 'Updated 13 October 2026',
     sections: [
-      ['The service', 'SwingMath calculates how accessories and lead change a racket’s specs. It is an estimation tool.'],
-      ['Estimates, not guarantees', 'Values are estimates from a physical model and the data you enter. Catalogue specs are nominal and approximate. Always check with measurements before changing your racket. We are not responsible for damage to equipment or for results on court.'],
-      ['Pro', 'Pro is a monthly or annual subscription, with 7 days free at the start. It renews at the end of each period until you cancel. You can cancel at any time in the subscription portal, in one click; Pro carries on to the end of the period you paid for. If the subscription ends, all your data stays and only the Pro features stop. A licence works on up to 3 devices and you can free one in Settings.'],
-      ['Refunds', 'You can ask for a refund of a payment within 14 days, no reason needed, at {email} or through the store you subscribed in.'],
-      ['Acceptable use', 'Do not try to get around the licence or resell keys.'],
-      ['Account and community', 'What you publish must be yours and respectful. By publishing a setup you allow us to show it on the website and in the app until you delete it. Do not put personal data (yours or anyone else’s) in the setup’s name or the signature. We may hide or delete setups that are reported or break these terms. Shared measurements must be real.'],
-      ['Changes', 'We may update these terms; the date at the top shows the latest version.'],
-      ['Contact', '{owner} — {email}.'],
+      ['The service', 'SwingMath works out how lead, accessories and strings change a racket’s specs and feel, and helps you keep track of your rackets and stringings. It is an estimating tool.'],
+      ['Estimates, not guarantees', 'The values are estimates from a physical model and the data you enter. Catalogue specs are nominal and every frame varies. Always confirm with measurements before changing your racket. We are not liable for damage to equipment or for results on court.'],
+      ['SwingMath Pro', 'Pro comes as a monthly or annual subscription, which renews automatically at the end of each period until you cancel, or as a lifetime purchase. Lifetime is a one-off purchase: it does not renew, and you can restore it on another device with the same store account under “Restore purchases”. The price and period are shown before you confirm.'],
+      ['Free trial', 'Where offered, the 7-day free trial is one per App Store or Google Play account. Unless you cancel at least 24 hours before the trial ends, the subscription starts and the first period is charged.'],
+      ['Payment, renewal and cancelling', 'Payment is charged to your App Store or Google Play account when you confirm the purchase. The subscription renews automatically at the same price unless you cancel it at least 24 hours before the end of the period. You manage and cancel it in your store account’s settings. Uninstalling the app or deleting your account does not cancel the subscription. When you cancel, Pro stays on until the end of the period already paid.'],
+      ['Refunds', 'Refund requests are handled by Apple or Google under each store’s rules, without prejudice to your rights under consumer law.'],
+      ['Apple devices', 'If you use the app on an Apple device, Apple’s standard Licensed Application End User License Agreement also applies. These terms complement it.'],
+      ['Community rules', 'What you publish must be yours, true and respectful. Do not publish personal data (yours or anyone else’s), offensive content, advertising or made-up measurements. By publishing a setup you allow us to show it in the app and on the website until you delete it. You can report setups and hide authors. We may hide or delete what is reported or breaks these rules, and stop people who break them repeatedly from publishing.'],
+      ['Liability', 'To the extent permitted by law, we are not liable for indirect loss, for damage to equipment or for loss of data that was neither exported nor synced. Nothing in these terms limits liability that the law does not allow to be limited.'],
+      ['Law and disputes', 'These terms are governed by Portuguese law, without prejudice to the consumer protection rules of the country where you live. In a consumer dispute you can turn to an alternative dispute resolution (ADR) body, such as CNIACC (cniacc.pt); the full list is at consumidor.gov.pt.'],
+      ['Changes', 'We may update these terms; the date at the top shows the latest version, and we tell you in the app when the change matters.'],
+      ['Contact', '{owner}, {address}. {email}.'],
     ],
+    web: [],
   },
 }
 
@@ -83,31 +108,42 @@ const ES: typeof PT = {
     title: 'Política de privacidad',
     updated: 'Actualizada el 13 de octubre de 2026',
     sections: [
-      ['Resumen', 'La cuenta es opcional. Sin cuenta, tus raquetas, setups, diario y ajustes se quedan en tu dispositivo y no recogemos datos personales. Con cuenta, guardamos tu email y lo que eliges sincronizar o compartir.'],
-      ['Responsable', '{owner}. Contacto: {email}.'],
-      ['Datos en tu dispositivo', 'Raquetas, setups, mediciones y ajustes se guardan en el almacenamiento local del navegador (IndexedDB y localStorage). No se envían a ningún servidor. Puedes exportarlos o borrarlos en Ajustes.'],
-      ['Cuenta (opcional)', 'Para entrar, indicas tu email y recibes un enlace o un código. Guardamos el email y, si tienes Pro, tus raquetas, setups y diario, para sincronizarlos entre tus dispositivos. Estos datos se guardan en Supabase (Supabase, Inc.), en servidores de la Unión Europea. Puedes borrar la cuenta, y todo lo que está en la nube, en Ajustes.'],
-      ['Comunidad', 'Si compartes una medición, entra en la mediana pública de esa raqueta; la medición en sí y quién la hizo no son públicas, y la mediana solo aparece a partir de 3 jugadores. Si publicas un setup, lo ve todo el mundo: el nombre del setup, la firma que elijas (o anónimo), la receta (raqueta, plomo, cuerdas y specs), el objetivo, el nivel y el estilo que indiques y, solo si lo activas, las medias de tu diario con ese setup (sesiones, horas y notas de 1 a 5). Las notas escritas del diario y el dolor en el brazo nunca se publican. Puedes actualizar o borrar el setup cuando quieras. Tres denuncias de jugadores distintos ocultan un setup hasta que lo revisemos.'],
-      ['Alojamiento', 'El sitio lo sirve GitHub Pages (GitHub, Inc.). Como en cualquier web, el servidor recibe tu dirección IP y datos técnicos de la petición para entregar las páginas y proteger contra abusos. No los usamos para identificarte ni para publicidad.'],
-      ['Compras', 'Si te suscribes a Pro en la web, el pago lo gestiona Lemon Squeezy, vendedor registrado, según su propia política. Al activar la licencia, la app envía a Lemon Squeezy la clave y un nombre de dispositivo (por ejemplo «SwingMath Android 2026-10-08»); después, cada pocos días, envía la clave para confirmar que la suscripción sigue activa. En las apps móviles, la suscripción se hace por Google Play o la App Store, que gestionan el pago. Para saber si el Pro está activo, la app usa RevenueCat (EE. UU.), que recibe de la tienda el recibo de la compra y guarda un identificador: aleatorio, o el de tu cuenta si has iniciado sesión, para que el Pro te siga en otros dispositivos. RevenueCat no recibe tu email ni datos de tarjeta.'],
-      ['Cookies y analítica', 'No usamos cookies ni herramientas de analítica o publicidad.'],
-      ['Compartir setups', 'Cuando compartes un setup, sus datos van dentro del propio enlace o código QR. Solo quien tenga el enlace puede verlos.'],
-      ['Tus derechos', 'Sin cuenta, no guardamos datos tuyos. Con cuenta, puedes exportar tus datos y borrar la cuenta en Ajustes cuando quieras. Para los registros de compra en Lemon Squeezy, o cualquier otra petición, escribe a {email}. Puedes reclamar ante tu autoridad de protección de datos.'],
+      ['Resumen', 'No necesitas cuenta para usar SwingMath. Sin cuenta, lo que registras se queda solo en tu móvil. Con cuenta, guardamos tu email y lo que eliges sincronizar o publicar. Los pagos se hacen en la App Store o en Google Play. No usamos publicidad ni herramientas de seguimiento.'],
+      ['Responsable del tratamiento', '{owner}, {address}. Contacto: {email}.'],
+      ['Datos en tu móvil', 'Tus raquetas, setups, encordados, diario y ajustes se guardan en el almacenamiento privado de la app, solo en este móvil. Sin cuenta, no se envían a ningún servidor. Se borran al desinstalar la app. Puedes exportarlos a un archivo cuando quieras en Ajustes.'],
+      ['Cuenta (opcional)', 'Para crear una cuenta indicas tu email y recibes un código para entrar. Guardamos el email y, si activas la sincronización, tus raquetas, setups, encordados y diario, para tenerlos en todos tus dispositivos. Estos datos los guarda Supabase (Supabase, Inc.) en servidores de la Unión Europea. El email con el código lo envía un proveedor de envío de emails, que solo recibe tu dirección y el mensaje.'],
+      ['Compras', 'SwingMath Pro se compra en la App Store (Apple) o en Google Play (Google), que son las responsables del pago y tratan tus datos de pago según sus políticas. Nunca recibimos los datos de tu tarjeta. Para saber si el Pro está activo, usamos RevenueCat, Inc., en Estados Unidos. RevenueCat recibe un identificador (aleatorio, o el de tu cuenta si has iniciado sesión), los recibos de tus compras y datos técnicos del dispositivo, como el modelo, las versiones del sistema y de la app y el país de la tienda. La transferencia a Estados Unidos se hace con las garantías que prevé el RGPD: el Marco de Privacidad de Datos UE-EE. UU. o las cláusulas contractuales tipo aprobadas por la Comisión Europea.'],
+      ['Comunidad', 'Si publicas un setup, lo ve todo el mundo: el nombre del setup, la firma que elijas (o anónimo), la receta (raqueta, plomo, cuerdas y specs), el objetivo, el nivel y el estilo que indiques y, solo si lo activas, las medias de tu diario con ese setup (sesiones, horas y notas de 1 a 5). Las notas escritas del diario y el dolor en el brazo nunca se publican. Si compartes una medición, solo entra en la mediana pública de la raqueta, que solo aparece a partir de 3 jugadores. Cuando denuncias un setup, guardamos cuál es, tu cuenta y la fecha, para revisar la denuncia; quien lo publicó no sabe quién lo denunció. Tres denuncias de jugadores distintos ocultan un setup hasta que lo revisemos.'],
+      ['Notificaciones', 'Los recordatorios para encordar se programan en el propio móvil (notificaciones locales). No usamos notificaciones push ni enviamos datos para ello. Puedes desactivarlos en los ajustes de la app o del móvil.'],
+      ['Compartir setups', 'Cuando compartes un setup por enlace o código QR, los datos del setup van dentro del propio enlace. Solo quien lo tenga los ve.'],
+      ['Bases legales', 'Tratamos los datos de la cuenta, de la sincronización y del Pro para cumplir el contrato que haces con nosotros al usarlos; la publicación en la comunidad y las notificaciones con tu consentimiento, que puedes retirar cuando quieras; la moderación de denuncias y la seguridad del servicio por nuestro interés legítimo; y los registros de compras para cumplir obligaciones legales.'],
+      ['Conservación', 'Los datos del móvil se quedan hasta que los borres o desinstales la app. Los datos de la cuenta se quedan hasta que borres la cuenta; después, pueden permanecer hasta 30 días en copias de seguridad. Los setups y mediciones publicados se quedan hasta que los borres o borres la cuenta. Las denuncias se guardan hasta 12 meses después de revisarlas. Los registros de compras se guardan el tiempo que exija la ley.'],
+      ['Tus derechos', 'Puedes acceder a tus datos, corregirlos, borrarlos, llevártelos (exportar en Ajustes), oponerte al tratamiento o limitarlo, y retirar el consentimiento. La cuenta y todo lo que está en la nube se borran en Ajustes. Para cualquier petición, escribe a {email}. Puedes reclamar ante la autoridad portuguesa de protección de datos, la CNPD (cnpd.pt), o ante la Agencia Española de Protección de Datos (aepd.es).'],
+      ['Menores', 'La app funciona sin cuenta a cualquier edad. Crear una cuenta y publicar en la comunidad, solo a partir de los 13 años en Portugal y de los 14 años en España; por debajo de esa edad, solo con el consentimiento de quien ejerza la patria potestad o tutela.'],
+      ['Cambios', 'Si cambiamos esta política, actualizamos la fecha de arriba y avisamos en la app cuando el cambio sea importante.'],
+    ],
+    web: [
+      ['Esta web', 'La web la sirve GitHub Pages (GitHub, Inc.). Como en cualquier web, el servidor recibe tu dirección IP y datos técnicos de la petición para entregar las páginas y protegerse de abusos. La web no usa cookies ni herramientas de analítica.'],
     ],
   },
   terms: {
     title: 'Términos de uso',
     updated: 'Actualizados el 13 de octubre de 2026',
     sections: [
-      ['El servicio', 'SwingMath calcula cómo los accesorios y el plomo cambian las especificaciones de una raqueta. Es una herramienta de estimación.'],
-      ['Estimaciones, no garantías', 'Los valores son estimaciones a partir de un modelo físico y de los datos que introduces. Las especificaciones de catálogo son nominales y aproximadas. Comprueba siempre con mediciones antes de modificar tu raqueta. No somos responsables de daños en el material ni de resultados en pista.'],
-      ['Pro', 'Pro es una suscripción mensual o anual, con 7 días gratis al principio. Se renueva al final de cada periodo hasta que canceles. Puedes cancelar en cualquier momento en el portal de la suscripción, con un clic; Pro sigue hasta el final del periodo pagado. Si la suscripción termina, todos tus datos se quedan y solo dejan de funcionar las funciones Pro. La licencia funciona en hasta 3 dispositivos y puedes liberar uno en Ajustes.'],
-      ['Reembolsos', 'Puedes pedir el reembolso de un pago en los 14 días siguientes, sin justificación, en {email} o en la tienda donde te suscribiste.'],
-      ['Uso aceptable', 'No intentes saltarte la licencia ni revender claves.'],
-      ['Cuenta y comunidad', 'Lo que publicas tiene que ser tuyo y respetuoso. Al publicar un setup, nos autorizas a mostrarlo en la web y en la app mientras no lo borres. No pongas datos personales (tuyos o de otros) en el nombre del setup ni en la firma. Podemos ocultar o borrar setups denunciados o que incumplan estos términos. Las mediciones compartidas deben ser reales.'],
-      ['Cambios', 'Podemos actualizar estos términos; la fecha de arriba indica la última versión.'],
-      ['Contacto', '{owner} — {email}.'],
+      ['El servicio', 'SwingMath calcula cómo el plomo, los accesorios y las cuerdas cambian las especificaciones y la sensación de una raqueta, y te ayuda a llevar el control de tus raquetas y encordados. Es una herramienta de estimación.'],
+      ['Estimaciones, no garantías', 'Los valores son estimaciones a partir de un modelo físico y de los datos que introduces. Las especificaciones de catálogo son nominales y cada raqueta varía. Confirma siempre con mediciones antes de modificar tu raqueta. No somos responsables de daños en el material ni de resultados en el juego.'],
+      ['SwingMath Pro', 'El Pro existe como suscripción mensual o anual, que se renueva automáticamente al final de cada periodo hasta que la canceles, o como compra vitalicia. El vitalicio es una compra única: no se renueva y puedes restaurarlo en otro dispositivo con la misma cuenta de la tienda, en «Restaurar compras». El precio y el periodo aparecen antes de confirmar la compra.'],
+      ['Prueba gratis', 'Cuando se ofrece, la prueba gratis de 7 días es una por cuenta de la App Store o de Google Play. Si no cancelas al menos 24 horas antes de que termine la prueba, empieza la suscripción y se cobra el primer periodo.'],
+      ['Pago, renovación y cancelación', 'El pago se carga en tu cuenta de la App Store o de Google Play al confirmar la compra. La suscripción se renueva automáticamente, al mismo precio, salvo que la canceles al menos 24 horas antes del final del periodo. Gestionas y cancelas la suscripción en los ajustes de tu cuenta de la tienda. Desinstalar la app o borrar la cuenta no cancela la suscripción. Al cancelar, el Pro sigue hasta el final del periodo ya pagado.'],
+      ['Reembolsos', 'Las solicitudes de reembolso las gestionan Apple o Google, según las reglas de cada tienda, sin perjuicio de los derechos que te da la ley de consumo.'],
+      ['Dispositivos Apple', 'Si usas la app en un dispositivo Apple, se aplica también el Contrato de Licencia de Usuario Final estándar de Apple (Licensed Application End User License Agreement). Estos términos lo completan.'],
+      ['Normas de la comunidad', 'Lo que publicas tiene que ser tuyo, veraz y respetuoso. No publiques datos personales (tuyos o de otros), contenido ofensivo, publicidad ni mediciones inventadas. Al publicar un setup, nos autorizas a mostrarlo en la app y en la web mientras no lo borres. Puedes denunciar setups y ocultar autores. Podemos ocultar o borrar lo que se denuncie o incumpla estas normas e impedir publicar a quien las incumpla repetidamente.'],
+      ['Responsabilidad', 'En la medida permitida por la ley, no somos responsables de daños indirectos, de daños en el material ni de la pérdida de datos que no estuvieran exportados ni sincronizados. Nada en estos términos limita la responsabilidad que la ley no permite limitar.'],
+      ['Ley y litigios', 'Estos términos se rigen por la ley portuguesa, sin perjuicio de las normas de protección del consumidor del país donde vives. En un litigio de consumo puedes acudir a una entidad de resolución alternativa de litigios (RAL), como el CNIACC portugués (cniacc.pt), o a la junta arbitral de consumo de tu comunidad autónoma.'],
+      ['Cambios', 'Podemos actualizar estos términos; la fecha de arriba indica la última versión y avisamos en la app cuando el cambio sea importante.'],
+      ['Contacto', '{owner}, {address}. {email}.'],
     ],
+    web: [],
   },
 }
 

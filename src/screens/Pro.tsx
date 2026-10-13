@@ -1,6 +1,5 @@
 import { Check, Lock, Sparkles } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { isPro, useStore, type Account } from '../data/store'
 import { fmt, useT } from '../i18n'
 import {
@@ -20,6 +19,7 @@ import { IS_APP } from '../lib/platform'
 import type { StorePlan } from '../lib/purchases'
 import { Badge, Button, Card, cx, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
+import { LegalSheet, type LegalKind } from './Legal'
 
 const PaywallCtx = createContext<(reason?: string) => void>(() => {})
 
@@ -229,6 +229,7 @@ function StorePanel({ onDone }: { onDone?: () => void }) {
   const [plans, setPlans] = useState<StorePlan[] | null>(null)
   const [plan, setPlan] = useState<Plan>('annual')
   const [busy, setBusy] = useState<'buy' | 'restore' | null>(null)
+  const [legal, setLegal] = useState<LegalKind | null>(null)
 
   useEffect(() => {
     let live = true
@@ -306,20 +307,24 @@ function StorePanel({ onDone }: { onDone?: () => void }) {
             {chosen.trialDays ? fmt(t.pro.start, { days: chosen.trialDays }) : t.pro.subscribe}
           </Button>
           <p className="text-xs text-muted">
-            {fmt(chosen.trialDays ? t.pro.storeFineTrial : t.pro.storeFine, { price: chosen.price, per: t.pro.per[chosen.plan], store: storeName() })}{' '}
-            <Link to="/termos" className="underline">
-              {t.settings.terms}
-            </Link>{' '}
-            ·{' '}
-            <Link to="/privacidade" className="underline">
-              {t.settings.privacy}
-            </Link>
+            {fmt(chosen.trialDays ? t.pro.storeFineTrial : t.pro.storeFine, { price: chosen.price, per: t.pro.per[chosen.plan], store: storeName() })}
           </p>
         </>
       )}
       <Button variant="ghost" className="w-full" loading={busy === 'restore'} disabled={busy !== null} onClick={() => run('restore')}>
         {t.pro.restore}
       </Button>
+      {/* Always there, even before the plans load: the stores ask for both links. */}
+      <p className="text-center text-xs text-muted">
+        <button type="button" onClick={() => setLegal('terms')} className="underline underline-offset-2">
+          {t.settings.terms}
+        </button>
+        {' · '}
+        <button type="button" onClick={() => setLegal('privacy')} className="underline underline-offset-2">
+          {t.settings.privacy}
+        </button>
+      </p>
+      <LegalSheet kind={legal} onClose={() => setLegal(null)} />
     </div>
   )
 }

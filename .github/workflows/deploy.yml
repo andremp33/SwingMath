@@ -46,6 +46,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwbHZiZWN3dXJuenV0eHhzbmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1MDEwODcsImV4cCI6MjEwNzA3NzA4N30.1_xrjUT3Yu7gemGSMljCyne5zyxgpDmxxOcTUcttfF0' }}
           VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL || secrets.VITE_SUPPORT_EMAIL }}
           VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME || secrets.VITE_OWNER_NAME }}
+          VITE_OWNER_ADDRESS: ${{ vars.VITE_OWNER_ADDRESS || secrets.VITE_OWNER_ADDRESS }}
       # Deep links (/SwingMath/rackets, shared setups) load the app too.
       - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
       - uses: peaceiris/actions-gh-pages@v4

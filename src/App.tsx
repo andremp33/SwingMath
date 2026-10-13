@@ -13,6 +13,7 @@ const Compare = lazy(() => import('./screens/Compare').then((m) => ({ default: m
 const DesignPage = lazy(() => import('./screens/DesignPage').then((m) => ({ default: m.DesignPage })))
 const Landing = lazy(() => import('./screens/Landing').then((m) => ({ default: m.Landing })))
 const LegalPage = lazy(() => import('./screens/Landing').then((m) => ({ default: m.LegalPage })))
+const LegalScreen = lazy(() => import('./screens/Legal').then((m) => ({ default: m.LegalScreen })))
 const Journal = lazy(() => import('./screens/Journal').then((m) => ({ default: m.Journal })))
 const Library = lazy(() => import('./screens/Library').then((m) => ({ default: m.Library })))
 const Match = lazy(() => import('./screens/Match').then((m) => ({ default: m.Match })))
@@ -29,8 +30,13 @@ const L = (el: ReactNode) => <Suspense fallback={null}>{el}</Suspense>
 const router = createBrowserRouter([
   // The app has no website pages: its about page is the calculator.
   { path: '/sobre', element: IS_APP ? <Navigate to="/" replace /> : L(<Landing />) },
-  { path: '/privacidade', element: L(<LegalPage kind="privacy" />) },
-  { path: '/termos', element: L(<LegalPage kind="terms" />) },
+  // The website's legal pages; in the app they are screens inside it (below).
+  ...(IS_APP
+    ? []
+    : [
+        { path: '/privacidade', element: L(<LegalPage kind="privacy" />) },
+        { path: '/termos', element: L(<LegalPage kind="terms" />) },
+      ]),
   { path: '/ficha/:id', element: L(<SetupSheet />) },
   {
     element: <Shell />,
@@ -48,6 +54,12 @@ const router = createBrowserRouter([
       { path: '/settings', element: L(<Settings />) },
       { path: '/s/:data', element: L(<SharedSetup />) },
       { path: '/design', element: L(<DesignPage />) },
+      ...(IS_APP
+        ? [
+            { path: '/privacidade', element: L(<LegalScreen kind="privacy" />) },
+            { path: '/termos', element: L(<LegalScreen kind="terms" />) },
+          ]
+        : []),
       { path: '*', element: <NotFound /> },
     ],
   },

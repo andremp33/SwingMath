@@ -10,11 +10,11 @@ import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { PRICING, PRO_BETA } from '../lib/entitlement'
 import { usePrice } from './Pro'
+import { LegalBody } from './Legal'
+import { SUPPORT_EMAIL } from '../lib/owner'
 
 const FEATURE_ICONS = [Scale, CircleCheck, Target, NotebookPen, Globe, Wifi]
 
-const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined) || undefined
-const OWNER = (import.meta.env.VITE_OWNER_NAME as string | undefined) || 'SwingMath'
 
 function useTitle(title: string) {
   useEffect(() => {
@@ -261,18 +261,11 @@ export function Landing() {
 export function LegalPage({ kind }: { kind: 'privacy' | 'terms' }) {
   const doc = useLegal(kind)
   useTitle(`${doc.title} — SwingMath`)
-  const fill = (s: string) => fmt(s, { email: SUPPORT_EMAIL ?? '—', owner: OWNER })
   return (
     <SiteFrame>
       <article className="mx-auto max-w-[720px] px-4 pt-8 lg:px-8">
-        <h1 className="text-xl font-bold tracking-tight">{doc.title}</h1>
-        <p className="mt-1 text-sm text-muted">{doc.updated}</p>
-        {doc.sections.map(([h, p]) => (
-          <section key={h} className="mt-8">
-            <h2 className="text-lg font-semibold">{h}</h2>
-            <p className="mt-2 leading-relaxed text-muted">{fill(p)}</p>
-          </section>
-        ))}
+        <h1 className="mb-1 text-xl font-bold tracking-tight">{doc.title}</h1>
+        <LegalBody kind={kind} web large />
       </article>
     </SiteFrame>
   )
