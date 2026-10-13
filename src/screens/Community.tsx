@@ -13,6 +13,7 @@ import {
   deletePublicSetup,
   measurementStats,
   GOALS,
+  HiddenRecipeError,
   LEVELS,
   publicSetups,
   myRecipe,
@@ -105,8 +106,8 @@ export function CommunityCard({ racket }: { racket: Racket }) {
     if (!account) return toast(t.community.needAccount)
     try {
       await fn()
-    } catch {
-      toast(t.community.error)
+    } catch (err) {
+      toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : t.community.error)
     }
   }
 
@@ -115,7 +116,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
     signedIn(async () => {
       const { result } = compute({ spec: racket, ...local, masses })
       const results = p.results && owned && stringings && sessions ? setupResults(local.id, owned, stringings, sessions) : null
-      await publishSetup({
+      const done = await publishSetup({
         name: local.name,
         author: p.author ?? undefined,
         config: local,
@@ -127,7 +128,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
         results,
         setupRef: local.id,
       })
-      toast(t.community.updated)
+      toast(done === 'moved' ? t.community.moved : t.community.updated)
       setVersion((v) => v + 1)
     })
 
@@ -370,11 +371,11 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
             results: withResults ? results : null,
             setupRef: setup.id,
           })
-          toast(done === 'updated' ? t.community.updated : t.community.published)
+          toast(done === 'updated' ? t.community.updated : done === 'moved' ? t.community.moved : t.community.published)
           setOpen(false)
           setPublishedAs((id) => id ?? 'yes')
-        } catch {
-          toast(t.community.error)
+        } catch (err) {
+          toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : t.community.error)
         } finally {
           setBusy(false)
         }

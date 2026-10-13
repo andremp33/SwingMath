@@ -566,6 +566,8 @@ export const pt = {
     hours: '{h} h',
     update: 'Atualizar na comunidade',
     updated: 'Setup atualizado na comunidade',
+    moved: 'Setup publicado na raquete nova; saiu da antiga',
+    hiddenRecipe: 'Este setup foi escondido depois de denúncias e não pode ser publicado de novo enquanto não o revermos.',
     all: 'Todos',
     filter: 'Filtrar por objetivo',
     partner: 'Loja parceira · {name}',

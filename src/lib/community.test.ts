@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import { emptyLead } from '../domain/types'
-import { parsePublicSetups, rankPublicSetups, roundResults, type PublicSetup } from './community'
+import { parsePublicSetups, rankPublicSetups, republishPlan, roundResults, type PublicSetup } from './community'
 
 const config = {
   racketId: 'stock-x',
@@ -67,5 +67,20 @@ describe('community recipes', () => {
 
   it('rounds averages to a tenth and hours to the half hour', () => {
     expect(roundResults({ sessions: 4, hours: 3.3, avg: { overall: 4.26, comfort: 3.94 } })).toEqual({ sessions: 4, hours: 3.5, avg: { overall: 4.3, comfort: 3.9 } })
+  })
+})
+
+describe('publishing a setup again', () => {
+  const prev = { id: 'row', racket_id: 'stock-x', hidden: false }
+  it('first time inserts; same frame updates', () => {
+    expect(republishPlan(null, 'stock-x')).toBe('insert')
+    expect(republishPlan(prev, 'stock-x')).toBe('update')
+  })
+  it('another frame replaces the old recipe with a new one', () => {
+    expect(republishPlan(prev, 'stock-y')).toBe('replace')
+  })
+  it('a recipe hidden by reports is never replaced or updated', () => {
+    expect(republishPlan({ ...prev, hidden: true }, 'stock-y')).toBe('hidden')
+    expect(republishPlan({ ...prev, hidden: true }, 'stock-x')).toBe('hidden')
   })
 })

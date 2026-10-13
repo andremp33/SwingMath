@@ -568,6 +568,8 @@ export const en: Dict = {
     hours: '{h} h',
     update: 'Update in the community',
     updated: 'Setup updated in the community',
+    moved: 'Setup published on the new racket; it left the old one',
+    hiddenRecipe: 'This setup was hidden after reports and cannot be published again until we review it.',
     all: 'All',
     filter: 'Filter by goal',
     partner: 'Partner shop · {name}',

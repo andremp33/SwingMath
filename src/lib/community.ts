@@ -195,14 +195,37 @@ export async function myRecipe(setupRef: string): Promise<PublicSetup | null> {
   return data ? (parsePublicSetups([data])[0] ?? null) : null
 }
 
-async function publishedId(setupRef: string): Promise<string | null> {
-  const c = cloud()
-  if (!c) return null
-  const cl = await c
+/** My earlier publish of a saved setup: which row, which frame, and
+ *  whether reports hid it. */
+export interface Published {
+  id: string
+  racket_id: string
+  hidden: boolean
+}
+
+async function published(cl: SupabaseClient, setupRef: string): Promise<Published | null> {
   const uid = await myId(cl)
   if (!uid) return null
-  const { data } = await cl.from('public_setups').select('id').eq('user_id', uid).eq('setup_ref', setupRef).maybeSingle()
-  return (data?.id as string | undefined) ?? null
+  const { data } = await cl.from('public_setups').select('id, racket_id, hidden').eq('user_id', uid).eq('setup_ref', setupRef).maybeSingle()
+  return (data as Published | null) ?? null
+}
+
+/** A recipe hidden by reports cannot be published again: that would undo moderation. */
+export class HiddenRecipeError extends Error {
+  constructor() {
+    super('hidden')
+  }
+}
+
+/**
+ * What publishing a setup again does. Same frame: update the recipe. Another
+ * frame: it is another recipe, so the old one goes and a new one starts, with
+ * no copies. Hidden by reports: neither.
+ */
+export function republishPlan(prev: Published | null, racketId: string): 'insert' | 'update' | 'replace' | 'hidden' {
+  if (!prev) return 'insert'
+  if (prev.hidden) return 'hidden'
+  return prev.racket_id === racketId ? 'update' : 'replace'
 }
 
 export interface PublishInput {
@@ -220,7 +243,7 @@ export interface PublishInput {
 
 /** Publishes a saved setup, or updates my earlier copy of it (found by
  *  setupRef). Updates go by id: upsert and per-column grants do not mix. */
-export async function publishSetup(p: PublishInput): Promise<'created' | 'updated'> {
+export async function publishSetup(p: PublishInput): Promise<'created' | 'updated' | 'moved'> {
   const cl = await getCloud()!
   const { racketId, baseMode, measured, accessories, leadG, extra, grip, strings } = p.config
   const { createdAt: _c, updatedAt: _u, ...frame } = p.racket
@@ -236,16 +259,23 @@ export async function publishSetup(p: PublishInput): Promise<'created' | 'update
     style: p.style ?? null,
     results: p.results ? roundResults(p.results) : null,
   }
-  const existing = p.setupRef ? await publishedId(p.setupRef) : null
+  const prev = p.setupRef ? await published(cl, p.setupRef) : null
+  const plan = republishPlan(prev, racketId)
+  if (plan === 'hidden') throw new HiddenRecipeError()
   countsCache = undefined
-  if (existing) {
-    const { error } = await cl.from('public_setups').update({ ...row, updated_at: new Date().toISOString() }).eq('id', existing)
+  if (plan === 'update') {
+    const { error } = await cl.from('public_setups').update({ ...row, updated_at: new Date().toISOString() }).eq('id', prev!.id)
     if (error) throw error
     return 'updated'
   }
+  // The unique (user, setup_ref) means the old row must go before the new one.
+  if (plan === 'replace') {
+    const { error } = await cl.from('public_setups').delete().eq('id', prev!.id)
+    if (error) throw error
+  }
   const { error } = await cl.from('public_setups').insert({ ...row, racket_id: racketId, setup_ref: p.setupRef ?? null })
   if (error) throw error
-  return 'created'
+  return plan === 'replace' ? 'moved' : 'created'
 }
 
 let countsCache: Promise<Map<string, number>> | undefined

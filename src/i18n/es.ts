@@ -568,6 +568,8 @@ export const es: Dict = {
     hours: '{h} h',
     update: 'Actualizar en la comunidad',
     updated: 'Setup actualizado en la comunidad',
+    moved: 'Setup publicado en la raqueta nueva; salió de la anterior',
+    hiddenRecipe: 'Este setup se ocultó tras varias denuncias y no se puede volver a publicar hasta que lo revisemos.',
     all: 'Todos',
     filter: 'Filtrar por objetivo',
     partner: 'Tienda colaboradora · {name}',

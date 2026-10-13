@@ -72,6 +72,8 @@ test('wrong code is refused; during the beta every account has Pro', async ({ br
   await card.getByRole('button', { name: 'Entrar' }).click()
   await expect(card.getByText('Código errado ou expirado.')).toBeVisible()
   await card.getByRole('button', { name: 'Usar outro email' }).click()
+  // The server sends one code per address per second (max_frequency).
+  await page.waitForTimeout(1100)
   await signIn(page, email)
   // Run with VITE_PRO_BETA=false, an account without a subscription has no Pro.
   if (BETA_OFF) return expect(card).toContainText('Esta conta não tem subscrição')
@@ -193,6 +195,54 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   await lib.getByRole('button', { name: /setups? ?: Ver os setups da comunidade para a Babolat Pure Aero 98$/ }).first().click()
   await expect(lib.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
   await expect(lib.getByRole('region', { name: 'Comunidade' }).getByRole('button', { name: /^Comunidade/ })).toHaveAttribute('aria-expanded', 'true')
+})
+
+test('a setup moved to another racket moves its recipe; a hidden one stays put', async ({ browser }) => {
+  test.setTimeout(90_000)
+  const name = `Muda ${stamp}`
+  const author = await open(browser)
+  await signIn(author, emailOf('mover'))
+  await saveSetup(author, name)
+  await author.goto('/setups')
+  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Controlo' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+  const before = await admin.from('public_setups').select('id, racket_id').eq('name', name)
+  expect(before.data).toHaveLength(1)
+  await admin.rpc('count_copy', { setup_id: before.data![0].id })
+
+  // The same setup, now on a Prestige.
+  await author.goto('/')
+  await expect(author.getByText(`A editar: ${name}`)).toBeVisible()
+  await author.getByRole('button', { name: /Raquete Babolat Pure Aero 98/ }).first().click()
+  await author.getByRole('dialog').getByRole('searchbox').fill('prestige')
+  await author.getByRole('dialog').getByRole('button', { name: 'Head Prestige MP (2023)' }).click()
+  await author.getByRole('button', { name: 'Atualizar setup' }).click()
+  await expect(author.getByText('Setup atualizado', { exact: true })).toBeVisible()
+  await author.goto('/setups')
+  await expect(author.getByRole('article').filter({ hasText: name })).toContainText('Prestige MP')
+  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado na raquete nova; saiu da antiga')).toBeVisible()
+  const after = await admin.from('public_setups').select('id, racket_id, copies, goals').eq('name', name)
+  expect(after.data).toHaveLength(1)
+  expect(after.data![0].racket_id).toContain('prestige')
+  expect(after.data![0].racket_id).not.toBe(before.data![0].racket_id)
+  // Another recipe: copies start again, the goals carry over.
+  expect(after.data![0]).toMatchObject({ copies: 0, goals: ['control'] })
+
+  // Hidden by reports: publishing again changes nothing.
+  await admin.from('public_setups').update({ hidden: true }).eq('id', after.data![0].id)
+  await author.keyboard.press('Escape')
+  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
+  await expect(author.getByText('Este setup foi escondido depois de denúncias', { exact: false })).toBeVisible()
+  const still = await admin.from('public_setups').select('id, hidden').eq('name', name)
+  expect(still.data).toEqual([{ id: after.data![0].id, hidden: true }])
 })
 
 test('measurements: the median shows from 3 players, then account deletion', async ({ browser }) => {
