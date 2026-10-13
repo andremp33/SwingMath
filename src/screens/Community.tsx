@@ -84,20 +84,22 @@ export function CommunityCard({ racket }: { racket: Racket }) {
   const [stats, setStats] = useState<MeasurementStats[]>()
   const [setups, setSetups] = useState<PublicSetup[]>()
   const [version, setVersion] = useState(0)
-  const [goal, setGoal] = useState<Goal | 'all'>('all')
+  const myGoal = useStore((s) => s.profile.goals?.[0]) ?? 'all'
+  const [goal, setGoal] = useState<Goal | 'all'>(myGoal)
   const [all, setAll] = useState(false)
 
   useEffect(() => {
     let alive = true
     setStats(undefined)
     setSetups(undefined)
-    setGoal('all')
+    setGoal(myGoal)
     setAll(false)
     measurementStats(racket.id).then((s) => alive && setStats(s))
     publicSetups(racket.id).then((s) => alive && setSetups(s))
     return () => {
       alive = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [racket.id, version])
 
   if (!communityEnabled() || !racket.isStock) return null
@@ -134,7 +136,9 @@ export function CommunityCard({ racket }: { racket: Racket }) {
 
   const list = setups ?? []
   const goalsHere = GOALS.filter((g) => list.some((p) => p.goals.includes(g)))
-  const ranked = rankPublicSetups(list, goal === 'all' ? undefined : goal)
+  // The player's goal, if this frame has recipes for it.
+  const active = goal !== 'all' && goalsHere.includes(goal) ? goal : 'all'
+  const ranked = rankPublicSetups(list, active === 'all' ? undefined : active)
   const shown = all ? ranked : ranked.slice(0, SHOWN)
   const measured = (stats ?? []).reduce((n, x) => n + x.n, 0)
   return (
@@ -191,7 +195,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
             <div className="mb-1">
               <ChoiceChips<Goal | 'all'>
                 label={t.community.filter}
-                value={goal}
+                value={active}
                 onChange={(g) => {
                   setGoal(g)
                   setAll(false)
@@ -312,9 +316,10 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
   const sessions = useSessions()
   const [open, setOpen] = useState(false)
   const [author, setAuthor] = useState('')
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [level, setLevel] = useState<Level | ''>('')
-  const [style, setStyle] = useState<Style | ''>('')
+  const profile = useStore((s) => s.profile)
+  const [goals, setGoals] = useState<Goal[]>(profile.goals ?? [])
+  const [level, setLevel] = useState<Level | ''>(profile.level ?? '')
+  const [style, setStyle] = useState<Style | ''>(profile.style ?? '')
   const [withResults, setWithResults] = useState(false)
   const [busy, setBusy] = useState(false)
   const [tried, setTried] = useState(false)

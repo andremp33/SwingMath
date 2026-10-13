@@ -1,3 +1,4 @@
+import type { Goal, Level, Style } from '../lib/community'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import {
@@ -70,6 +71,11 @@ export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
 export interface Profile {
   /** Playing hours a week, for the restring date until sessions are logged. */
   hoursPerWeek?: number
+  /** What they want to improve (up to 2): picks the community's recipes. */
+  goals?: Goal[]
+  level?: Level
+  style?: Style
+  hand?: 'right' | 'left'
 }
 
 interface State {
@@ -92,6 +98,8 @@ interface State {
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
+  /** The first-launch walkthrough has been done or skipped (store apps). */
+  onboarded: boolean
   account: Account | null
   accountPro: AccountPro | null
   sync: SyncState
@@ -114,6 +122,7 @@ interface State {
   spendFreeRun: () => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
+  setOnboarded: (v: boolean) => void
   setAccount: (a: Account | null) => void
   setAccountPro: (p: AccountPro | null) => void
   setSync: (s: Partial<SyncState>) => void
@@ -138,6 +147,7 @@ export const useStore = create<State>()(
       freeRunsUsed: 0,
       reminded: [],
       profile: {},
+      onboarded: false,
       account: null,
       accountPro: null,
       sync: { userId: null, cursor: null },
@@ -167,6 +177,7 @@ export const useStore = create<State>()(
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
       setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p } })),
+      setOnboarded: (onboarded) => set({ onboarded }),
       markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),
     }),
     {

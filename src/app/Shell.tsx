@@ -1,10 +1,11 @@
 import { Calculator, ClipboardList, GitCompareArrows, NotebookPen, Settings } from 'lucide-react'
 import { RacketIcon } from '../ui/icons'
 import { useEffect } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useStore } from '../data/store'
 import { useT } from '../i18n'
 import { LOCALE } from '../lib/format'
+import { IS_APP } from '../lib/platform'
 import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { useRestringReminders } from '../screens/reminders'
@@ -53,6 +54,9 @@ export function Shell() {
     document.documentElement.classList.add('in-app')
     return () => document.documentElement.classList.remove('in-app')
   }, [])
+  const onboarded = useStore((s) => s.onboarded)
+  // First launch of the store apps: the walkthrough (a shared link still opens).
+  if (IS_APP && !onboarded && loc.pathname === '/') return <Navigate to="/bem-vindo" replace />
 
   return (
     <div id="app-scroll" className="h-dvh overflow-y-auto overscroll-y-contain lg:pl-56">

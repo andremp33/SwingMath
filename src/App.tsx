@@ -14,6 +14,7 @@ const DesignPage = lazy(() => import('./screens/DesignPage').then((m) => ({ defa
 const Landing = lazy(() => import('./screens/Landing').then((m) => ({ default: m.Landing })))
 const LegalPage = lazy(() => import('./screens/Landing').then((m) => ({ default: m.LegalPage })))
 const LegalScreen = lazy(() => import('./screens/Legal').then((m) => ({ default: m.LegalScreen })))
+const Onboarding = lazy(() => import('./screens/Onboarding').then((m) => ({ default: m.Onboarding })))
 const Journal = lazy(() => import('./screens/Journal').then((m) => ({ default: m.Journal })))
 const Library = lazy(() => import('./screens/Library').then((m) => ({ default: m.Library })))
 const Match = lazy(() => import('./screens/Match').then((m) => ({ default: m.Match })))
@@ -30,6 +31,8 @@ const L = (el: ReactNode) => <Suspense fallback={null}>{el}</Suspense>
 const router = createBrowserRouter([
   // The app has no website pages: its about page is the calculator.
   { path: '/sobre', element: IS_APP ? <Navigate to="/" replace /> : L(<Landing />) },
+  // The store apps' first launch, full screen.
+  ...(IS_APP ? [{ path: '/bem-vindo', element: L(<Onboarding />) }] : []),
   // The website's legal pages; in the app they are screens inside it (below).
   ...(IS_APP
     ? []
