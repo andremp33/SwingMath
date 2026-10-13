@@ -5,7 +5,10 @@ import { env } from '../cloud/env'
 
 const admin = createClient(env.url, env.serviceKey, { auth: { persistSession: false } })
 const MAILPIT = 'http://127.0.0.1:54324'
-const stamp = Date.now()
+let stamp = String(Date.now())
+test.beforeAll(() => {
+  stamp = `${Date.now()}-${test.info().project.name}`
+})
 const emailOf = (name: string) => `${name}-${stamp}@example.test`
 /** The app shows the beta or the real subscription, depending on the build. */
 const BETA_OFF = process.env.VITE_PRO_BETA === 'false'

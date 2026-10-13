@@ -111,8 +111,8 @@ test.describe('F09 Pro and settings', () => {
   })
 })
 
-test.describe('F18 the community lives in the app', () => {
-  test('F18-E1 the website shows no community in the calculator or the library', async ({ page }) => {
+test.describe('F18 without the cloud', () => {
+  test('F18-E1 the calculator and the library show no community', async ({ page }) => {
     await start(page)
     await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Comunidade' })).toHaveCount(0)

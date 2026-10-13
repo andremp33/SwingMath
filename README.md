@@ -16,7 +16,7 @@ npm run e2e        # build + Playwright (desktop, phone, offline)
 # Accounts, sync and community, against a local Supabase (needs Docker)
 npx supabase start
 npm run test:cloud                                  # database rules, webhook, sync
-npx playwright test -c playwright.cloud.config.ts   # sign-in, sync, community in the app
+npx playwright test -c playwright.cloud.config.ts   # sign-in, sync, community, on the web and in the app
 ```
 
 - `src/domain/` — physics, sweet spot, pendulum swingweight, strings, grip, arm comfort, journal, solvers (pure, tested)

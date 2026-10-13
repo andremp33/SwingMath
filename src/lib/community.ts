@@ -4,13 +4,12 @@ import { racketSchema, setupSchema } from '../data/db'
 import { MIN_RESULT_SESSIONS, SESSION_RATINGS, type SessionRating } from '../domain/journal'
 import type { Racket, SetupConfig, Specs } from '../domain/types'
 import { cloudConfigured, getCloud } from './cloud'
-import { IS_APP } from './platform'
 
 /** Community data: medians of frames players measured, and setups they
  *  published. Reading needs no account; writing does. */
 
-/** The community lives in the app only; the website talks about the app. */
-export const communityEnabled = () => IS_APP && cloudConfigured()
+/** On the website and in the app alike, wherever the cloud is set up. */
+export const communityEnabled = () => cloudConfigured()
 
 const cloud = () => (communityEnabled() ? getCloud() : null)
 
