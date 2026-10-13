@@ -47,8 +47,11 @@ jobs:
           VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL || secrets.VITE_SUPPORT_EMAIL }}
           VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME || secrets.VITE_OWNER_NAME }}
           VITE_OWNER_ADDRESS: ${{ vars.VITE_OWNER_ADDRESS || secrets.VITE_OWNER_ADDRESS }}
-      # Deep links (shared setups, the stores' pages) load the site too.
-      - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
+      # Shared setups load the site through the 404 page; the pages the
+      # stores link to get a copy of their own, so they answer 200.
+      - run: |
+          cp dist/index.html dist/404.html && touch dist/.nojekyll
+          for p in privacidade termos suporte apagar-conta; do mkdir -p "dist/$p" && cp dist/index.html "dist/$p/index.html"; done
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
