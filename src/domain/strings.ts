@@ -162,16 +162,20 @@ export interface StringLife {
   limit: 'hours' | 'time'
 }
 
+/** A stringbed's life: playing hours (the player's own, if set) and weeks on
+ *  the racket. A hybrid dies when its least durable string does. */
+export function lifeLimits(bed: Stringbed, lifeHours?: number): { hours: number; weeks: number } {
+  const mats = [bed.mains.material, crossesOf(bed).material].map((k) => MATERIAL[k])
+  return { hours: lifeHours ?? Math.min(...mats.map((m) => m.lifeHours)), weeks: Math.min(...mats.map((m) => m.lifeWeeks)) }
+}
+
 /**
  * How much of the string's life is used. Life ends at the material's playing
  * hours, or its weeks on the racket, whichever comes first; the player can
  * set their own hours (they know their strings best).
  */
 export function stringLife(bed: Stringbed, hours: number, days: number, lifeHours?: number): StringLife {
-  // A hybrid dies when its least durable string does.
-  const mats = [bed.mains.material, crossesOf(bed).material].map((k) => MATERIAL[k])
-  const life = lifeHours ?? Math.min(...mats.map((m) => m.lifeHours))
-  const weeks = Math.min(...mats.map((m) => m.lifeWeeks))
+  const { hours: life, weeks } = lifeLimits(bed, lifeHours)
   const byHours = hours / life
   const byTime = days / 7 / weeks
   const c = crossesOf(bed)

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useSessions, useStringings } from '../data/hooks'
+import { useOwned, useSessions, useStringings } from '../data/hooks'
 import { useStore } from '../data/store'
-import { dueForRestring, hoursOn } from '../domain/journal'
+import { currentStringings, dueForRestring, hoursOn, restringDue } from '../domain/journal'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
 import { IS_APP } from '../lib/platform'
+import { bedLabel } from '../ui/strings'
 
 const supported = () => IS_APP || (typeof window !== 'undefined' && 'Notification' in window)
 const permissionNow = (): NotificationPermission => (IS_APP ? 'default' : supported() ? Notification.permission : 'denied')
@@ -23,11 +24,20 @@ export function useReminders() {
   }
 }
 
+/** A stable notification number for an id. */
+const numberFor = (tag: string) => [...tag].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7) & 0x7fffffff
+
+/** 19:00 local time on the day something is due. */
+export function eveningOf(ms: number): Date {
+  const d = new Date(ms)
+  d.setHours(19, 0, 0, 0)
+  return d
+}
+
 async function notify(title: string, body: string, tag: string) {
   if (IS_APP) {
     // A stable number per stringing, so a reminder is not shown twice.
-    const id = [...tag].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7) & 0x7fffffff
-    return import('../lib/native').then((n) => n.notifyNative(id, title, body))
+    return import('../lib/native').then((n) => n.notifyNative(numberFor(tag), title, body))
   }
   // Android Chrome only allows notifications through the service worker.
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => undefined)
@@ -36,20 +46,57 @@ async function notify(title: string, body: string, tag: string) {
 }
 
 /**
- * Restring reminders (Pro): once per stringing, when the app opens and a
- * racket is past its strings' life. Returns how many rackets are due, for
- * the badge on the Journal tab (shown to everyone).
+ * Restring reminders. In the store apps, each racket's restring date is a
+ * local notification at 19:00 that day, set again whenever its stringing or
+ * sessions change, and dropped for a new stringing or a retired racket. A
+ * racket already past its strings' life when the app opens gets one
+ * reminder then (the only kind on the web). Returns how many rackets are
+ * due, for the dot on the Journal tab.
  */
 export function useRestringReminders(): number {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const reminded = useStore((s) => s.reminded)
   const markReminded = useStore((s) => s.markReminded)
+  const hoursPerWeek = useStore((s) => s.profile.hoursPerWeek)
   const stringings = useStringings()
   const sessions = useSessions()
-  const due = stringings && sessions ? dueForRestring(stringings, sessions) : []
+  const owned = useOwned()
+  const ready = !!(stringings && sessions && owned)
+  // Retired rackets are out of the way: no reminders, no dot.
+  const inPlay = (s: { ownedId?: string }) => !s.ownedId || !owned?.some((o) => o.id === s.ownedId && o.retired)
+  const due = ready ? dueForRestring(stringings!, sessions!).filter(inPlay) : []
   const fresh = due.filter((s) => !reminded.includes(s.id))
   const key = fresh.map((s) => s.id).join()
+
+  const now = Date.now()
+  const plan = IS_APP && ready
+    ? currentStringings(stringings!)
+        .filter((s) => s.ownedId && inPlay(s))
+        .map((s) => ({ s, at: eveningOf(restringDue(s, sessions!, hoursPerWeek, now)) }))
+        .filter((x) => x.at.getTime() > now)
+    : []
+  const planKey = plan.map((x) => `${x.s.id}@${x.at.getTime()}`).join()
+  useEffect(() => {
+    if (!IS_APP || !ready) return
+    const name = (id?: string) => owned!.find((o) => o.id === id)?.name ?? ''
+    void import('../lib/native')
+      .then((n) =>
+        n.scheduleRestrings(
+          plan.map(({ s, at }) => ({
+            id: numberFor(`due:${s.ownedId}`),
+            at,
+            title: t.journal.notifyTitle,
+            body: fmt(t.journal.notifyDueBody, { label: name(s.ownedId), bed: bedLabel(s.bed, t, lang), date: fmtDate(s.date, lang) }),
+          })),
+        ),
+      )
+      .catch(() => {})
+    // What is scheduled is not sent again when the app opens late.
+    if (plan.length) markReminded(plan.map((x) => x.s.id))
+    // `planKey` stands for `plan`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, planKey, lang])
 
   useEffect(() => {
     if (!key || !supported() || (!IS_APP && Notification.permission !== 'granted')) return

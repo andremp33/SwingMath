@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentStringings, dueForRestring, hoursOn, insights, latestOf, lifeOf, linkOwned, setupResults, weeklyHours, type OwnedRacket, type Session, type Stringing } from './journal'
+import { currentStringings, dueForRestring, hoursOn, insights, latestOf, lifeOf, linkOwned, restringDue, setupResults, weeklyHours, type OwnedRacket, type Session, type Stringing } from './journal'
 
 const DAY = 86_400_000
 const NOW = Date.UTC(2026, 9, 9)
@@ -120,5 +120,32 @@ describe('setup results', () => {
   it('never carries arm pain', () => {
     const s = [session('direct', 60, 15, 4, true), session('direct', 60, 14, 4, true), session('direct', 60, 13, 4)]
     expect(setupResults('torneio', owned, st, s)).not.toHaveProperty('armPainShare')
+  })
+})
+
+describe('restring date', () => {
+  // Poly: 18 playing hours or 8 weeks on the racket, whichever comes first.
+  const st = (daysAgo: number) => stringing('r', 'x', daysAgo)
+
+  it('before any session, the player’s hours a week set the pace', () => {
+    expect(restringDue(st(0), [], 3, NOW)).toBe(NOW + 42 * DAY)
+    // Little play: the 8 weeks come first.
+    expect(restringDue(st(0), [], 1, NOW)).toBe(NOW + 56 * DAY)
+  })
+
+  it('with no sessions and no estimate, the weeks alone', () => {
+    expect(restringDue(st(10), [], undefined, NOW)).toBe(NOW - 10 * DAY + 56 * DAY)
+  })
+
+  it('once sessions are logged, they set the pace and the estimate no longer counts', () => {
+    const s = [session('r', 240, 10), session('r', 120, 3)]
+    // 6 h in 14 days; 12 h left at that pace is 28 days.
+    expect(restringDue(st(14), s, 3, NOW)).toBeCloseTo(NOW + 28 * DAY, -3)
+    expect(restringDue(st(14), s, 20, NOW)).toBeCloseTo(NOW + 28 * DAY, -3)
+  })
+
+  it('a long first session is spread over a week, and a spent stringing is due now', () => {
+    expect(restringDue(st(1), [session('r', 180, 0)], undefined, NOW)).toBeCloseTo(NOW + 35 * DAY, -3)
+    expect(restringDue(st(20), [session('r', 20 * 60, 5)], undefined, NOW)).toBe(NOW)
   })
 })

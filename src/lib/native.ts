@@ -66,3 +66,13 @@ export async function shareFile(name: string, text: string, title: string) {
   // Closing the sheet without choosing rejects; that is not an error.
   await Share.share({ title, files: [uri] }).catch(() => {})
 }
+
+/** The restring reminders, at their dates: whatever was scheduled before is
+ *  replaced, so a new stringing or a retired racket drops its old date. */
+export async function scheduleRestrings(items: { id: number; at: Date; title: string; body: string }[]) {
+  const { display } = await LocalNotifications.checkPermissions()
+  if (display !== 'granted') return
+  const { notifications } = await LocalNotifications.getPending()
+  if (notifications.length) await LocalNotifications.cancel({ notifications: notifications.map((n) => ({ id: n.id })) })
+  if (items.length) await LocalNotifications.schedule({ notifications: items.map((i) => ({ id: i.id, title: i.title, body: i.body, schedule: { at: i.at, allowWhileIdle: true } })) })
+}

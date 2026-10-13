@@ -1,4 +1,4 @@
-import { stringLife, type Stringbed, type StringLife } from './strings'
+import { lifeLimits, stringLife, type Stringbed, type StringLife } from './strings'
 
 /**
  * The player's journal: their own rackets (the physical frames they play
@@ -114,6 +114,25 @@ export function linkOwned(stringings: Stringing[], owned: OwnedRacket[], newId: 
     linked.push({ ...s, ownedId: o.id, updatedAt: now })
   }
   return { created, linked }
+}
+
+/**
+ * When a stringing's life runs out, in ms: its weeks on the racket or its
+ * playing hours, whichever comes first. The hours run at the pace of the
+ * sessions logged on it (over at least a week, so one long first session
+ * does not race the date); with none logged yet, at the player's own
+ * estimate of hours a week. Neither: the weeks alone.
+ */
+export function restringDue(st: Stringing, sessions: Session[], hoursPerWeek?: number, now = Date.now()): number {
+  const { hours: life, weeks } = lifeLimits(st.bed, st.lifeHours)
+  const byTime = st.date + weeks * 7 * DAY
+  const mine = sessions.filter((s) => s.stringingId === st.id)
+  const played = mine.reduce((h, s) => h + s.minutes / 60, 0)
+  const days = Math.max(7, (now - st.date) / DAY)
+  const perDay = mine.length ? played / days : (hoursPerWeek ?? 0) / 7
+  if (perDay <= 0) return byTime
+  const byHours = mine.length ? now + (Math.max(0, life - played) / perDay) * DAY : st.date + (life / perDay) * DAY
+  return Math.min(byTime, byHours)
 }
 
 /** Rackets whose strings are at or past the end of their life. */

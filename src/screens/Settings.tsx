@@ -255,23 +255,29 @@ function DataGroup() {
   )
 }
 
-/** Restring reminders: a notification when a racket's strings are spent. */
+/** Restring reminders: a notification on the day a racket's strings run out. */
 function RemindersGroup() {
   const t = useT()
+  const hoursPerWeek = useStore((s) => s.profile.hoursPerWeek)
+  const setProfile = useStore((s) => s.setProfile)
   const { supported, permission, enable } = useReminders()
-  if (!supported) return null
   return (
     <SettingsGroup title={t.journal.reminders}>
-      <SettingsRow label={t.journal.remindersRow} hint={permission === 'denied' ? t.journal.remindersBlocked : t.journal.remindersHint}>
-        {permission === 'granted' ? (
-          <span className="flex items-center gap-1.5 text-sm font-medium">
-            <Bell className="size-4" aria-hidden /> {t.journal.remindersOn}
-          </span>
-        ) : permission === 'denied' ? null : (
-          <Button size="sm" icon={Bell} onClick={enable}>
-            {t.journal.remindersEnable}
-          </Button>
-        )}
+      {supported && (
+        <SettingsRow label={t.journal.remindersRow} hint={permission === 'denied' ? t.journal.remindersBlocked : t.journal.remindersHint}>
+          {permission === 'granted' ? (
+            <span className="flex items-center gap-1.5 text-sm font-medium">
+              <Bell className="size-4" aria-hidden /> {t.journal.remindersOn}
+            </span>
+          ) : permission === 'denied' ? null : (
+            <Button size="sm" icon={Bell} onClick={enable}>
+              {t.journal.remindersEnable}
+            </Button>
+          )}
+        </SettingsRow>
+      )}
+      <SettingsRow label={t.journal.hoursPerWeek} hint={t.journal.hoursPerWeekHint}>
+        <NumberField inline label={t.journal.hoursPerWeek} unit="h" min={0} max={40} value={hoursPerWeek} onChange={(v) => setProfile({ hoursPerWeek: v })} />
       </SettingsRow>
     </SettingsGroup>
   )

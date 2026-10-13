@@ -66,6 +66,12 @@ export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
   strings: DEFAULT_STRINGBED,
 })
 
+/** What the player tells us about their game. All optional. */
+export interface Profile {
+  /** Playing hours a week, for the restring date until sessions are logged. */
+  hoursPerWeek?: number
+}
+
 interface State {
   lang: Lang
   theme: Theme
@@ -85,6 +91,7 @@ interface State {
   freeRunsUsed: number
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
+  profile: Profile
   account: Account | null
   accountPro: AccountPro | null
   sync: SyncState
@@ -106,6 +113,7 @@ interface State {
   clearCompare: () => void
   spendFreeRun: () => void
   markReminded: (ids: string[]) => void
+  setProfile: (p: Partial<Profile>) => void
   setAccount: (a: Account | null) => void
   setAccountPro: (p: AccountPro | null) => void
   setSync: (s: Partial<SyncState>) => void
@@ -129,6 +137,7 @@ export const useStore = create<State>()(
       compare: [],
       freeRunsUsed: 0,
       reminded: [],
+      profile: {},
       account: null,
       accountPro: null,
       sync: { userId: null, cursor: null },
@@ -157,6 +166,7 @@ export const useStore = create<State>()(
       setAccount: (account) => set({ account }),
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
+      setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p } })),
       markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),
     }),
     {
