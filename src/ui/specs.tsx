@@ -30,11 +30,12 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
       sub: pts(s.ptsHL),
       delta: from && (s.balanceCm - from.balanceCm) * 10,
     },
-    { key: 'sw', label: t.spec.swingweight, value: fmtNum(s.swingweight, 0, lang), delta: from && s.swingweight - from.swingweight },
+    { key: 'sw', label: t.spec.swingweight, value: fmtNum(s.swingweight, 0, lang), unit: t.units.kgcm2, delta: from && s.swingweight - from.swingweight },
     {
       key: 'tw',
       label: t.spec.twistweight,
       value: fmtNum(s.twistweight, 1, lang),
+      unit: t.units.kgcm2,
       sub: s.twistweightEstimated ? t.common.estimated : undefined,
       delta: from && s.twistweight !== undefined && from.twistweight !== undefined ? s.twistweight - from.twistweight : undefined,
       deltaDigits: 1,
@@ -42,7 +43,7 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
     },
   ]
   if (opts.recoil !== false) {
-    rows.push({ key: 'rw', label: t.spec.recoil, value: fmtNum(s.recoilWeight, 0, lang), delta: from && s.recoilWeight - from.recoilWeight })
+    rows.push({ key: 'rw', label: t.spec.recoil, value: fmtNum(s.recoilWeight, 0, lang), unit: t.units.kgcm2, delta: from && s.recoilWeight - from.recoilWeight })
     rows.push({
       key: 'ss',
       label: t.spec.sweetSpot,

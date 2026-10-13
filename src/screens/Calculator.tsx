@@ -443,10 +443,10 @@ function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: 
         onClick={onToggle}
         className="num mx-auto flex w-full max-w-lg items-center py-2 text-center text-xs"
       >
-        <Mini label={t.spec.weight} value={fmtNum(result.weightG, 0, lang)} delta={result.weightG - base.weightG} lang={lang} />
-        <Mini label={t.spec.balance} value={fmtNum(result.balanceCm * 10, 0, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
-        <Mini label="SW" value={fmtNum(result.swingweight, 0, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
-        <Mini label="TW" value={fmtNum(result.twistweight, 1, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} lang={lang} />
+        <Mini label={t.spec.weight} unit={t.units.g} value={fmtNum(result.weightG, 0, lang)} delta={result.weightG - base.weightG} lang={lang} />
+        <Mini label={t.spec.balance} unit={t.units.mm} value={fmtNum(result.balanceCm * 10, 0, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
+        <Mini label="SW" unit={t.units.kgcm2} value={fmtNum(result.swingweight, 0, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
+        <Mini label="TW" unit={t.units.kgcm2} value={fmtNum(result.twistweight, 1, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} lang={lang} />
         <ChevronUp className={cx('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
     </div>
@@ -486,12 +486,15 @@ function MiniRing({ label, value, delta, color, lang }: { label: string; value: 
   )
 }
 
-function Mini({ label, value, delta, digits = 1, lang }: { label: string; value: string; delta: number; digits?: number; lang: string }) {
+function Mini({ label, value, unit, delta, digits = 1, lang }: { label: string; value: string; unit: string; delta: number; digits?: number; lang: string }) {
   const d = Math.round(delta * 10 ** digits) / 10 ** digits
   return (
     <div className="min-w-0 flex-1">
       <div className="truncate text-muted">{label}</div>
-      <div className="readout text-sm">{value}</div>
+      <div className="readout whitespace-nowrap text-sm">
+        {value}
+        <span className="ml-0.5 text-[11px] font-normal text-muted">{unit}</span>
+      </div>
       <div className="num text-[11px] text-muted">{d === 0 ? '·' : fmtSigned(delta, digits, lang)}</div>
     </div>
   )
