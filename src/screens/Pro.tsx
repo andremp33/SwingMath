@@ -4,9 +4,11 @@ import { FREE_SETUP_LIMIT, isPro, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import type { Plan } from '../lib/entitlement'
 import { offerCopy, savingPct, type PaywallReason } from '../lib/paywall'
+import { IS_PREVIEW } from '../lib/platform'
 import type { StorePlan } from '../lib/purchases'
 import { Badge, Button, Card, cx } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
+import { AppOnly } from '../preview/text'
 import { LegalSheet, type LegalKind } from './Legal'
 
 type OpenPaywall = (reason: PaywallReason, opts?: { asked?: boolean }) => void
@@ -89,8 +91,8 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
 
   useEffect(() => {
     let live = true
-    import('../lib/purchases')
-      .then((m) => m.storePlans())
+    // The app's preview in a browser sells nothing.
+    ;(IS_PREVIEW ? Promise.resolve<StorePlan[]>([]) : import('../lib/purchases').then((m) => m.storePlans()))
       .catch(() => [])
       .then((p) => live && setPlans(p))
     return () => {
@@ -139,7 +141,11 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
       {plans === null ? (
         <p className="text-sm text-muted">{t.pro.loadingPlans}</p>
       ) : !chosen ? (
-        <p className="rounded-md bg-surface-2 px-3 py-2 text-sm text-muted">{t.pro.notConfigured}</p>
+        IS_PREVIEW ? (
+          <AppOnly />
+        ) : (
+          <p className="rounded-md bg-surface-2 px-3 py-2 text-sm text-muted">{t.pro.notConfigured}</p>
+        )
       ) : (
         <>
           <fieldset>
@@ -177,9 +183,11 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
           <p className="text-xs text-muted">{copy(chosen).legal}</p>
         </>
       )}
-      <Button variant="ghost" className="w-full" loading={busy === 'restore'} disabled={busy !== null} onClick={() => run('restore')}>
-        {t.pro.restore}
-      </Button>
+      {!IS_PREVIEW && (
+        <Button variant="ghost" className="w-full" loading={busy === 'restore'} disabled={busy !== null} onClick={() => run('restore')}>
+          {t.pro.restore}
+        </Button>
+      )}
       {/* Always there, even before the plans load: the stores ask for both links. */}
       <p className="text-center text-xs text-muted">
         <button type="button" onClick={() => setLegal('terms')} className="underline underline-offset-2">

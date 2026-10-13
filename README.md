@@ -48,6 +48,15 @@ In the apps: native status bar and back button, restring reminders as
 local notifications, and the sign-in link opens the app
 (`app.swingmath://auth`, allowed in Supabase's redirect URLs).
 
+### Private preview (until TestFlight)
+
+`npm run build:preview` builds the app's screens for a phone's browser into
+`dist/preview/`; the deploy publishes it at `/SwingMath/preview/`. Nothing
+links to it and it is not indexed. Open it in Safari, then Share, Add to Home
+Screen. No plugins there: no purchases (the paywall says so), reminders or
+share sheet; the export downloads the file. Its own code lives in
+`src/preview/` and behind `IS_PREVIEW`, so the store builds do not carry it.
+
 ## Going live
 
 **The website.** Set `VITE_APP_STORE_URL` and `VITE_PLAY_STORE_URL` as

@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "test:cloud": "vitest run --config vitest.cloud.config.ts",
     "build:app": "node scripts/check-app-env.mjs && tsc -b && vite build --mode app",
+    "build:preview": "vite build --mode preview --outDir dist/preview",
     "android": "npm run build:app && npx cap sync android && npx cap open android",
     "ios": "npm run build:app && npx cap sync ios && npx cap open ios",
     "app:assets": "node scripts/app-assets.mjs && capacitor-assets generate --android --ios --iconBackgroundColor \"#1c1a17\" --iconBackgroundColorDark \"#1c1a17\" --splashBackgroundColor \"#f5f3ee\" --splashBackgroundColorDark \"#141312\"",

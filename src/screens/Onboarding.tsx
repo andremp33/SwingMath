@@ -8,7 +8,7 @@ import { DEFAULT_STRINGBED, MATERIALS, type Stringbed, type StringMaterial } fro
 import type { Racket } from '../domain/types'
 import { fmt, useT } from '../i18n'
 import { GOALS, LEVELS, STYLES } from '../lib/community'
-import { IS_APP } from '../lib/platform'
+import { IS_APP, IS_NATIVE } from '../lib/platform'
 import { Button, ChoiceChips, cx, MultiChoiceChips, NumberField, Segmented, Select, TextField } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { useOpenOwned } from '../ui/MyRackets'
@@ -79,7 +79,7 @@ export function Onboarding() {
     setOnboarded(true)
     nav(to, { replace: true })
     // Off unless the offering's metadata says onboarding_paywall: true.
-    if (IS_APP)
+    if (IS_NATIVE)
       void import('../lib/purchases')
         .then((m) => m.offeringFlag('onboarding_paywall'))
         .then((on) => on && paywall('profile', { asked: true }))

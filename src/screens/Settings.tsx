@@ -8,7 +8,7 @@ import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, useT, type Lang } from '../i18n'
 import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
-import { IS_APP } from '../lib/platform'
+import { IS_APP, IS_NATIVE } from '../lib/platform'
 import { Badge, Button, NumberField, Segmented, SettingsGroup, SettingsRow } from '../ui/basics'
 import { BackTitle } from '../ui/BackTitle'
 import { useToast } from '../ui/overlay'
@@ -104,7 +104,7 @@ export function PlanGroup() {
             {t.settings.seePlans}
           </Button>
         </SettingsRow>
-        {IS_APP && <RestoreRow />}
+        {IS_NATIVE && <RestoreRow />}
       </SettingsGroup>
     )
   }
@@ -139,7 +139,7 @@ export function PlanGroup() {
           </Button>
         ) : null}
       </SettingsRow>
-      {IS_APP && !l?.lifetime && <RestoreRow />}
+      {IS_NATIVE && !l?.lifetime && <RestoreRow />}
     </SettingsGroup>
   )
 }

@@ -1,0 +1,45 @@
+/* The preview's strip sits under the iPhone's status bar, whose text is
+   always white here (black-translucent, see vite.config.ts): dark in both
+   themes, so the clock stays readable. The app moves down by its height. */
+:root {
+  --preview-h: 20px;
+}
+
+.preview-strip {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(var(--preview-h) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  background: #1c1a17;
+  color: #f5f3ee;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* The app's header: its status-bar padding goes under the strip. */
+#app-scroll > header {
+  top: var(--preview-h);
+  margin-top: var(--preview-h);
+}
+
+/* Full-screen pages (the first launch, the stringer's sheet). */
+html:not(.in-app) body {
+  padding-top: var(--preview-h);
+}
+
+/* Wide screens: no header, a sidebar. */
+@media (min-width: 1024px) {
+  #app-scroll {
+    padding-top: var(--preview-h);
+  }
+  nav[aria-label='Main'] {
+    top: var(--preview-h);
+  }
+}

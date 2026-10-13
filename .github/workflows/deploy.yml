@@ -24,7 +24,7 @@ jobs:
       - run: npm ci
       - run: npx vitest run
       - name: Build
-        run: npm run build
+        run: npm run build && npm run build:preview
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
           SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
@@ -41,9 +41,12 @@ jobs:
           VITE_OWNER_ADDRESS: ${{ vars.VITE_OWNER_ADDRESS || secrets.VITE_OWNER_ADDRESS }}
       # Shared setups load the site through the 404 page; the pages the
       # stores link to get a copy of their own, so they answer 200.
+      # The app's private preview (/preview/, nothing links to it) keeps only
+      # what the app uses: the website's pictures stay at the root.
       - run: |
           cp dist/index.html dist/404.html && touch dist/.nojekyll
           for p in privacidade termos suporte apagar-conta; do mkdir -p "dist/$p" && cp dist/index.html "dist/$p/index.html"; done
+          rm -rf dist/preview/landing dist/preview/og.png dist/preview/_headers dist/preview/_redirects
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

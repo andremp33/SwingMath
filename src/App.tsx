@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { useAccountSync } from './app/account'
-import { IS_APP } from './lib/platform'
+import { IS_APP, IS_PREVIEW } from './lib/platform'
 import { Shell, useApplyTheme } from './app/Shell'
 import { Calculator } from './screens/Calculator'
 import { NotFound } from './screens/NotFound'
@@ -81,7 +81,11 @@ const SITE_ROUTES = [
   { path: '*', element: <Navigate to="/" replace /> },
 ]
 
-const router = createBrowserRouter(IS_APP ? APP_ROUTES : SITE_ROUTES, { basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/' })
+// The app's preview sits at /preview/ on GitHub Pages, which only knows
+// that one page: its routes go after a #.
+const router = IS_PREVIEW
+  ? createHashRouter(APP_ROUTES)
+  : createBrowserRouter(IS_APP ? APP_ROUTES : SITE_ROUTES, { basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/' })
 
 export default function App() {
   useApplyTheme()

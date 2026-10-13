@@ -2,6 +2,10 @@
 /// <reference types="vite-plugin-pwa/client" />
 
 declare const __APP_VERSION__: string
+/** Which build this is (vite.config.ts), as literals the bundler can fold. */
+declare const __APP__: boolean
+declare const __NATIVE__: boolean
+declare const __PREVIEW__: boolean
 
 interface ImportMetaEnv {
   readonly VITE_RC_IOS_KEY?: string

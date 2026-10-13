@@ -4,6 +4,7 @@ import { racketSchema, setupSchema } from '../data/db'
 import type { Feel } from '../domain/feel'
 import type { Racket, Setup, Specs } from '../domain/types'
 import { fmtNum } from './format'
+import { IS_PREVIEW } from './platform'
 
 /** What travels in a share link: the setup and the frame it is built on. */
 const payloadSchema = z.object({
@@ -31,7 +32,8 @@ export function decodeShare(data: string): SharePayload | null {
   }
 }
 
-export const shareUrl = (data: string) => `${location.origin}${import.meta.env.BASE_URL}s/${data}`
+export const shareUrl = (data: string) =>
+  `${location.origin}${IS_PREVIEW ? import.meta.env.BASE_URL.replace(/preview\/$/, '') : import.meta.env.BASE_URL}s/${data}`
 
 /** Feel colours in FEEL_KEYS order, dark-theme steps (the card is dark). */
 const FEEL_COLORS = ['#d95926', '#3987e5', '#199e70', '#9085e9', '#d55181', '#c98500']

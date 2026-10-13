@@ -4,23 +4,24 @@ import { useStore } from '../data/store'
 import { currentStringings, dueForRestring, hoursOn, restringDue } from '../domain/journal'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
-import { IS_APP } from '../lib/platform'
+import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
 import { bedLabel } from '../ui/strings'
 
-const supported = () => IS_APP || (typeof window !== 'undefined' && 'Notification' in window)
-const permissionNow = (): NotificationPermission => (IS_APP ? 'default' : supported() ? Notification.permission : 'denied')
+// The app's preview in a browser has no reminders.
+const supported = () => IS_NATIVE || (!IS_PREVIEW && typeof window !== 'undefined' && 'Notification' in window)
+const permissionNow = (): NotificationPermission => (IS_NATIVE ? 'default' : supported() ? Notification.permission : 'denied')
 
 /** Notification permission for the reminders card. */
 export function useReminders() {
   const [permission, setPermission] = useState<NotificationPermission>(permissionNow)
   useEffect(() => {
-    if (IS_APP) void import('../lib/native').then((n) => n.nativeNotifyPermission(false)).then(setPermission)
+    if (IS_NATIVE) void import('../lib/native').then((n) => n.nativeNotifyPermission(false)).then(setPermission)
   }, [])
   return {
     supported: supported(),
     permission,
     enable: async () =>
-      setPermission(IS_APP ? await import('../lib/native').then((n) => n.nativeNotifyPermission(true)) : await Notification.requestPermission()),
+      setPermission(IS_NATIVE ? await import('../lib/native').then((n) => n.nativeNotifyPermission(true)) : await Notification.requestPermission()),
   }
 }
 
@@ -35,7 +36,7 @@ export function eveningOf(ms: number): Date {
 }
 
 async function notify(title: string, body: string, tag: string) {
-  if (IS_APP) {
+  if (IS_NATIVE) {
     // A stable number per stringing, so a reminder is not shown twice.
     return import('../lib/native').then((n) => n.notifyNative(numberFor(tag), title, body))
   }
@@ -70,7 +71,7 @@ export function useRestringReminders(): number {
   const key = fresh.map((s) => s.id).join()
 
   const now = Date.now()
-  const plan = IS_APP && ready
+  const plan = IS_NATIVE && ready
     ? currentStringings(stringings!)
         .filter((s) => s.ownedId && inPlay(s))
         .map((s) => ({ s, at: eveningOf(restringDue(s, sessions!, hoursPerWeek, now)) }))
@@ -78,7 +79,7 @@ export function useRestringReminders(): number {
     : []
   const planKey = plan.map((x) => `${x.s.id}@${x.at.getTime()}`).join()
   useEffect(() => {
-    if (!IS_APP || !ready) return
+    if (!IS_NATIVE || !ready) return
     const name = (id?: string) => owned!.find((o) => o.id === id)?.name ?? ''
     void import('../lib/native')
       .then((n) =>
@@ -99,7 +100,7 @@ export function useRestringReminders(): number {
   }, [ready, planKey, lang])
 
   useEffect(() => {
-    if (!key || !supported() || (!IS_APP && Notification.permission !== 'granted')) return
+    if (!key || !supported() || (!IS_NATIVE && Notification.permission !== 'granted')) return
     for (const s of fresh) {
       notify(t.journal.notifyTitle, fmt(t.journal.notifyBody, { label: s.label, h: fmtNum(hoursOn(s.id, sessions ?? []), 1, lang), date: fmtDate(s.date, lang) }), s.id).catch(() => {})
     }

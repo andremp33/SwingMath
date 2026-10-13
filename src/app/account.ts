@@ -4,7 +4,7 @@ import { db, ensureOwned } from '../data/db'
 import { accountProActive, useStore, type AccountPro } from '../data/store'
 import { enqueueAll, supabaseRemote, syncOnce, SyncError, trackChanges } from '../data/sync'
 import { cloudConfigured, getCloud } from '../lib/cloud'
-import { IS_APP } from '../lib/platform'
+import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
 
 /**
  * Optional account: sign-in with a code by email, the subscription the
@@ -32,7 +32,7 @@ async function client() {
 
 export async function sendCode(email: string) {
   const c = await client()
-  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: IS_APP ? 'app.swingmath://auth' : `${location.origin}${import.meta.env.BASE_URL}perfil` } }).catch(() => ({ error: { status: 0 } }))
+  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: IS_NATIVE ? 'app.swingmath://auth' : `${location.origin}${import.meta.env.BASE_URL}${IS_PREVIEW ? '' : 'perfil'}` } }).catch(() => ({ error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
 }
 
@@ -127,7 +127,7 @@ const soon = () => {
 
 /** Store apps: the RevenueCat user follows the account. */
 const identifyStore = (userId: string | null) => {
-  if (IS_APP) void import('../lib/purchases').then((m) => m.identify(userId))
+  if (IS_NATIVE) void import('../lib/purchases').then((m) => m.identify(userId))
 }
 
 async function onSession(session: Session | null) {
