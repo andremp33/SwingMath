@@ -84,7 +84,9 @@ test.describe('Pro targets', () => {
     // Library values are unstrung, so Nadal's strung 337 g loses the 17 g of strings.
     await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('320')
     await expect(to).toContainText('Medida com cordas; convertemos para sem cordas')
-    await expect(to.getByRole('link', { name: 'Fonte: Tennis Warehouse' })).toHaveAttribute('href', /BARORreview/)
+    // Sources are described, never named or linked.
+    await expect(to).toContainText('Medida com cordas por uma fonte independente de confiança')
+    await expect(to.getByRole('link')).toHaveCount(0)
     await a11y(page)
   })
 

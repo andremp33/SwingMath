@@ -130,9 +130,6 @@ function ProList({ selected, fromStrung, onPick }: { selected: string; fromStrun
               {fmt(t.match.converted, { from: picked.strung ? t.match.strungShort : t.match.unstrungShort, to: fromStrung ? t.match.strungShort : t.match.unstrungShort })}
             </p>
           )}
-          <a href={picked.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
-            {fmt(t.match.proSource, { source: picked.source })}
-          </a>
         </div>
       )}
     </div>

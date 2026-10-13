@@ -288,7 +288,8 @@ export function Calculator() {
             <SpecTable rows={resultRows} />
             {catalog && <p className="mt-2 text-xs text-muted">{t.calc.catalogNote}</p>}
           </Card>
-          <Card className="order-4 xl:order-none">
+          {/* Phones have the feel in the result bar, larger and always at hand. */}
+          <Card className="order-4 hidden lg:block xl:order-none">
             <CardTitle info={<InfoTip title={t.calc.feel}>{t.calc.feelHint}</InfoTip>}>{t.calc.feel}</CardTitle>
             <FeelRings feel={f} />
             <FeelSource racket={racket} />
@@ -300,7 +301,7 @@ export function Calculator() {
       </div>
 
       {/* Phones: the result (and, opened, the feel) follows you while you move the sliders. */}
-      <ResultBar result={result} base={play} feel={f} feelBase={racketFeel(racket, noLead?.result ?? result, config.strings, masses)} open={barOpen} onToggle={toggleBar} />
+      <ResultBar racket={racket} result={result} base={play} feel={f} feelBase={racketFeel(racket, noLead?.result ?? result, config.strings, masses)} open={barOpen} onToggle={toggleBar} />
       <div className={cx('lg:hidden', barOpen ? 'h-44' : 'h-12')} />
 
       <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
@@ -413,17 +414,26 @@ const writeOpen = (k: string, v: boolean) => {
 
 /** The bar above the tabs: the four numbers; a tap opens the feel above
  *  them, with how much the lead moved each one. */
-function ResultBar({ result, base, feel: f, feelBase, open, onToggle }: { result: Specs; base: Specs; feel: Feel; feelBase: Feel; open: boolean; onToggle: () => void }) {
+function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: { racket: Racket; result: Specs; base: Specs; feel: Feel; feelBase: Feel; open: boolean; onToggle: () => void }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   return (
     <div className="result-bar fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 backdrop-blur lg:hidden">
       {open && (
-        <ul id="result-bar-feel" aria-label={t.calc.feel} className="mx-auto grid max-w-lg grid-cols-3 gap-x-2 gap-y-2 border-b border-border pb-2 pt-3">
-          {FEEL_KEYS.map((k) => (
-            <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} />
-          ))}
-        </ul>
+        <div id="result-bar-feel" className="mx-auto max-w-lg border-b border-border pb-2">
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-xs font-medium text-muted">{t.calc.feel}</span>
+            <InfoTip title={t.calc.feel}>
+              {t.calc.feelHint}
+              <FeelSource racket={racket} />
+            </InfoTip>
+          </div>
+          <ul aria-label={t.calc.feel} className="grid grid-cols-3 gap-x-2 gap-y-2">
+            {FEEL_KEYS.map((k) => (
+              <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} />
+            ))}
+          </ul>
+        </div>
       )}
       <button
         type="button"
@@ -688,18 +698,11 @@ function AddPositionSheet({ open, onClose, onAdded }: { open: boolean; onClose: 
   )
 }
 
-/** Where the feel starts: the frame's playtest, with a link to it. */
+/** Where the feel starts: independent playtests of the frame, or of its closest sibling. */
 function FeelSource({ racket }: { racket: Racket }) {
   const t = useT()
   const rev = reviewOf(racket)
   if (!rev) return <p className="mt-3 text-xs text-muted">{t.calc.feelSpecsOnly}</p>
   const like = rev.key.split('|')
-  return (
-    <p className="mt-3 text-xs text-muted">
-      {rev.own ? t.calc.feelFrom : fmt(t.calc.feelFromLike, { model: `${like[1]} ${like[2]}`.trim() })}{' '}
-      <a href={rev.review.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
-        {t.calc.feelReview}
-      </a>
-    </p>
-  )
+  return <p className="mt-3 text-xs text-muted">{rev.own ? t.calc.feelFrom : fmt(t.calc.feelFromLike, { model: `${like[1]} ${like[2]}`.trim() })}</p>
 }

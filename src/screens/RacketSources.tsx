@@ -42,11 +42,6 @@ export function RacketSources({ racket }: { racket: Racket }) {
           </p>
           <p className="text-muted">{t.sources.measuredHow}</p>
           {racket.approxWeight && <p className="text-muted">{t.calc.approxNote}</p>}
-          {racket.source && (
-            <a href={racket.source} target="_blank" rel="noopener noreferrer" className={link}>
-              {t.calc.sourceLink}
-            </a>
-          )}
         </section>
       )}
 
