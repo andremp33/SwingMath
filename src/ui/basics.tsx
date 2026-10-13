@@ -128,6 +128,7 @@ export function TextField({
   maxLength,
   autoFocus,
   hint,
+  type = 'text',
 }: {
   label: string
   value: string
@@ -138,6 +139,7 @@ export function TextField({
   autoFocus?: boolean
   /** A line under the field, when there is no error to show. */
   hint?: string
+  type?: 'text' | 'password'
 }) {
   const id = useId()
   return (
@@ -145,6 +147,7 @@ export function TextField({
       <Label htmlFor={id}>{label}</Label>
       <input
         id={id}
+        type={type}
         className={cx(inputBase, error ? 'border-danger' : 'border-border-input')}
         value={value}
         placeholder={placeholder}

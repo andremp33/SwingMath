@@ -4,6 +4,7 @@ import { racketSchema, setupSchema } from '../data/db'
 import { MIN_RESULT_SESSIONS, SESSION_RATINGS, type SessionRating } from '../domain/journal'
 import type { Racket, SetupConfig, Specs } from '../domain/types'
 import { cloudConfigured, getCloud } from './cloud'
+import { hasBlockedWords } from './wordFilter'
 
 /** Community data: medians of frames players measured, and setups they
  *  published. Reading needs no account; writing does. */
@@ -209,6 +210,13 @@ async function published(cl: SupabaseClient, setupRef: string): Promise<Publishe
   return (data as Published | null) ?? null
 }
 
+/** A setup's name or signature with an insult in it is not published. */
+export class BlockedWordsError extends Error {
+  constructor() {
+    super('blocked words')
+  }
+}
+
 /** A recipe hidden by reports cannot be published again: that would undo moderation. */
 export class HiddenRecipeError extends Error {
   constructor() {
@@ -243,6 +251,7 @@ export interface PublishInput {
 /** Publishes a saved setup, or updates my earlier copy of it (found by
  *  setupRef). Updates go by id: upsert and per-column grants do not mix. */
 export async function publishSetup(p: PublishInput): Promise<'created' | 'updated' | 'moved'> {
+  if (hasBlockedWords(p.name) || hasBlockedWords(p.author)) throw new BlockedWordsError()
   const cl = await getCloud()!
   const { racketId, baseMode, measured, accessories, leadG, extra, grip, strings } = p.config
   const { createdAt: _c, updatedAt: _u, ...frame } = p.racket

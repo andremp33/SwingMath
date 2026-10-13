@@ -196,12 +196,21 @@ function RestoreRow() {
 }
 
 function DataGroup() {
+  const hiddenAuthors = useStore((s) => s.hiddenAuthors)
+  const showAllAuthors = useStore((s) => s.showAllAuthors)
   const t = useT()
   const toast = useToast()
   const s = useStore()
   const fileRef = useRef<HTMLInputElement>(null)
   return (
     <SettingsGroup title={t.settings.data} info={<InfoTip title={t.settings.data}>{t.settings.dataHint}</InfoTip>}>
+      {hiddenAuthors.length > 0 && (
+        <SettingsRow label={fmt(t.community.hiddenCount, { n: hiddenAuthors.length })}>
+          <Button variant="secondary" size="sm" onClick={showAllAuthors}>
+            {t.community.showAgain}
+          </Button>
+        </SettingsRow>
+      )}
       <SettingsRow label={t.settings.export} hint={t.settings.exportHint}>
         <Button
           variant="secondary"

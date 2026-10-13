@@ -22,7 +22,7 @@ npx playwright test -c playwright.cloud.config.ts   # sign-in, sync, community, 
 - `src/domain/` — physics, sweet spot, pendulum swingweight, strings, grip, arm comfort, journal, solvers (pure, tested)
 - `src/data/` — racket library, local database (IndexedDB), sync with the account
 - `src/screens/` — app screens; `/sobre`, `/privacidade`, `/termos` are the site pages
-- `supabase/` — database schema and rules (`migrations/`), the Lemon Squeezy and RevenueCat webhooks (`functions/ls-webhook`, `functions/rc-webhook`), sign-in email
+- `supabase/` — database schema and rules (`migrations/`), the Lemon Squeezy and RevenueCat webhooks (`functions/ls-webhook`, `functions/rc-webhook`), account deletion (`functions/delete-account`), sign-in email
 - `.github/workflows/deploy.yml` — builds and publishes to GitHub Pages on every push to `main`
 - `.env.example` — store, accounts and contact settings
 
@@ -69,11 +69,14 @@ through the App Store and Google Play, via RevenueCat. The apps never link to
 the web checkout.
 
 1. In App Store Connect and Google Play Console, create one subscription
-   group with two products (monthly and annual) and a 7-day free trial
-   (iOS: an introductory offer; Play: a free-trial offer on each base plan).
+   group with two products (monthly and annual), a 7-day free trial on the
+   annual one (iOS: an introductory offer; Play: a free-trial offer on its
+   base plan), and a one-time (non-consumable) lifetime product.
 2. In RevenueCat, add both apps (`app.swingmath`), import the products, make
-   an entitlement `pro` with both products, and an offering `default` (set
-   as current) with the `$rc_monthly` and `$rc_annual` packages.
+   an entitlement `pro` with all three, and an offering `default` (set as
+   current) with the `$rc_annual`, `$rc_lifetime` and `$rc_monthly`
+   packages. Its metadata may set `onboarding_paywall: true` to show the
+   plans after the first-launch walkthrough (off unless set).
 3. Put the public SDK keys in `.env.local` before `npm run android` /
    `npm run ios`: `VITE_RC_IOS_KEY=appl_...` and `VITE_RC_ANDROID_KEY=goog_...`.
 4. So Pro follows the account to the website and other devices:
@@ -86,3 +89,32 @@ the web checkout.
 
 Signed in, the RevenueCat user is the account id; a purchase made signed out
 moves to the account when the player signs in.
+
+**Deleting an account.** `npx supabase functions deploy delete-account` (it
+keeps JWT verification: the player's own token is checked). It uses the
+same `RC_SECRET_KEY` to delete the RevenueCat customer, then deletes the
+user, and the database removes their data by cascade. Without the key it
+refuses (locally, `supabase/config.toml` lets it skip RevenueCat). Until the
+function is deployed the app falls back to deleting in the database alone.
+Deleting an account does not cancel a store subscription; the app says so
+and links to the store's page.
+
+**Email (custom SMTP).** The sign-in code is an email, and Supabase's
+built-in sender is only for testing (a few emails an hour, to team
+addresses). In Supabase → Authentication → Emails → SMTP settings, fill in
+a provider's host, port, user and password (for example Brevo, Resend,
+Postmark or Amazon SES, with SPF and DKIM set on your domain), then set the
+templates as in step 1 of the accounts above. Name the provider in the
+privacy policy if you want to be specific.
+
+**The stores' review account.** Apple and Google reviewers cannot receive
+our sign-in emails, so one account signs in with a password instead:
+
+1. In Supabase → Authentication → Users → Add user, create it with an email
+   you control (for example `review@yourdomain`), a strong password, and
+   "Auto confirm user" on.
+2. Set `VITE_REVIEW_EMAIL` to that email for the app builds. Only that email
+   shows the password field; everyone else signs in with a code.
+3. Give the email and password to the reviewers in App Store Connect (App
+   Review Information) and Play Console (App access). Keep the password out
+   of the repository.

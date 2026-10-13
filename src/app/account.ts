@@ -1,4 +1,4 @@
-import type { Session } from '@supabase/supabase-js'
+import { FunctionsHttpError, type Session } from '@supabase/supabase-js'
 import { useEffect } from 'react'
 import { db, ensureOwned } from '../data/db'
 import { accountProActive, useStore, type AccountPro } from '../data/store'
@@ -32,13 +32,25 @@ async function client() {
 
 export async function sendCode(email: string) {
   const c = await client()
-  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: IS_APP ? 'app.swingmath://auth' : `${location.origin}${import.meta.env.BASE_URL}settings` } }).catch(() => ({ error: { status: 0 } }))
+  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: IS_APP ? 'app.swingmath://auth' : `${location.origin}${import.meta.env.BASE_URL}perfil` } }).catch(() => ({ error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
 }
 
 export async function verifyCode(email: string, code: string) {
   const c = await client()
   const { error } = await c.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' }).catch(() => ({ error: { status: 0 } }))
+  if (error) throw new AccountError(kindOf(error))
+}
+
+/** The App Store and Google Play reviewers' account signs in with a
+ *  password (they cannot receive our email); nobody else can. */
+export const REVIEW_EMAIL = ((import.meta.env.VITE_REVIEW_EMAIL as string | undefined) || '').trim().toLowerCase() || null
+export const isReviewEmail = (email: string) => !!REVIEW_EMAIL && email.trim().toLowerCase() === REVIEW_EMAIL
+
+export async function signInWithPassword(email: string, password: string) {
+  if (!isReviewEmail(email)) throw new AccountError('invalid')
+  const c = await client()
+  const { error } = await c.auth.signInWithPassword({ email: email.trim(), password }).catch(() => ({ error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
 }
 
@@ -52,8 +64,15 @@ export async function signOut() {
 /** Deletes the account and its cloud data. This device keeps its own copy. */
 export async function deleteAccount() {
   const c = await client()
-  const { error } = await c.rpc('delete_account')
-  if (error) throw new AccountError(kindOf(error))
+  // The function also deletes the RevenueCat customer. Until it is
+  // deployed (it answers 404), the database deletes the account itself.
+  const { error } = await c.functions.invoke('delete-account', { method: 'POST' })
+  if (error) {
+    const notThere = error instanceof FunctionsHttpError && (error.context as Response).status === 404
+    if (!notThere) throw new AccountError(error instanceof FunctionsHttpError ? 'invalid' : 'offline')
+    const fallback = await c.rpc('delete_account')
+    if (fallback.error) throw new AccountError(kindOf(fallback.error))
+  }
   await c.auth.signOut({ scope: 'local' })
   store().setAccount(null)
   store().setAccountPro(null)

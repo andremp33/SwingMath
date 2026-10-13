@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { env } from '../cloud/env'
+import { env, REVIEW_EMAIL } from '../cloud/env'
 
 const admin = createClient(env.url, env.serviceKey, { auth: { persistSession: false } })
 const MAILPIT = 'http://127.0.0.1:54324'
@@ -141,6 +141,23 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   // Reporting needs an account.
   await row.getByRole('button', { name: /Denunciar/ }).click()
   await expect(visitor.getByText('Precisas de conta para isto.')).toBeVisible()
+  // Hiding an author needs none, and keeps their setups out of sight.
+  await row.getByRole('button', { name: 'Esconder este autor: Ana' }).click()
+  await expect(visitor.getByText('Não vais ver mais setups deste autor.')).toBeVisible()
+  await expect(card.getByRole('listitem').filter({ hasText: 'Plow extra' })).toHaveCount(0)
+})
+
+test('a name with an insult is not published', async ({ browser }) => {
+  const author = await open(browser)
+  await signIn(author, emailOf('rude'))
+  await saveSetup(author, `Setup de merda ${stamp}`)
+  await author.goto('/setups')
+  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Potência' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('O nome ou a assinatura têm palavras que não publicamos.', { exact: false })).toBeVisible()
+  expect((await admin.from('public_setups').select('id').eq('name', `Setup de merda ${stamp}`)).data).toEqual([])
 })
 
 /** No WCAG A/AA problems inside one part of the page. */
@@ -253,6 +270,24 @@ test('a setup moved to another racket moves its recipe; a hidden one stays put',
   await expect(author.getByText('Este setup foi escondido depois de denúncias', { exact: false })).toBeVisible()
   const still = await admin.from('public_setups').select('id, hidden').eq('name', name)
   expect(still.data).toEqual([{ id: after.data![0].id, hidden: true }])
+})
+
+test('the review account signs in with a password; nobody else sees the field', async ({ browser }) => {
+  // A throwaway password for the local stack, made here, never a real one.
+  const password = `review-${stamp}-${Math.random().toString(36).slice(2)}`
+  const { data } = await admin.auth.admin.createUser({ email: REVIEW_EMAIL, password, email_confirm: true })
+  try {
+    const page = await open(browser)
+    const card = await accountCard(page)
+    await card.getByLabel('Email').fill(emailOf('someone'))
+    await expect(card.getByLabel('Palavra-passe')).toHaveCount(0)
+    await card.getByLabel('Email').fill(REVIEW_EMAIL)
+    await card.getByLabel('Palavra-passe').fill(password)
+    await card.getByRole('button', { name: 'Entrar' }).click()
+    await expect(card.getByText(`Entraste como ${REVIEW_EMAIL}`)).toBeVisible()
+  } finally {
+    if (data.user) await admin.auth.admin.deleteUser(data.user.id)
+  }
 })
 
 test('measurements: the median shows from 3 players, then account deletion', async ({ browser }) => {

@@ -100,6 +100,8 @@ interface State {
   profile: Profile
   /** The first-launch walkthrough has been done or skipped (store apps). */
   onboarded: boolean
+  /** Community authors the player chose not to see (their user ids). */
+  hiddenAuthors: string[]
   account: Account | null
   accountPro: AccountPro | null
   sync: SyncState
@@ -123,6 +125,9 @@ interface State {
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
+  hideAuthor: (userId: string) => void
+  showAuthor: (userId: string) => void
+  showAllAuthors: () => void
   setAccount: (a: Account | null) => void
   setAccountPro: (p: AccountPro | null) => void
   setSync: (s: Partial<SyncState>) => void
@@ -148,6 +153,7 @@ export const useStore = create<State>()(
       reminded: [],
       profile: {},
       onboarded: false,
+      hiddenAuthors: [],
       account: null,
       accountPro: null,
       sync: { userId: null, cursor: null },
@@ -178,6 +184,9 @@ export const useStore = create<State>()(
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
       setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p } })),
       setOnboarded: (onboarded) => set({ onboarded }),
+      hideAuthor: (id) => set((s) => ({ hiddenAuthors: [...new Set([...s.hiddenAuthors, id])] })),
+      showAuthor: (id) => set((s) => ({ hiddenAuthors: s.hiddenAuthors.filter((x) => x !== id) })),
+      showAllAuthors: () => set({ hiddenAuthors: [] }),
       markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),
     }),
     {

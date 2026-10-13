@@ -1,5 +1,5 @@
 import { scrollToTop } from '../app/Shell'
-import { ArrowRight, Flag, RefreshCw, Send, Trash2, Upload, Users } from 'lucide-react'
+import { ArrowRight, EyeOff, Flag, RefreshCw, Send, Trash2, Upload, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useOwned, useSessions, useSetups, useStringings } from '../data/hooks'
 import { useStore } from '../data/store'
@@ -12,6 +12,7 @@ import {
   countCopy,
   deletePublicSetup,
   measurementStats,
+  BlockedWordsError,
   GOALS,
   HiddenRecipeError,
   LEVELS,
@@ -86,6 +87,9 @@ export function CommunityCard({ racket }: { racket: Racket }) {
   const [version, setVersion] = useState(0)
   const myGoal = useStore((s) => s.profile.goals?.[0]) ?? 'all'
   const [goal, setGoal] = useState<Goal | 'all'>(myGoal)
+  const hidden = useStore((s) => s.hiddenAuthors)
+  const hideAuthor = useStore((s) => s.hideAuthor)
+  const showAuthor = useStore((s) => s.showAuthor)
   const [all, setAll] = useState(false)
 
   useEffect(() => {
@@ -109,7 +113,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
     try {
       await fn()
     } catch (err) {
-      toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : t.community.error)
+      toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : err instanceof BlockedWordsError ? t.community.blockedWords : t.community.error)
     }
   }
 
@@ -134,7 +138,8 @@ export function CommunityCard({ racket }: { racket: Racket }) {
       setVersion((v) => v + 1)
     })
 
-  const list = setups ?? []
+  // Authors the player hid stay out of sight on this phone.
+  const list = (setups ?? []).filter((p) => !hidden.includes(p.user_id))
   const goalsHere = GOALS.filter((g) => list.some((p) => p.goals.includes(g)))
   // The player's goal, if this frame has recipes for it.
   const active = goal !== 'all' && goalsHere.includes(goal) ? goal : 'all'
@@ -267,14 +272,24 @@ export function CommunityCard({ racket }: { racket: Racket }) {
                         })}
                       />
                     ) : (
-                      <IconButton
-                        icon={Flag}
-                        label={`${t.community.report} ${p.name}`}
-                        onClick={signedIn(async () => {
-                          await reportSetup(p.id)
-                          toast(t.community.reported)
-                        })}
-                      />
+                      <>
+                        <IconButton
+                          icon={EyeOff}
+                          label={`${t.community.hideAuthor}: ${p.partner ?? p.author ?? t.community.anon}`}
+                          onClick={() => {
+                            hideAuthor(p.user_id)
+                            toast(t.community.authorHidden, { label: t.common.undo, run: () => showAuthor(p.user_id) })
+                          }}
+                        />
+                        <IconButton
+                          icon={Flag}
+                          label={`${t.community.report} ${p.name}`}
+                          onClick={signedIn(async () => {
+                            await reportSetup(p.id)
+                            toast(t.community.reported)
+                          })}
+                        />
+                      </>
                     )}
                   </div>
                 </li>
@@ -380,7 +395,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
           setOpen(false)
           setPublishedAs((id) => id ?? 'yes')
         } catch (err) {
-          toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : t.community.error)
+          toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : err instanceof BlockedWordsError ? t.community.blockedWords : t.community.error)
         } finally {
           setBusy(false)
         }

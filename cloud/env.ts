@@ -8,3 +8,6 @@ export const env = {
     process.env.SUPABASE_TEST_SERVICE_KEY ??
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU',
 }
+
+/** The stores' review account in the cloud tests (local Supabase only). */
+export const REVIEW_EMAIL = 'review@example.test'

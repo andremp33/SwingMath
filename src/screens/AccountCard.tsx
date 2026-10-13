@@ -1,9 +1,10 @@
-import { LogOut, RefreshCw, Trash2, UserRound } from 'lucide-react'
+import { ExternalLink, LogOut, RefreshCw, Trash2, UserRound } from 'lucide-react'
 import { useState } from 'react'
-import { AccountError, deleteAccount, sendCode, signOut, syncNow, verifyCode } from '../app/account'
+import { AccountError, deleteAccount, isReviewEmail, sendCode, signInWithPassword, signOut, syncNow, verifyCode } from '../app/account'
 import { accountProActive, useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { cloudConfigured } from '../lib/cloud'
+import { IS_APP } from '../lib/platform'
 import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
@@ -48,6 +49,7 @@ function SignInForm() {
   const toast = useToast()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
+  const [password, setPassword] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
@@ -69,6 +71,8 @@ function SignInForm() {
       setSent(true)
     })
 
+  // The stores' reviewers: a password, only for their one email.
+  const review = isReviewEmail(email)
   if (!sent) {
     return (
       <form
@@ -79,16 +83,31 @@ function SignInForm() {
             setError(t.account.errors.email)
             return
           }
-          void send()
+          if (review)
+            void run(async () => {
+              await signInWithPassword(email, password)
+              toast(t.account.signedIn)
+            })
+          else void send()
         }}
       >
         <p className="text-sm text-muted">{t.account.intro}</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <TextField label={t.account.email} value={email} onChange={setEmail} error={error} placeholder="nome@exemplo.com" maxLength={120} />
-          <Button type="submit" variant="primary" icon={UserRound} loading={busy} disabled={!email.trim()} className="h-11">
-            {t.account.sendCode}
-          </Button>
+          {!review && (
+            <Button type="submit" variant="primary" icon={UserRound} loading={busy} disabled={!email.trim()} className="h-11">
+              {t.account.sendCode}
+            </Button>
+          )}
         </div>
+        {review && (
+          <>
+            <TextField label={t.account.password} hint={t.account.passwordHint} type="password" value={password} onChange={setPassword} maxLength={200} />
+            <Button type="submit" variant="primary" loading={busy} disabled={!password}>
+              {t.account.signIn}
+            </Button>
+          </>
+        )}
       </form>
     )
   }
@@ -196,6 +215,8 @@ function SignedIn() {
 export function AccountEnd() {
   const t = useT()
   const toast = useToast()
+  const license = useStore((s) => s.license)
+  const storeSub = license?.provider === 'store' && license.status === 'active' && !license.lifetime
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState(false)
   return (
@@ -243,6 +264,25 @@ export function AccountEnd() {
         }
       >
         <p className="text-sm">{t.account.deleteBody}</p>
+        {/* Deleting the account leaves a store subscription running. */}
+        {IS_APP && (
+          <div className="mt-3 space-y-2 rounded-md bg-surface-2 px-3 py-2.5 text-sm">
+            <p>{t.account.deleteStore}</p>
+            {storeSub && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={ExternalLink}
+                onClick={async () => {
+                  const url = await import('../lib/purchases').then((m) => m.manageUrl()).catch(() => null)
+                  if (url) window.open(url, '_blank')
+                }}
+              >
+                {t.account.manageStore}
+              </Button>
+            )}
+          </div>
+        )}
       </Sheet>
     </SettingsGroup>
   )

@@ -21,4 +21,5 @@ interface ImportMetaEnv {
   readonly VITE_SUPPORT_EMAIL?: string
   readonly VITE_OWNER_NAME?: string
   readonly VITE_OWNER_ADDRESS?: string
+  readonly VITE_REVIEW_EMAIL?: string
 }
