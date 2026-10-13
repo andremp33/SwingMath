@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useT } from '../i18n'
 import { cx } from './basics'
 
@@ -19,6 +19,7 @@ export function Sheet({
   footer?: ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
   const t = useT()
   useEffect(() => {
     const d = ref.current
@@ -30,9 +31,11 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
+      // React passes a nested sheet's close up to this one (a picker inside a
+      // form): only this dialog's own close closes it.
+      onClose={(e) => e.target === ref.current && onClose()}
       onClick={(e) => e.target === ref.current && onClose()}
-      aria-labelledby="sheet-title"
+      aria-labelledby={titleId}
       className={cx(
         'm-0 mt-auto w-full max-w-none rounded-t-lg border border-border bg-surface p-0 text-text shadow-pop backdrop:bg-black/60',
         'md:m-auto md:max-w-lg md:rounded-lg',
@@ -41,7 +44,7 @@ export function Sheet({
       {open && (
         <div className="flex max-h-[85dvh] flex-col">
           <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-            <h2 id="sheet-title" className="text-lg font-semibold">
+            <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
             <button type="button" onClick={onClose} aria-label={t.common.close} className="rounded-full p-2 text-muted hover:bg-surface-2 hover:text-text">

@@ -26,6 +26,28 @@ async function logSession(page: Page, minutes: number, overall?: number) {
 }
 
 test.describe('F14 journal', () => {
+  test('F14-E3 picking another model keeps the new racket open', async ({ page }) => {
+    await start(page, { path: '/diario' })
+    await page.getByRole('button', { name: 'Nova raquete' }).first().click()
+    const d = page.getByRole('dialog', { name: 'Nova raquete' })
+    // Closing the model picker (Esc) leaves the racket sheet open.
+    await d.getByRole('button', { name: /Babolat Pure Aero 98/ }).click()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Modelo' })).toBeHidden()
+    await expect(d).toBeVisible()
+    // So does choosing a model, which then shows in the sheet.
+    await d.getByRole('button', { name: /Babolat Pure Aero 98/ }).click()
+    const pick = page.getByRole('dialog', { name: 'Modelo' })
+    await pick.getByRole('searchbox').fill('prestige')
+    await pick.getByRole('button', { name: 'Head Prestige MP (2023)' }).click()
+    await expect(pick).toBeHidden()
+    await expect(d.getByRole('button', { name: /Head Prestige MP/ })).toBeVisible()
+    await d.getByLabel('Nome', { exact: true }).fill('Prestige de jogo')
+    await d.getByRole('button', { name: 'Guardar' }).click()
+    await expect(d).toBeHidden()
+    await expect(page.getByRole('region', { name: 'As tuas raquetes' })).toContainText('Head Prestige MP')
+  })
+
   test('F14-H1 first time: add a racket, then log a session', async ({ page }) => {
     await start(page, { path: '/diario' })
     await expect(page.getByText('Adiciona a tua raquete')).toBeVisible()
