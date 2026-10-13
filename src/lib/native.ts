@@ -1,5 +1,7 @@
 import { App } from '@capacitor/app'
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { Share } from '@capacitor/share'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { getCloud } from './cloud'
@@ -55,4 +57,12 @@ export async function notifyNative(id: number, title: string, body: string) {
 export async function nativeNotifyPermission(ask: boolean): Promise<NotificationPermission> {
   const r = ask ? await LocalNotifications.requestPermissions() : await LocalNotifications.checkPermissions()
   return r.display === 'granted' ? 'granted' : r.display === 'denied' ? 'denied' : 'default'
+}
+
+/** Writes a text file to the app's cache and opens the share sheet with it,
+ *  so the player can save it to Files or send it anywhere. */
+export async function shareFile(name: string, text: string, title: string) {
+  const { uri } = await Filesystem.writeFile({ path: name, data: text, directory: Directory.Cache, encoding: Encoding.UTF8 })
+  // Closing the sheet without choosing rejects; that is not an error.
+  await Share.share({ title, files: [uri] }).catch(() => {})
 }

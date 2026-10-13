@@ -82,7 +82,7 @@ export function Settings() {
           <div className="space-y-3 py-3.5 text-sm">
             <p className="text-muted">{t.settings.aboutText}</p>
             <nav aria-label={t.settings.about} className="flex flex-wrap gap-x-5 gap-y-2 font-semibold text-accent-text">
-              <Link to="/sobre">SwingMath</Link>
+              {!IS_APP && <Link to="/sobre">SwingMath</Link>}
               <Link to="/privacidade">{t.settings.privacy}</Link>
               <Link to="/termos">{t.settings.terms}</Link>
             </nav>
@@ -192,10 +192,14 @@ function DataGroup() {
           icon={Download}
           aria-label={t.settings.export}
           onClick={async () => {
-            const blob = new Blob([JSON.stringify(await exportAll(), null, 2)], { type: 'application/json' })
+            const json = JSON.stringify(await exportAll(), null, 2)
+            const name = `swingmath-${new Date().toISOString().slice(0, 10)}.json`
+            // A download link does nothing inside the app: hand the file to the share sheet.
+            if (IS_APP) return import('../lib/native').then((n) => n.shareFile(name, json, t.settings.export))
+            const blob = new Blob([json], { type: 'application/json' })
             const a = document.createElement('a')
             a.href = URL.createObjectURL(blob)
-            a.download = `swingmath-${new Date().toISOString().slice(0, 10)}.json`
+            a.download = name
             a.click()
             URL.revokeObjectURL(a.href)
           }}

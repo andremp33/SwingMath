@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { useAccountSync } from './app/account'
+import { IS_APP } from './lib/platform'
 import { Shell, useApplyTheme } from './app/Shell'
 import { Calculator } from './screens/Calculator'
 import { NotFound } from './screens/NotFound'
@@ -26,7 +27,8 @@ const SharedSetup = lazy(() => import('./screens/SharedSetup').then((m) => ({ de
 const L = (el: ReactNode) => <Suspense fallback={null}>{el}</Suspense>
 
 const router = createBrowserRouter([
-  { path: '/sobre', element: L(<Landing />) },
+  // The app has no website pages: its about page is the calculator.
+  { path: '/sobre', element: IS_APP ? <Navigate to="/" replace /> : L(<Landing />) },
   { path: '/privacidade', element: L(<LegalPage kind="privacy" />) },
   { path: '/termos', element: L(<LegalPage kind="terms" />) },
   { path: '/ficha/:id', element: L(<SetupSheet />) },

@@ -320,7 +320,6 @@ function StorePanel({ onDone }: { onDone?: () => void }) {
       <Button variant="ghost" className="w-full" loading={busy === 'restore'} disabled={busy !== null} onClick={() => run('restore')}>
         {t.pro.restore}
       </Button>
-      <p className="text-xs text-muted">{t.pro.webHint}</p>
     </div>
   )
 }

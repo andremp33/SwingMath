@@ -37,6 +37,9 @@ jobs:
           VITE_PRICE_ANNUAL: ${{ vars.VITE_PRICE_ANNUAL || secrets.VITE_PRICE_ANNUAL }}
           VITE_PRICE_CURRENCY: ${{ vars.VITE_PRICE_CURRENCY || secrets.VITE_PRICE_CURRENCY }}
           VITE_TRIAL_DAYS: ${{ vars.VITE_TRIAL_DAYS || secrets.VITE_TRIAL_DAYS }}
+          # The beta is now opt-in; the website keeps it until it becomes the
+          # app's shop window.
+          VITE_PRO_BETA: ${{ vars.VITE_PRO_BETA || 'true' }}
           # The project's URL and anon key are public by design (they ship in
           # the site's JavaScript); the database rules protect the data.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL || 'https://cplvbecwurnzutxxsngu.supabase.co' }}

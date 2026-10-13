@@ -41,19 +41,20 @@ export function Match() {
   const t = useT()
   const pro = useStore(isPro)
   const left = FREE_PRO_RUNS - useStore((s) => s.freeRunsUsed)
-  const badge = !pro && <Badge tone="pro">{left > 0 ? fmt(t.pro.freeLeft, { n: left }) : 'Pro'}</Badge>
+  // The free uses are shared by both modes, so the count shows once.
+  const badge = !pro && <Badge tone="pro">{left <= 0 ? 'Pro' : left === 1 ? t.pro.freeUseOne : fmt(t.pro.freeUses, { n: left })}</Badge>
   const [mode, setMode] = useState<Mode>('smart')
   return (
     <>
-      <PageTitle>{t.match.title}</PageTitle>
+      <PageTitle action={badge}>{t.match.title}</PageTitle>
       <div className="mb-4 max-w-md">
         <Segmented
           label={t.match.title}
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'smart', label: t.match.smart, badge },
-            { value: 'batch', label: t.match.batch, badge },
+            { value: 'smart', label: t.match.smart },
+            { value: 'batch', label: t.match.batch },
           ]}
         />
       </div>

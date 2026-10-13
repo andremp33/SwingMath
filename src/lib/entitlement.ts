@@ -10,9 +10,9 @@ import type { License } from '../data/store'
  * Android/iOS: store subscriptions through RevenueCat, wired in the Capacitor
  * build (see replica/backend.md).
  */
-/** While in beta, every Pro feature is free for everyone. Set
- *  VITE_PRO_BETA=false to start selling. */
-export const PRO_BETA = ((import.meta.env.VITE_PRO_BETA as string | undefined) || 'true') !== 'false'
+/** While in beta, every Pro feature is free for everyone. Off unless a
+ *  build asks for it with VITE_PRO_BETA=true, so a store build sells Pro. */
+export const PRO_BETA = (import.meta.env.VITE_PRO_BETA as string | undefined) === 'true'
 
 export type Plan = 'monthly' | 'annual'
 export const PLANS: Plan[] = ['monthly', 'annual']

@@ -28,13 +28,16 @@ test.describe('F06 hit a target', () => {
 
   test('FIX-5 free users get 3 runs, then the Pro sheet', async ({ page }) => {
     await start(page, { path: '/match' })
-    await expect(page.getByRole('radio', { name: /Atingir um alvo/ })).toContainText('3 grátis')
+    // One count for both modes, not one per tab.
+    await expect(page.getByText('3 usos grátis')).toHaveCount(1)
+    await expect(page.getByRole('radio', { name: /Atingir um alvo/ })).not.toContainText('grátis')
     await page.getByRole('region', { name: 'Alvo', exact: true }).getByLabel('Peso', { exact: true }).fill('320')
     const run = page.getByRole('button', { name: 'Calcular', exact: true })
     for (let i = 0; i < 3; i++) {
       await run.click()
       await expect(page.getByRole('region', { name: 'Onde pôr o chumbo' })).toBeVisible()
     }
+    await expect(page.getByText('Pro', { exact: true })).toBeVisible()
     await run.click()
     const sheet = page.getByRole('dialog', { name: 'SwingMath Pro' })
     await expect(sheet).toBeVisible()
