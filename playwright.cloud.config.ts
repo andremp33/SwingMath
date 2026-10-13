@@ -11,7 +11,8 @@ export default defineConfig({
   reporter: [['list']],
   use: { baseURL: 'http://localhost:5174', locale: 'pt-PT', trace: 'off', ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
   webServer: {
-    command: 'npx vite --port 5174 --strictPort',
+    // The community lives in the app only, so these run the app build's mode.
+    command: 'npx vite --mode app --port 5174 --strictPort',
     url: 'http://localhost:5174',
     reuseExistingServer: true,
     env: { VITE_SUPABASE_URL: env.url, VITE_SUPABASE_ANON_KEY: env.anonKey },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentStringings, dueForRestring, hoursOn, insights, latestOf, lifeOf, linkOwned, weeklyHours, type OwnedRacket, type Session, type Stringing } from './journal'
+import { currentStringings, dueForRestring, hoursOn, insights, latestOf, lifeOf, linkOwned, setupResults, weeklyHours, type OwnedRacket, type Session, type Stringing } from './journal'
 
 const DAY = 86_400_000
 const NOW = Date.UTC(2026, 9, 9)
@@ -90,5 +90,35 @@ describe('owned rackets', () => {
     const renamed = [{ ...stringing('x1', 'Old name', 9), ownedId: 'r' }, { ...stringing('x2', 'New name', 2), ownedId: 'r' }]
     expect(currentStringings(renamed).map((s) => s.id)).toEqual(['x2'])
     expect(latestOf('r', renamed)?.id).toBe('x2')
+  })
+})
+
+describe('setup results', () => {
+  const owned: OwnedRacket[] = [
+    { id: 'o1', name: 'Aero de jogo', racketId: 'stock-x', setupId: 'torneio', createdAt: 0, updatedAt: 0 },
+    { id: 'o2', name: 'Aero treino', racketId: 'stock-x', createdAt: 0, updatedAt: 0 },
+  ]
+  // Named on the stringing, through the racket, and on a racket built to something else.
+  const st = [
+    { ...stringing('direct', 'x', 20), setupId: 'torneio' },
+    { ...stringing('via-racket', 'x', 10), ownedId: 'o1' },
+    { ...stringing('other', 'x', 5), ownedId: 'o2' },
+    { ...stringing('named-elsewhere', 'x', 4), ownedId: 'o1', setupId: 'leve' },
+  ]
+
+  it('links sessions by the stringing’s setup, or by its racket’s', () => {
+    const s = [session('direct', 60, 15, 4), session('via-racket', 90, 8, 5), session('via-racket', 30, 7), session('other', 60, 3, 1), session('named-elsewhere', 60, 2, 1)]
+    const r = setupResults('torneio', owned, st, s)
+    expect(r).toEqual({ sessions: 3, hours: 3, avg: { overall: 4.5 } })
+  })
+
+  it('needs at least 3 sessions', () => {
+    expect(setupResults('torneio', owned, st, [session('direct', 60, 15, 4), session('via-racket', 60, 8, 5)])).toBeNull()
+    expect(setupResults('nothing', owned, st, [])).toBeNull()
+  })
+
+  it('never carries arm pain', () => {
+    const s = [session('direct', 60, 15, 4, true), session('direct', 60, 14, 4, true), session('direct', 60, 13, 4)]
+    expect(setupResults('torneio', owned, st, s)).not.toHaveProperty('armPainShare')
   })
 })

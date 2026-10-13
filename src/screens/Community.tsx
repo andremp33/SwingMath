@@ -5,8 +5,8 @@ import { useStore } from '../data/store'
 import { compute } from '../domain/physics'
 import type { Racket, Setup } from '../domain/types'
 import { fmt, useT } from '../i18n'
-import { cloudConfigured } from '../lib/cloud'
 import {
+  communityEnabled,
   countCopy,
   deletePublicSetup,
   measurementStats,
@@ -44,7 +44,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
     }
   }, [racket.id, version])
 
-  if (!cloudConfigured() || !racket.isStock) return null
+  if (!communityEnabled() || !racket.isStock) return null
 
   const signedIn = (fn: () => Promise<void>) => async () => {
     if (!account) return toast(t.community.needAccount)
@@ -171,7 +171,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
   const [open, setOpen] = useState(false)
   const [author, setAuthor] = useState('')
   const [busy, setBusy] = useState(false)
-  if (!cloudConfigured() || !racket.isStock) return null
+  if (!communityEnabled() || !racket.isStock) return null
 
   if (!open)
     return (
@@ -193,6 +193,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
             config: setup,
             racket,
             specs: result,
+            goals: [],
           })
           toast(t.community.published)
           setOpen(false)
@@ -220,7 +221,7 @@ export function ShareMeasurement({ racket, weightG, balanceCm, swingweight }: { 
   const [strung, setStrung] = useState(true)
   const [unit, setUnit] = useState<'1' | '2' | '3' | '4'>('1')
   const [busy, setBusy] = useState(false)
-  if (!cloudConfigured() || !racket || weightG === undefined) return null
+  if (!communityEnabled() || !racket || weightG === undefined) return null
 
   return (
     <Card label={t.community.share}>

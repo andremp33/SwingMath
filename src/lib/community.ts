@@ -1,8 +1,18 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import { racketSchema, setupSchema } from '../data/db'
+import { MIN_RESULT_SESSIONS, SESSION_RATINGS, type SessionRating } from '../domain/journal'
 import type { Racket, SetupConfig, Specs } from '../domain/types'
-import { getCloud } from './cloud'
+import { cloudConfigured, getCloud } from './cloud'
+import { IS_APP } from './platform'
 
 /** Community data: medians of frames players measured, and setups they
  *  published. Reading needs no account; writing does. */
+
+/** The community lives in the app only; the website talks about the app. */
+export const communityEnabled = () => IS_APP && cloudConfigured()
+
+const cloud = () => (communityEnabled() ? getCloud() : null)
 
 export interface MeasurementStats {
   strung: boolean
@@ -19,7 +29,7 @@ export interface MeasurementStats {
 const cache = new Map<string, Promise<MeasurementStats[]>>()
 
 export function measurementStats(racketId: string): Promise<MeasurementStats[]> {
-  const c = getCloud()
+  const c = cloud()
   if (!c || !racketId.startsWith('stock-')) return Promise.resolve([])
   if (!cache.has(racketId)) {
     cache.set(
@@ -64,6 +74,20 @@ export async function submitMeasurement(m: MeasurementInput) {
   cache.delete(m.racketId)
 }
 
+export const GOALS = ['stability', 'power', 'manoeuvrability', 'spin', 'control', 'comfort'] as const
+export type Goal = (typeof GOALS)[number]
+export const LEVELS = ['beginner', 'intermediate', 'advanced', 'competition'] as const
+export type Level = (typeof LEVELS)[number]
+export const STYLES = ['baseline', 'allcourt', 'net'] as const
+export type Style = (typeof STYLES)[number]
+
+/** A recipe's journal results, as published: never arm pain or notes. */
+export interface PublicResults {
+  sessions: number
+  hours: number
+  avg: Partial<Record<SessionRating, number>>
+}
+
 export interface PublicSetup {
   id: string
   user_id: string
@@ -75,39 +99,163 @@ export interface PublicSetup {
   specs: Pick<Specs, 'weightG' | 'balanceCm' | 'swingweight'>
   copies: number
   created_at: string
+  goals: Goal[]
+  level: Level | null
+  style: Style | null
+  results: PublicResults | null
+  setup_ref: string | null
+  partner: string | null
+  updated_at: string
 }
 
-export async function publicSetups(racketId: string, limit = 5): Promise<PublicSetup[]> {
-  const c = getCloud()
+const score = z.number().finite().min(1).max(5)
+const resultsSchema = z.object({
+  sessions: z.number().int().min(0).max(100_000),
+  hours: z.number().finite().min(0).max(100_000),
+  avg: z.object(Object.fromEntries(SESSION_RATINGS.map((k) => [k, score.optional()])) as Record<SessionRating, z.ZodOptional<typeof score>>),
+})
+const configSchema = setupSchema.pick({ racketId: true, baseMode: true, measured: true, accessories: true, leadG: true, extra: true, grip: true, strings: true })
+const finite = z.number().finite()
+/** Rows are written by other players: each one is checked before the app uses it. */
+const rowSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  racket_id: z.string(),
+  name: z.string().min(1),
+  author: z.string().nullable(),
+  config: configSchema,
+  racket: racketSchema.omit({ createdAt: true, updatedAt: true }).nullable(),
+  specs: z.object({ weightG: finite, balanceCm: finite, swingweight: finite }),
+  copies: z.number().int().min(0),
+  created_at: z.string(),
+  goals: z.array(z.enum(GOALS)).max(2).default([]),
+  level: z.enum(LEVELS).nullable().default(null),
+  style: z.enum(STYLES).nullable().default(null),
+  results: resultsSchema.nullable().default(null),
+  setup_ref: z.string().nullable().default(null),
+  partner: z.string().nullable().default(null),
+  updated_at: z.string(),
+})
+
+/** Keeps the rows that pass the schema; drops the rest without a fuss. */
+export function parsePublicSetups(rows: unknown[]): PublicSetup[] {
+  return rows.flatMap((r) => {
+    const p = rowSchema.safeParse(r)
+    return p.success ? [p.data as PublicSetup] : []
+  })
+}
+
+const COLUMNS = 'id, user_id, racket_id, name, author, config, racket, specs, copies, created_at, goals, level, style, results, setup_ref, partner, updated_at'
+
+export async function publicSetups(racketId: string): Promise<PublicSetup[]> {
+  const c = cloud()
   if (!c) return []
-  const { data } = await (await c)
-    .from('public_setups')
-    .select('id, user_id, racket_id, name, author, config, racket, specs, copies, created_at')
-    .eq('racket_id', racketId)
-    .order('copies', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit)
-  return (data ?? []) as PublicSetup[]
+  const { data } = await (await c).from('public_setups').select(COLUMNS).eq('racket_id', racketId).order('created_at', { ascending: false }).limit(50)
+  return parsePublicSetups(data ?? [])
 }
 
-export async function publishSetup(p: { name: string; author?: string; config: SetupConfig; racket: Racket; specs: Specs }) {
+const hasResults = (p: PublicSetup) => (p.results?.sessions ?? 0) >= MIN_RESULT_SESSIONS
+
+/**
+ * The order players see: partner shops first, then recipes with journal
+ * results (best overall first), then the most copied, then the newest.
+ */
+export function rankPublicSetups(list: PublicSetup[], goal?: Goal): PublicSetup[] {
+  return list
+    .filter((p) => !goal || p.goals.includes(goal))
+    .sort(
+      (a, b) =>
+        Number(!!b.partner) - Number(!!a.partner) ||
+        Number(hasResults(b)) - Number(hasResults(a)) ||
+        (hasResults(a) && hasResults(b) ? (b.results!.avg.overall ?? 0) - (a.results!.avg.overall ?? 0) : 0) ||
+        b.copies - a.copies ||
+        Date.parse(b.created_at) - Date.parse(a.created_at),
+    )
+}
+
+/** Published averages to a tenth, hours to the half hour. */
+export function roundResults(r: PublicResults): PublicResults {
+  const avg: PublicResults['avg'] = {}
+  for (const k of SESSION_RATINGS) if (r.avg[k] !== undefined) avg[k] = Math.round(r.avg[k]! * 10) / 10
+  return { sessions: r.sessions, hours: Math.round(r.hours * 2) / 2, avg }
+}
+
+async function myId(cl: SupabaseClient) {
+  return (await cl.auth.getSession()).data.session?.user.id
+}
+
+/** The id of my published copy of a saved setup, if there is one. */
+export async function publishedId(setupRef: string): Promise<string | null> {
+  const c = cloud()
+  if (!c) return null
+  const cl = await c
+  const uid = await myId(cl)
+  if (!uid) return null
+  const { data } = await cl.from('public_setups').select('id').eq('user_id', uid).eq('setup_ref', setupRef).maybeSingle()
+  return (data?.id as string | undefined) ?? null
+}
+
+export interface PublishInput {
+  name: string
+  author?: string
+  config: SetupConfig
+  racket: Racket
+  specs: Specs
+  goals: Goal[]
+  level?: Level
+  style?: Style
+  results?: PublicResults | null
+  setupRef?: string
+}
+
+/** Publishes a saved setup, or updates my earlier copy of it (found by
+ *  setupRef). Updates go by id: upsert and per-column grants do not mix. */
+export async function publishSetup(p: PublishInput): Promise<'created' | 'updated'> {
   const cl = await getCloud()!
   const { racketId, baseMode, measured, accessories, leadG, extra, grip, strings } = p.config
   const { createdAt: _c, updatedAt: _u, ...frame } = p.racket
-  const { error } = await cl.from('public_setups').insert({
-    racket_id: racketId,
+  const row = {
     name: p.name.trim().slice(0, 60),
     author: p.author?.trim().slice(0, 30) || null,
     config: { racketId, baseMode, measured, accessories, leadG, extra, grip, strings },
     // Custom frames travel with the setup, like a share link.
     racket: p.racket.isStock ? null : frame,
     specs: { weightG: p.specs.weightG, balanceCm: p.specs.balanceCm, swingweight: p.specs.swingweight },
-  })
+    goals: p.goals.slice(0, 2),
+    level: p.level ?? null,
+    style: p.style ?? null,
+    results: p.results ? roundResults(p.results) : null,
+  }
+  const existing = p.setupRef ? await publishedId(p.setupRef) : null
+  countsCache = undefined
+  if (existing) {
+    const { error } = await cl.from('public_setups').update({ ...row, updated_at: new Date().toISOString() }).eq('id', existing)
+    if (error) throw error
+    return 'updated'
+  }
+  const { error } = await cl.from('public_setups').insert({ ...row, racket_id: racketId, setup_ref: p.setupRef ?? null })
   if (error) throw error
+  return 'created'
+}
+
+let countsCache: Promise<Map<string, number>> | undefined
+
+/** Visible published setups per frame, for the library. */
+export function setupCounts(): Promise<Map<string, number>> {
+  const c = cloud()
+  if (!c) return Promise.resolve(new Map())
+  countsCache ??= c
+    .then((cl) => cl.from('public_setup_counts').select('racket_id, n'))
+    .then(({ data }) => new Map((data ?? []).map((r: { racket_id: string; n: number }) => [r.racket_id, r.n])))
+    .catch(() => {
+      countsCache = undefined
+      return new Map<string, number>()
+    })
+  return countsCache
 }
 
 export async function countCopy(id: string) {
-  const c = getCloud()
+  const c = cloud()
   if (c) await (await c).rpc('count_copy', { setup_id: id })
 }
 
@@ -120,6 +268,7 @@ export async function reportSetup(id: string) {
 
 export async function deletePublicSetup(id: string) {
   const cl = await getCloud()!
+  countsCache = undefined
   const { error } = await cl.from('public_setups').delete().eq('id', id)
   if (error) throw error
 }

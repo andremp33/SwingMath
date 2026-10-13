@@ -121,35 +121,56 @@ export function dueForRestring(all: Stringing[], sessions: Session[], now = Date
   return currentStringings(all).filter((s) => lifeOf(s, sessions, now).used >= 1)
 }
 
-export interface StringingInsight {
+export interface StringingInsight extends SessionSummary {
   stringing: Stringing
+}
+
+/** What a set of sessions adds up to. Only rated sessions count towards
+ *  each average. */
+export interface SessionSummary {
   sessions: number
   hours: number
   avg: Partial<Record<SessionRating, number>>
   armPainShare: number
 }
 
+export function summariseSessions(list: Session[]): SessionSummary {
+  const avg: Partial<Record<SessionRating, number>> = {}
+  for (const k of SESSION_RATINGS) {
+    const vals = list.map((s) => s.ratings[k]).filter((v): v is number => v !== undefined)
+    if (vals.length) avg[k] = vals.reduce((a, b) => a + b, 0) / vals.length
+  }
+  return {
+    sessions: list.length,
+    hours: list.reduce((h, s) => h + s.minutes / 60, 0),
+    avg,
+    armPainShare: list.length ? list.filter((s) => s.armPain).length / list.length : 0,
+  }
+}
+
 /** Averages per stringing, best overall first. Only rated sessions count
  *  towards each average. */
 export function insights(all: Stringing[], sessions: Session[]): StringingInsight[] {
   return all
-    .map((st) => {
-      const mine = sessions.filter((s) => s.stringingId === st.id)
-      const avg: Partial<Record<SessionRating, number>> = {}
-      for (const k of SESSION_RATINGS) {
-        const vals = mine.map((s) => s.ratings[k]).filter((v): v is number => v !== undefined)
-        if (vals.length) avg[k] = vals.reduce((a, b) => a + b, 0) / vals.length
-      }
-      return {
-        stringing: st,
-        sessions: mine.length,
-        hours: mine.reduce((h, s) => h + s.minutes / 60, 0),
-        avg,
-        armPainShare: mine.length ? mine.filter((s) => s.armPain).length / mine.length : 0,
-      }
-    })
+    .map((st) => ({ stringing: st, ...summariseSessions(sessions.filter((s) => s.stringingId === st.id)) }))
     .filter((i) => i.sessions > 0)
     .sort((a, b) => (b.avg.overall ?? 0) - (a.avg.overall ?? 0) || b.sessions - a.sessions)
+}
+
+/** Fewer sessions than this say nothing about a setup. */
+export const MIN_RESULT_SESSIONS = 3
+
+/**
+ * How a saved setup played: the sessions on stringings built to it. A
+ * stringing counts when it names the setup, or, naming none, when its
+ * racket is built to it. Null below MIN_RESULT_SESSIONS. Arm pain is left
+ * out: it is health data and never leaves the device with this.
+ */
+export function setupResults(setupId: string, owned: OwnedRacket[], stringings: Stringing[], sessions: Session[]) {
+  const builtTo = new Set(owned.filter((o) => o.setupId === setupId).map((o) => o.id))
+  const ids = new Set(stringings.filter((st) => (st.setupId ? st.setupId === setupId : !!st.ownedId && builtTo.has(st.ownedId))).map((st) => st.id))
+  const { sessions: n, hours, avg } = summariseSessions(sessions.filter((s) => s.stringingId && ids.has(s.stringingId)))
+  return n < MIN_RESULT_SESSIONS ? null : { sessions: n, hours, avg }
 }
 
 /** Hours played per week over the last `weeks` weeks, oldest first. */
