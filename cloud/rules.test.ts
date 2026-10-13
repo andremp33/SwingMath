@@ -160,6 +160,67 @@ describe('public setups', () => {
   })
 })
 
+describe('community recipes', () => {
+  const rid = `stock-recipe-${stamp}`
+  const recipe = { racket_id: rid, name: 'Estável', config: { leadG: { threeNine: 4 } }, specs: { weightG: 332 } }
+  const results = { sessions: 12, hours: 9, avg: { overall: 4.3, comfort: 4.1 } }
+
+  it('publishes with goals, level and results', async () => {
+    const { data, error } = await free.db
+      .from('public_setups')
+      .insert({ ...recipe, goals: ['stability', 'control'], level: 'advanced', style: 'baseline', results, setup_ref: 'local-1' })
+      .select('goals, level, style, results')
+      .single()
+    expect(error).toBeNull()
+    expect(data).toEqual({ goals: ['stability', 'control'], level: 'advanced', style: 'baseline', results })
+  })
+
+  it('refuses three goals, an unknown goal, and a partner badge', async () => {
+    expect((await free.db.from('public_setups').insert({ ...recipe, goals: ['stability', 'power', 'spin'] })).error).not.toBeNull()
+    expect((await free.db.from('public_setups').insert({ ...recipe, goals: ['speed'] })).error).not.toBeNull()
+    expect((await free.db.from('public_setups').insert({ ...recipe, partner: 'Loja X' })).error).not.toBeNull()
+  })
+
+  it('the same setup_ref twice is refused', async () => {
+    expect((await free.db.from('public_setups').insert({ ...recipe, setup_ref: 'twice' })).error).toBeNull()
+    expect((await free.db.from('public_setups').insert({ ...recipe, setup_ref: 'twice' })).error?.code).toBe('23505')
+  })
+
+  it('authors update their recipe, never its counters, visibility, badge or owner', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...recipe, setup_ref: 'edit-me' }).select('id').single()
+    const id = data!.id
+    const ok = await free.db.from('public_setups').update({ goals: ['comfort'], results, updated_at: new Date().toISOString() }).eq('id', id)
+    expect(ok.error).toBeNull()
+    for (const change of [{ copies: 99 }, { hidden: true }, { partner: 'Eu' }, { user_id: pro.id }]) {
+      expect((await free.db.from('public_setups').update(change).eq('id', id)).error).not.toBeNull()
+    }
+    const row = (await admin.from('public_setups').select('goals, results, copies, hidden, partner, user_id').eq('id', id).single()).data
+    expect(row).toEqual({ goals: ['comfort'], results, copies: 0, hidden: false, partner: null, user_id: free.id })
+  })
+
+  it('nobody updates someone else’s recipe', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...recipe, setup_ref: 'not-yours' }).select('id').single()
+    await pro.db.from('public_setups').update({ name: 'Roubado' }).eq('id', data!.id)
+    expect((await anon.from('public_setups').select('name').eq('id', data!.id).single()).data?.name).toBe('Estável')
+  })
+
+  it('copies and reports still work through their functions', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...recipe, setup_ref: 'counted' }).select('id').single()
+    await anon.rpc('count_copy', { setup_id: data!.id })
+    expect((await anon.from('public_setups').select('copies').eq('id', data!.id).single()).data?.copies).toBe(1)
+    for (const n of ['rr1', 'rr2', 'rr3']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id })
+    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data).toEqual([])
+  })
+
+  it('counts per frame show only visible setups, to anyone', async () => {
+    const visible = (await admin.from('public_setups').select('id').eq('racket_id', rid).eq('hidden', false)).data!.length
+    const { data, error } = await anon.from('public_setup_counts').select('n').eq('racket_id', rid).single()
+    expect(error).toBeNull()
+    expect(data?.n).toBe(visible)
+    expect(visible).toBeGreaterThan(0)
+  })
+})
+
 describe('account deletion', () => {
   it('removes the account and its data', async () => {
     const u = await user('leaving')
