@@ -79,16 +79,13 @@ export async function deleteAccount() {
   store().setSync({ userId: null, cursor: null, lastAt: undefined, error: undefined })
 }
 
-const RANK = ['on_trial', 'active', 'past_due', 'cancelled', 'paused', 'unpaid', 'expired']
-
+/** The account's Pro, as the stores report it through RevenueCat's webhook
+ *  (one row per account; a lifetime purchase has no end). */
 export async function refreshSubscription(): Promise<AccountPro | null> {
   const c = await client()
-  // Bought on the website (Lemon Squeezy) or in the apps (App Store, Google Play).
-  const [web, app] = await Promise.all([c.from('subscriptions').select('status, ends_at'), c.from('store_subscriptions').select('status, ends_at')])
-  if (web.error) return store().accountPro
-  // A player may have an old expired row and a new active one.
-  const best = [...(web.data ?? []), ...(app.data ?? [])].sort((a, b) => RANK.indexOf(a.status) - RANK.indexOf(b.status))[0]
-  const pro = best ? { status: best.status as string, endsAt: (best.ends_at as string | null) ?? null, checkedAt: Date.now() } : null
+  const { data, error } = await c.from('store_subscriptions').select('status, ends_at').maybeSingle()
+  if (error) return store().accountPro
+  const pro = data ? { status: data.status as string, endsAt: (data.ends_at as string | null) ?? null, checkedAt: Date.now() } : null
   store().setAccountPro(pro)
   return pro
 }

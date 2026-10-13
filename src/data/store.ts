@@ -17,15 +17,13 @@ import { RENAMED, STOCK_RACKETS } from './rackets'
 export type Theme = 'system' | 'dark' | 'light'
 
 export interface License {
-  /** 'store': App Store or Google Play, through RevenueCat. */
-  provider: 'lemonsqueezy' | 'store' | 'dev'
-  key?: string
-  instanceId?: string
+  /** 'store': App Store or Google Play, through RevenueCat; 'dev': development and tests. */
+  provider: 'store' | 'dev'
   activatedAt: number
   /** Last time the store confirmed the subscription. */
   checkedAt?: number
-  /** 'ended': the subscription ended; 'offline': not confirmed for too long. */
-  status?: 'active' | 'ended' | 'offline'
+  /** 'ended': the subscription ended. */
+  status?: 'active' | 'ended'
   /** When the current period ends, as the store reports it. */
   expiresAt?: string | null
   /** Store subscriptions: renews at the end of the period (false: cancelled). */

@@ -6,7 +6,7 @@ import { deleteAll, exportAll, importAll } from '../data/db'
 import { isPro, useStore, type Theme } from '../data/store'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, useT, type Lang } from '../i18n'
-import { deactivateLicense, PORTAL_URL, PRICING, PRO_BETA } from '../lib/entitlement'
+import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { IS_APP } from '../lib/platform'
 import { Badge, Button, NumberField, Segmented, SettingsGroup, SettingsRow } from '../ui/basics'
@@ -99,7 +99,7 @@ export function PlanGroup() {
   if (!pro) {
     return (
       <SettingsGroup title={t.profile.plan}>
-        <SettingsRow label={t.profile.free} hint={IS_APP ? t.paywall.free : fmt(t.pro.trial, { days: PRICING.trialDays })}>
+        <SettingsRow label={t.profile.free} hint={t.paywall.free}>
           <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('profile', { asked: true })}>
             {t.settings.seePlans}
           </Button>
@@ -137,32 +137,9 @@ export function PlanGroup() {
           >
             {t.pro.manage}
           </Button>
-        ) : PORTAL_URL && !IS_APP && (
-          <a
-            href={PORTAL_URL}
-            target="_blank"
-            rel="noopener"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-semibold hover:bg-surface-2"
-          >
-            {t.pro.manage} <ExternalLink className="size-3.5" aria-hidden />
-          </a>
-        )}
+        ) : null}
       </SettingsRow>
       {IS_APP && !l?.lifetime && <RestoreRow />}
-      {keyActive && l.provider === 'lemonsqueezy' && (
-        <SettingsRow label={t.pro.deactivate}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={async () => {
-              await deactivateLicense(l)
-              s.setLicense(null)
-            }}
-          >
-            {t.settings.deleteShort}
-          </Button>
-        </SettingsRow>
-      )}
     </SettingsGroup>
   )
 }

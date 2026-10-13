@@ -30,7 +30,7 @@ build.
 - `src/domain/` — physics, sweet spot, pendulum swingweight, strings, grip, arm comfort, journal, solvers (pure, tested)
 - `src/data/` — racket library, local database (IndexedDB), sync with the account
 - `src/screens/` — the app's screens; `Landing.tsx` is the website (front page, `/privacidade`, `/termos`, `/suporte`, `/apagar-conta`, `/s/…`, `/ficha/…`)
-- `supabase/` — database schema and rules (`migrations/`), the Lemon Squeezy and RevenueCat webhooks (`functions/ls-webhook`, `functions/rc-webhook`), account deletion (`functions/delete-account`), sign-in email
+- `supabase/` — database schema and rules (`migrations/`), the RevenueCat webhook (`functions/rc-webhook`), account deletion (`functions/delete-account`), sign-in email
 - `.github/workflows/deploy.yml` — builds and publishes to GitHub Pages on every push to `main`
 - `.env.example` — store, accounts and contact settings
 
@@ -57,9 +57,6 @@ asks for; `/privacidade` and `/termos` are the links both stores ask for.
 Earlier visitors' service worker removes itself (the site is no longer an
 app). App Links and Universal Links (`.well-known`) wait for a domain.
 
-The Lemon Squeezy code (web subscriptions) is no longer on any path: the
-apps sell through the stores only.
-
 **Accounts (Supabase), optional.**
 
 1. Create a project in an EU region. Set the site URL and allow
@@ -69,12 +66,10 @@ apps sell through the stores only.
    "Magic Link" and "Confirm signup" templates to `supabase/templates/code.html`
    with the subject `SwingMath: {{ .Token }}`.
 2. `npx supabase link --project-ref <ref>` then `npx supabase db push`.
-3. `npx supabase functions deploy ls-webhook --no-verify-jwt` and
-   `npx supabase secrets set LS_WEBHOOK_SECRET=<signing secret> LS_STORE_ID=<id>`.
-4. In Lemon Squeezy → Settings → Webhooks, point a webhook at
-   `https://<ref>.supabase.co/functions/v1/ls-webhook` with the same signing
-   secret and the `subscription_*` events.
-5. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository variables.
+3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository variables.
+
+The `subscriptions` table (web subscriptions, from an earlier version) stays
+in the database and `has_pro` still reads it; nothing writes to it any more.
 
 **Store subscriptions in the apps (RevenueCat).** Apple and Google require
 their own billing for subscriptions bought in the apps, so the apps sell Pro

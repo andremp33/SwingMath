@@ -29,14 +29,6 @@ jobs:
           BASE_PATH: /${{ github.event.repository.name }}/
           SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           # Store, account and contact settings: repository Actions variables (or secrets).
-          VITE_LS_STORE_ID: ${{ vars.VITE_LS_STORE_ID || secrets.VITE_LS_STORE_ID }}
-          VITE_LS_CHECKOUT_MONTHLY: ${{ vars.VITE_LS_CHECKOUT_MONTHLY || secrets.VITE_LS_CHECKOUT_MONTHLY }}
-          VITE_LS_CHECKOUT_ANNUAL: ${{ vars.VITE_LS_CHECKOUT_ANNUAL || secrets.VITE_LS_CHECKOUT_ANNUAL }}
-          VITE_LS_PORTAL_URL: ${{ vars.VITE_LS_PORTAL_URL || secrets.VITE_LS_PORTAL_URL }}
-          VITE_PRICE_MONTHLY: ${{ vars.VITE_PRICE_MONTHLY || secrets.VITE_PRICE_MONTHLY }}
-          VITE_PRICE_ANNUAL: ${{ vars.VITE_PRICE_ANNUAL || secrets.VITE_PRICE_ANNUAL }}
-          VITE_PRICE_CURRENCY: ${{ vars.VITE_PRICE_CURRENCY || secrets.VITE_PRICE_CURRENCY }}
-          VITE_TRIAL_DAYS: ${{ vars.VITE_TRIAL_DAYS || secrets.VITE_TRIAL_DAYS }}
           # The store buttons on the website ("coming soon" until set).
           VITE_APP_STORE_URL: ${{ vars.VITE_APP_STORE_URL || secrets.VITE_APP_STORE_URL }}
           VITE_PLAY_STORE_URL: ${{ vars.VITE_PLAY_STORE_URL || secrets.VITE_PLAY_STORE_URL }}
