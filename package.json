@@ -14,7 +14,7 @@
     "build:app": "tsc -b && vite build --mode app",
     "android": "npm run build:app && npx cap sync android && npx cap open android",
     "ios": "npm run build:app && npx cap sync ios && npx cap open ios",
-    "app:assets": "node scripts/app-assets.mjs && capacitor-assets generate --android --ios --iconBackgroundColor '#1c1a17' --iconBackgroundColorDark '#1c1a17' --splashBackgroundColor '#f5f3ee' --splashBackgroundColorDark '#141312'",
+    "app:assets": "node scripts/app-assets.mjs && capacitor-assets generate --android --ios --iconBackgroundColor \"#1c1a17\" --iconBackgroundColorDark \"#1c1a17\" --splashBackgroundColor \"#f5f3ee\" --splashBackgroundColorDark \"#141312\"",
     "android:apk": "npm run build:app && npx cap sync android && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
