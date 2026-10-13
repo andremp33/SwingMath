@@ -37,9 +37,9 @@ jobs:
           VITE_PRICE_ANNUAL: ${{ vars.VITE_PRICE_ANNUAL || secrets.VITE_PRICE_ANNUAL }}
           VITE_PRICE_CURRENCY: ${{ vars.VITE_PRICE_CURRENCY || secrets.VITE_PRICE_CURRENCY }}
           VITE_TRIAL_DAYS: ${{ vars.VITE_TRIAL_DAYS || secrets.VITE_TRIAL_DAYS }}
-          # The beta is now opt-in; the website keeps it until it becomes the
-          # app's shop window.
-          VITE_PRO_BETA: ${{ vars.VITE_PRO_BETA || 'true' }}
+          # The store buttons on the website ("coming soon" until set).
+          VITE_APP_STORE_URL: ${{ vars.VITE_APP_STORE_URL || secrets.VITE_APP_STORE_URL }}
+          VITE_PLAY_STORE_URL: ${{ vars.VITE_PLAY_STORE_URL || secrets.VITE_PLAY_STORE_URL }}
           # The project's URL and anon key are public by design (they ship in
           # the site's JavaScript); the database rules protect the data.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL || 'https://cplvbecwurnzutxxsngu.supabase.co' }}
@@ -47,7 +47,7 @@ jobs:
           VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL || secrets.VITE_SUPPORT_EMAIL }}
           VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME || secrets.VITE_OWNER_NAME }}
           VITE_OWNER_ADDRESS: ${{ vars.VITE_OWNER_ADDRESS || secrets.VITE_OWNER_ADDRESS }}
-      # Deep links (/SwingMath/rackets, shared setups) load the app too.
+      # Deep links (shared setups, the stores' pages) load the site too.
       - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
       - uses: peaceiris/actions-gh-pages@v4
         with:

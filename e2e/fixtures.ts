@@ -28,7 +28,8 @@ export async function start(page: Page, opts: { pro?: boolean; lang?: 'pt' | 'en
       if (!localStorage.getItem('swingmath'))
         localStorage.setItem(
           'swingmath',
-          JSON.stringify({ state: { lang, license: pro ? { provider: 'dev', activatedAt: 1 } : null }, version: 1 }),
+          // Past the first launch's walkthrough, which has its own tests.
+          JSON.stringify({ state: { lang, onboarded: true, license: pro ? { provider: 'dev', activatedAt: 1 } : null }, version: 1 }),
         )
     },
     [opts.pro ?? false, opts.lang ?? 'pt'] as const,

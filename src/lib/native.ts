@@ -33,7 +33,14 @@ export async function initNative() {
   })
 
   // The sign-in link lands here: app.swingmath://auth#access_token=...
+  // Shared setups and stringer's sheets from the website: app.swingmath://s/...
   App.addListener('appUrlOpen', async ({ url }) => {
+    const page = /^app\.swingmath:\/\/((?:s|ficha)\/[^?#]+)/.exec(url)?.[1]
+    if (page) {
+      history.pushState({}, '', `/${page}`)
+      dispatchEvent(new PopStateEvent('popstate'))
+      return
+    }
     if (!url.startsWith(APP_AUTH_URL)) return
     const cloud = await getCloud()
     if (!cloud) return

@@ -36,7 +36,7 @@ async function open(browser: Browser) {
   const ctx = await browser.newContext()
   const page = await ctx.newPage()
   await page.addInitScript(() => {
-    if (!localStorage.getItem('swingmath')) localStorage.setItem('swingmath', JSON.stringify({ state: { lang: 'pt' }, version: 3 }))
+    if (!localStorage.getItem('swingmath')) localStorage.setItem('swingmath', JSON.stringify({ state: { lang: 'pt', onboarded: true }, version: 3 }))
   })
   return page
 }

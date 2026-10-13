@@ -22,4 +22,6 @@ interface ImportMetaEnv {
   readonly VITE_OWNER_NAME?: string
   readonly VITE_OWNER_ADDRESS?: string
   readonly VITE_REVIEW_EMAIL?: string
+  readonly VITE_APP_STORE_URL?: string
+  readonly VITE_PLAY_STORE_URL?: string
 }

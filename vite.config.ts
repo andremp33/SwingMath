@@ -28,25 +28,16 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         disable: app,
+        // The website is the apps' shop window now, not an app: the service
+        // worker earlier visitors installed is replaced by one that removes
+        // itself and its caches.
+        selfDestroying: true,
         registerType: 'autoUpdate',
         // Registered in main.tsx, which also checks for updates on return.
         injectRegister: false,
         includeAssets: ['favicon.svg', 'icon.svg'],
-        manifest: {
-          name: 'SwingMath',
-          short_name: 'SwingMath',
-          description: 'Customise your tennis racket with real physics: weight, balance, swingweight, twistweight.',
-          theme_color: '#0e1210',
-          background_color: '#0e1210',
-          display: 'standalone',
-          start_url: '.',
-          scope: '.',
-          icons: [
-            { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-            { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-            { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          ],
-        },
+        // Nothing to install any more.
+        manifest: false,
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
           globIgnores: ['**/og.png', '**/landing/*.png'],

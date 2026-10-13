@@ -2,26 +2,34 @@
 
 Customise a tennis racket with real physics: weight, balance, swingweight,
 twistweight, recoil weight and sweet spot, with lead anywhere on the frame.
-Strings, grip, arm comfort and a stringing journal. Offline PWA, optional
-account, Portuguese / Spanish / English.
+Strings, grip, arm comfort and a stringing journal. An app for Android and
+iPhone (Capacitor), with an optional account, in Portuguese, Spanish and
+English. Pro is sold in the App Store and Google Play, through RevenueCat.
 
-**Live:** https://andremp33.github.io/SwingMath/
+**Website:** https://andremp33.github.io/SwingMath/ — the apps' shop window:
+what the app does, the store buttons, privacy, terms, support, account
+deletion, and previews of shared setups. It is not an app.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm test           # unit tests (physics, strings, journal, sync, licence)
-npm run e2e        # build + Playwright (desktop, phone, offline)
+npm run dev:app    # the app in a browser (app build's mode), for development
+npm run dev        # the website
+npm test           # unit tests (physics, strings, journal, sync, paywall, delete-account)
+npm run e2e        # build + Playwright: the app's flows (desktop, phone) and the website
 
 # Accounts, sync and community, against a local Supabase (needs Docker)
 npx supabase start
 npm run test:cloud                                  # database rules, webhook, sync
-npx playwright test -c playwright.cloud.config.ts   # sign-in, sync, community, on the web and in the app
+npx playwright test -c playwright.cloud.config.ts   # sign-in, sync, community, in the app
 ```
+
+`VITE_FAKE_STORE=true npm run dev:app` shows the paywall with pretend plans
+in a browser, where there is no App Store or Google Play; it never reaches a
+build.
 
 - `src/domain/` — physics, sweet spot, pendulum swingweight, strings, grip, arm comfort, journal, solvers (pure, tested)
 - `src/data/` — racket library, local database (IndexedDB), sync with the account
-- `src/screens/` — app screens; `/sobre`, `/privacidade`, `/termos` are the site pages
+- `src/screens/` — the app's screens; `Landing.tsx` is the website (front page, `/privacidade`, `/termos`, `/suporte`, `/apagar-conta`, `/s/…`, `/ficha/…`)
 - `supabase/` — database schema and rules (`migrations/`), the Lemon Squeezy and RevenueCat webhooks (`functions/ls-webhook`, `functions/rc-webhook`), account deletion (`functions/delete-account`), sign-in email
 - `.github/workflows/deploy.yml` — builds and publishes to GitHub Pages on every push to `main`
 - `.env.example` — store, accounts and contact settings
@@ -42,10 +50,15 @@ local notifications, and the sign-in link opens the app
 
 ## Going live
 
-**Payments (Lemon Squeezy).** One subscription product with a monthly and an
-annual variant, a 7-day trial and license keys on (3 activations). Put the
-checkout links, store id and customer portal link in the repository's Actions
-variables (names in `.env.example`).
+**The website.** Set `VITE_APP_STORE_URL` and `VITE_PLAY_STORE_URL` as
+repository variables once the apps are in the stores; until then the buttons
+say "coming soon". `/apagar-conta` is the account-deletion page Google Play
+asks for; `/privacidade` and `/termos` are the links both stores ask for.
+Earlier visitors' service worker removes itself (the site is no longer an
+app). App Links and Universal Links (`.well-known`) wait for a domain.
+
+The Lemon Squeezy code (web subscriptions) is no longer on any path: the
+apps sell through the stores only.
 
 **Accounts (Supabase), optional.**
 

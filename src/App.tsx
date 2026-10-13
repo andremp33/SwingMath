@@ -8,11 +8,16 @@ import { NotFound } from './screens/NotFound'
 import { PaywallProvider } from './screens/Pro'
 import { ToastProvider } from './ui/overlay'
 
-// The calculator loads first; everything else comes in its own chunk.
+// The calculator loads first in the app, the front page on the website;
+// everything else comes in its own chunk.
 const Compare = lazy(() => import('./screens/Compare').then((m) => ({ default: m.Compare })))
 const DesignPage = lazy(() => import('./screens/DesignPage').then((m) => ({ default: m.DesignPage })))
 const Landing = lazy(() => import('./screens/Landing').then((m) => ({ default: m.Landing })))
 const LegalPage = lazy(() => import('./screens/Landing').then((m) => ({ default: m.LegalPage })))
+const SupportPage = lazy(() => import('./screens/Landing').then((m) => ({ default: m.SupportPage })))
+const DeleteAccountPage = lazy(() => import('./screens/Landing').then((m) => ({ default: m.DeleteAccountPage })))
+const SharePreview = lazy(() => import('./screens/Landing').then((m) => ({ default: m.SharePreview })))
+const FichaPreview = lazy(() => import('./screens/Landing').then((m) => ({ default: m.FichaPreview })))
 const LegalScreen = lazy(() => import('./screens/Legal').then((m) => ({ default: m.LegalScreen })))
 const Onboarding = lazy(() => import('./screens/Onboarding').then((m) => ({ default: m.Onboarding })))
 const Journal = lazy(() => import('./screens/Journal').then((m) => ({ default: m.Journal })))
@@ -29,18 +34,12 @@ const SharedSetup = lazy(() => import('./screens/SharedSetup').then((m) => ({ de
 
 const L = (el: ReactNode) => <Suspense fallback={null}>{el}</Suspense>
 
-const router = createBrowserRouter([
+/** The store apps: every screen. */
+const APP_ROUTES = [
   // The app has no website pages: its about page is the calculator.
-  { path: '/sobre', element: IS_APP ? <Navigate to="/" replace /> : L(<Landing />) },
-  // The store apps' first launch, full screen.
-  ...(IS_APP ? [{ path: '/bem-vindo', element: L(<Onboarding />) }] : []),
-  // The website's legal pages; in the app they are screens inside it (below).
-  ...(IS_APP
-    ? []
-    : [
-        { path: '/privacidade', element: L(<LegalPage kind="privacy" />) },
-        { path: '/termos', element: L(<LegalPage kind="terms" />) },
-      ]),
+  { path: '/sobre', element: <Navigate to="/" replace /> },
+  // The first launch, full screen.
+  { path: '/bem-vindo', element: L(<Onboarding />) },
   { path: '/ficha/:id', element: L(<SetupSheet />) },
   {
     element: <Shell />,
@@ -61,16 +60,28 @@ const router = createBrowserRouter([
       { path: '/settings', element: <Navigate to="/perfil/definicoes" replace /> },
       { path: '/s/:data', element: L(<SharedSetup />) },
       { path: '/design', element: L(<DesignPage />) },
-      ...(IS_APP
-        ? [
-            { path: '/privacidade', element: L(<LegalScreen kind="privacy" />) },
-            { path: '/termos', element: L(<LegalScreen kind="terms" />) },
-          ]
-        : []),
+      { path: '/privacidade', element: L(<LegalScreen kind="privacy" />) },
+      { path: '/termos', element: L(<LegalScreen kind="terms" />) },
       { path: '*', element: <NotFound /> },
     ],
   },
-], { basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/' })
+]
+
+/** The website: the apps' shop window, the pages the stores ask for, and
+ *  shared setups. Everything else goes to the front page. */
+const SITE_ROUTES = [
+  { path: '/', element: L(<Landing />) },
+  { path: '/sobre', element: <Navigate to="/" replace /> },
+  { path: '/privacidade', element: L(<LegalPage kind="privacy" />) },
+  { path: '/termos', element: L(<LegalPage kind="terms" />) },
+  { path: '/suporte', element: L(<SupportPage />) },
+  { path: '/apagar-conta', element: L(<DeleteAccountPage />) },
+  { path: '/s/:data', element: L(<SharePreview />) },
+  { path: '/ficha/:id', element: L(<FichaPreview />) },
+  { path: '*', element: <Navigate to="/" replace /> },
+]
+
+const router = createBrowserRouter(IS_APP ? APP_ROUTES : SITE_ROUTES, { basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/' })
 
 export default function App() {
   useApplyTheme()

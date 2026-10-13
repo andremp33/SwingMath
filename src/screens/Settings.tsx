@@ -1,4 +1,5 @@
 import { Bell, Download, ExternalLink, RotateCcw, Sparkles, Trash2, Upload } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
 import { useRef, useState } from 'react'
 import { signOut } from '../app/account'
 import { deleteAll, exportAll, importAll } from '../data/db'
@@ -221,7 +222,7 @@ function DataGroup() {
             const json = JSON.stringify(await exportAll(), null, 2)
             const name = `swingmath-${new Date().toISOString().slice(0, 10)}.json`
             // A download link does nothing inside the app: hand the file to the share sheet.
-            if (IS_APP) return import('../lib/native').then((n) => n.shareFile(name, json, t.settings.export))
+            if (IS_APP && Capacitor.isNativePlatform()) return import('../lib/native').then((n) => n.shareFile(name, json, t.settings.export))
             const blob = new Blob([json], { type: 'application/json' })
             const a = document.createElement('a')
             a.href = URL.createObjectURL(blob)
