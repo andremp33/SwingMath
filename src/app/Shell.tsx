@@ -1,4 +1,4 @@
-import { Calculator, ClipboardList, GitCompareArrows, NotebookPen, Settings } from 'lucide-react'
+import { Calculator, ClipboardList, GitCompareArrows, NotebookPen, UserRound } from 'lucide-react'
 import { RacketIcon } from '../ui/icons'
 import { useEffect } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -8,6 +8,7 @@ import { LOCALE } from '../lib/format'
 import { IS_APP } from '../lib/platform'
 import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
+import { Avatar } from '../ui/Avatar'
 import { useRestringReminders } from '../screens/reminders'
 
 const TABS = [
@@ -68,8 +69,8 @@ export function Shell() {
           <Logo className="size-6" />
           {t.appName}
         </Link>
-        <NavLink to="/settings" aria-label={t.nav.settings} className="rounded-md p-2 text-muted hover:bg-surface-2 hover:text-text">
-          <Settings className="size-5" strokeWidth={1.75} aria-hidden />
+        <NavLink to="/perfil" aria-label={t.nav.profile} className="rounded-full p-1.5 hover:bg-surface-2">
+          <Avatar />
         </NavLink>
       </header>
 
@@ -85,8 +86,8 @@ export function Shell() {
           {t.appName}
         </Link>
         <ul className="mx-auto flex h-[var(--tabbar-h)] max-w-lg items-stretch justify-around lg:h-auto lg:flex-col lg:gap-0.5">
-          {[...TABS, { to: '/settings', icon: Settings, key: 'settings' as const, color: 'var(--c-text)' }].map(({ to, icon: Icon, key, color }) => (
-            <li key={to} className={cx('flex-1 lg:flex-none', key === 'settings' && 'hidden lg:block')}>
+          {[...TABS, { to: '/perfil', icon: UserRound, key: 'profile' as const, color: 'var(--c-text)' }].map(({ to, icon: Icon, key, color }) => (
+            <li key={to} className={cx('flex-1 lg:flex-none', key === 'profile' && 'hidden lg:block')}>
               <NavLink
                 to={to}
                 end={to === '/'}
@@ -101,7 +102,8 @@ export function Shell() {
                   <>
                     {isActive && <span aria-hidden className="absolute inset-x-6 top-0 h-0.5 rounded-b lg:hidden" style={{ background: color }} />}
                     <span className="relative">
-                      <Icon className="size-5" strokeWidth={isActive ? 2 : 1.75} style={isActive ? { color } : undefined} aria-hidden />
+                      {/* On wide screens the profile sits in the sidebar, as the avatar. */}
+                      {key === 'profile' ? <Avatar className="size-6 text-[10px]" /> : <Icon className="size-5" strokeWidth={isActive ? 2 : 1.75} style={isActive ? { color } : undefined} aria-hidden />}
                       {key === 'journal' && due > 0 && <span className="absolute -right-1 -top-0.5 size-2 rounded-full bg-accent ring-2 ring-bg" aria-hidden />}
                     </span>
                     <span className="tab-label">{t.nav[key]}</span>

@@ -147,7 +147,7 @@ export function Onboarding() {
               <Button variant="primary" size="lg" className="w-full" onClick={() => setStep('racket')}>
                 {t.onboarding.start}
               </Button>
-              <button type="button" onClick={() => finish('/settings')} className="min-h-11 w-full text-sm text-muted underline-offset-2 hover:underline">
+              <button type="button" onClick={() => finish('/perfil')} className="min-h-11 w-full text-sm text-muted underline-offset-2 hover:underline">
                 {t.onboarding.haveAccount}
               </button>
             </>
@@ -286,7 +286,7 @@ export function Onboarding() {
               >
                 {t.onboarding.openCalc}
               </Button>
-              <Button variant="ghost" size="lg" className="w-full" onClick={() => finish('/settings')}>
+              <Button variant="ghost" size="lg" className="w-full" onClick={() => finish('/perfil')}>
                 {t.onboarding.seeProfile}
               </Button>
             </>

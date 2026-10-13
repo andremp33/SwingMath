@@ -19,14 +19,26 @@ function ago(ms: number, t: Dict) {
   return fmt(t.account.hoursAgo, { n: Math.round(min / 60) })
 }
 
-/** Settings group: sign in, or the account's status and sync. */
-export function AccountGroup() {
+/** The profile's top: the account and sync, or no account (data on this
+ *  phone) with a way to create one. `entry` keeps the form closed until asked. */
+export function AccountGroup({ entry }: { entry?: boolean }) {
   const t = useT()
   const account = useStore((s) => s.account)
-  if (!cloudConfigured()) return null
+  const [open, setOpen] = useState(!entry)
+  if (!cloudConfigured()) return entry ? <p className="text-sm text-muted">{t.profile.noAccount}</p> : null
   return (
     <SettingsGroup title={t.account.title} action={!account && <span className="text-sm text-muted">{t.account.optional}</span>}>
-      {account ? <SignedIn /> : <SignInForm />}
+      {account ? (
+        <SignedIn />
+      ) : open ? (
+        <SignInForm />
+      ) : (
+        <SettingsRow label={t.profile.noAccount}>
+          <Button variant="primary" size="sm" icon={UserRound} onClick={() => setOpen(true)}>
+            {t.profile.createAccount}
+          </Button>
+        </SettingsRow>
+      )}
     </SettingsGroup>
   )
 }
@@ -117,14 +129,12 @@ function SignInForm() {
 
 function SignedIn() {
   const t = useT()
-  const toast = useToast()
   const lang = useStore((s) => s.lang)
   const account = useStore((s) => s.account)!
   const accountPro = useStore((s) => s.accountPro)
   const sync = useStore((s) => s.sync)
   const paywall = usePaywall()
   const [busy, setBusy] = useState(false)
-  const [confirm, setConfirm] = useState(false)
   // During the beta every account has Pro, sync included.
   const pro = PRO_BETA || accountProActive(accountPro)
 
@@ -141,11 +151,7 @@ function SignedIn() {
               : t.account.proActive
             : t.account.noPro
         }
-      >
-        <Button variant="secondary" size="sm" icon={LogOut} onClick={() => void signOut()}>
-          {t.account.signOut}
-        </Button>
-      </SettingsRow>
+      />
       <SettingsRow
         label={t.account.sync}
         hint={
@@ -181,6 +187,23 @@ function SignedIn() {
             {t.settings.seePlans}
           </Button>
         )}
+      </SettingsRow>
+    </>
+  )
+}
+
+/** At the end of the profile: sign out, or delete the account and what is in the cloud. */
+export function AccountEnd() {
+  const t = useT()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  return (
+    <SettingsGroup title={t.profile.account}>
+      <SettingsRow label={t.account.signOut}>
+        <Button variant="secondary" size="sm" icon={LogOut} onClick={() => void signOut()}>
+          {t.account.signOut}
+        </Button>
       </SettingsRow>
       <SettingsRow label={t.account.deleteAccount} hint={t.account.deleteHint} danger>
         <Button variant="danger" size="sm" icon={Trash2} onClick={() => setConfirm(true)}>
@@ -221,6 +244,6 @@ function SignedIn() {
       >
         <p className="text-sm">{t.account.deleteBody}</p>
       </Sheet>
-    </>
+    </SettingsGroup>
   )
 }

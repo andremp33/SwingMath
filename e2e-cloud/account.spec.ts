@@ -41,9 +41,17 @@ async function open(browser: Browser) {
   return page
 }
 
-async function signIn(page: Page, email: string) {
-  await page.goto('/settings')
+/** The account sits at the top of the profile; the form opens on request. */
+async function accountCard(page: Page) {
+  await page.goto('/perfil')
   const card = page.getByRole('region', { name: 'Conta' })
+  const create = card.getByRole('button', { name: 'Criar conta' })
+  if (await create.isVisible()) await create.click()
+  return card
+}
+
+async function signIn(page: Page, email: string) {
+  const card = await accountCard(page)
   await card.getByLabel('Email').fill(email)
   const sentAt = Date.now()
   await card.getByRole('button', { name: 'Enviar código' }).click()
@@ -67,8 +75,7 @@ async function saveSetup(page: Page, name: string) {
 test('wrong code is refused; during the beta every account has Pro', async ({ browser }) => {
   const page = await open(browser)
   const email = emailOf('free')
-  await page.goto('/settings')
-  const card = page.getByRole('region', { name: 'Conta' })
+  const card = await accountCard(page)
   await card.getByLabel('Email').fill(email)
   await card.getByRole('button', { name: 'Enviar código' }).click()
   await card.getByLabel('Código').fill('000000')
@@ -101,9 +108,9 @@ test('Pro through the account syncs setups to a second device', async ({ browser
   // An edit on B reaches A.
   await b.getByRole('button', { name: 'Apagar' }).first().click()
   await expect(b.getByRole('article')).toHaveCount(0)
-  await b.goto('/settings')
+  await b.goto('/perfil')
   await b.getByRole('button', { name: 'Sincronizar agora' }).click()
-  await a.goto('/settings')
+  await a.goto('/perfil')
   await a.getByRole('button', { name: 'Sincronizar agora' }).click()
   await a.goto('/setups')
   await expect(a.getByRole('article')).toHaveCount(0)
@@ -271,11 +278,11 @@ test('measurements: the median shows from 3 players, then account deletion', asy
   await expect(card).toContainText(/3 jogadores mediram esta raquete com cordas/)
   await expect(card).toContainText('323,0 g')
 
-  await page.goto('/settings')
+  await page.goto('/perfil')
   await page.getByRole('button', { name: 'Apagar conta' }).click()
   await page.getByRole('button', { name: 'Apagar conta para sempre' }).click()
   await expect(page.getByText('Conta apagada')).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Conta' }).getByLabel('Email')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Conta' }).getByRole('button', { name: 'Criar conta' })).toBeVisible()
   const left = await admin.from('measurements').select('id').eq('racket_id', rid).eq('weight_g', 323)
   expect(left.data).toEqual([])
 })

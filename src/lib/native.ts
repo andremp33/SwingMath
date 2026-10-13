@@ -43,7 +43,7 @@ export async function initNative() {
     if (code) await cloud.auth.exchangeCodeForSession(code)
     else if (hash.get('access_token') && hash.get('refresh_token'))
       await cloud.auth.setSession({ access_token: hash.get('access_token')!, refresh_token: hash.get('refresh_token')! })
-    history.pushState({}, '', '/settings')
+    history.pushState({}, '', '/perfil')
     dispatchEvent(new PopStateEvent('popstate'))
   })
 }

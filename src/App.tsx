@@ -21,6 +21,7 @@ const Match = lazy(() => import('./screens/Match').then((m) => ({ default: m.Mat
 const Measure = lazy(() => import('./screens/Measure').then((m) => ({ default: m.Measure })))
 const RacketForm = lazy(() => import('./screens/RacketForm').then((m) => ({ default: m.RacketForm })))
 const Settings = lazy(() => import('./screens/Settings').then((m) => ({ default: m.Settings })))
+const Profile = lazy(() => import('./screens/Profile').then((m) => ({ default: m.Profile })))
 const SetupSheet = lazy(() => import('./screens/SetupSheet').then((m) => ({ default: m.SetupSheet })))
 const StringCalc = lazy(() => import('./screens/StringCalc').then((m) => ({ default: m.StringCalc })))
 const Setups = lazy(() => import('./screens/Setups').then((m) => ({ default: m.Setups })))
@@ -54,7 +55,10 @@ const router = createBrowserRouter([
       { path: '/match', element: L(<Match />) },
       { path: '/diario', element: L(<Journal />) },
       { path: '/cordas', element: L(<StringCalc />) },
-      { path: '/settings', element: L(<Settings />) },
+      { path: '/perfil', element: L(<Profile />) },
+      { path: '/perfil/definicoes', element: L(<Settings />) },
+      // Settings live in the profile now; old links land there.
+      { path: '/settings', element: <Navigate to="/perfil/definicoes" replace /> },
       { path: '/s/:data', element: L(<SharedSetup />) },
       { path: '/design', element: L(<DesignPage />) },
       ...(IS_APP

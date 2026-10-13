@@ -1,8 +1,7 @@
-import { ChevronLeft } from 'lucide-react'
-import { fmt, useT } from '../i18n'
+import { fmt } from '../i18n'
 import { useLegal } from '../i18n/legal'
 import { OWNER, OWNER_ADDRESS, SUPPORT_EMAIL } from '../lib/owner'
-import { useBack, useSwipeBack } from '../ui/back'
+import { BackTitle } from '../ui/BackTitle'
 import { cx } from '../ui/basics'
 import { Sheet } from '../ui/overlay'
 
@@ -28,18 +27,10 @@ export function LegalBody({ kind, web, large }: { kind: LegalKind; web?: boolean
 
 /** In the app: a screen of its own, with a way back (button and edge swipe). */
 export function LegalScreen({ kind }: { kind: LegalKind }) {
-  const t = useT()
   const doc = useLegal(kind)
-  const back = useBack('/settings')
-  useSwipeBack(back)
   return (
     <article className="mx-auto max-w-2xl">
-      <header className="mb-3 flex min-h-11 items-center gap-1">
-        <button type="button" onClick={back} aria-label={t.common.back} className="-ml-2 rounded-full p-2 text-muted hover:bg-surface-2 hover:text-text">
-          <ChevronLeft className="size-6" aria-hidden />
-        </button>
-        <h1 className="min-w-0 text-xl font-semibold tracking-tight">{doc.title}</h1>
-      </header>
+      <BackTitle fallback="/perfil">{doc.title}</BackTitle>
       <LegalBody kind={kind} />
     </article>
   )

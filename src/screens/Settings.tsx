@@ -1,6 +1,5 @@
 import { Bell, Download, ExternalLink, RotateCcw, Sparkles, Trash2, Upload } from 'lucide-react'
-import { useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useRef, useState } from 'react'
 import { signOut } from '../app/account'
 import { deleteAll, exportAll, importAll } from '../data/db'
 import { isPro, useStore, type Theme } from '../data/store'
@@ -9,17 +8,16 @@ import { fmt, useT, type Lang } from '../i18n'
 import { deactivateLicense, PORTAL_URL, PRICING, PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { IS_APP } from '../lib/platform'
-import { Badge, Button, NumberField, PageTitle, Segmented, SettingsGroup, SettingsRow } from '../ui/basics'
+import { Badge, Button, NumberField, Segmented, SettingsGroup, SettingsRow } from '../ui/basics'
+import { BackTitle } from '../ui/BackTitle'
 import { useToast } from '../ui/overlay'
-import { AccountGroup } from './AccountCard'
 import { usePaywall } from './Pro'
 import { useReminders } from './reminders'
 import { InfoTip } from '../ui/disclosure'
 
 /**
- * One column of groups, each a list of rows: name and explanation on the
- * left, one control on the right. Plans and sign-in details open in sheets
- * instead of filling the page.
+ * The profile's settings: one column of groups, each a list of rows, name
+ * and explanation on the left, one control on the right.
  */
 export function Settings() {
   const t = useT()
@@ -27,11 +25,8 @@ export function Settings() {
 
   return (
     <div className="max-w-2xl">
-      <PageTitle>{t.settings.title}</PageTitle>
+      <BackTitle fallback="/perfil">{t.settings.title}</BackTitle>
       <div className="space-y-8 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">
-        <ProGroup />
-        <AccountGroup />
-
         <SettingsGroup title={t.settings.prefs}>
           <SettingsRow label={t.settings.language} stack>
             <Segmented<Lang>
@@ -77,25 +72,14 @@ export function Settings() {
         <RemindersGroup />
 
         <DataGroup />
-
-        <SettingsGroup title={t.settings.about}>
-          <div className="space-y-3 py-3.5 text-sm">
-            <p className="text-muted">{t.settings.aboutText}</p>
-            <nav aria-label={t.settings.about} className="flex flex-wrap gap-x-5 gap-y-2 font-semibold text-accent-text">
-              {!IS_APP && <Link to="/sobre">SwingMath</Link>}
-              <Link to="/privacidade">{t.settings.privacy}</Link>
-              <Link to="/termos">{t.settings.terms}</Link>
-            </nav>
-            <p className="num text-xs text-muted">{fmt(t.settings.version, { v: __APP_VERSION__ })}</p>
-          </div>
-        </SettingsGroup>
       </div>
     </div>
   )
 }
 
-/** Plan status in one row; the plans themselves open in the Pro sheet. */
-function ProGroup() {
+/** The plan in one row: free (see plans), on trial until a date, Pro or
+ *  lifetime; manage the subscription in the store, or restore purchases. */
+export function PlanGroup() {
   const t = useT()
   const s = useStore()
   const pro = useStore(isPro)
@@ -113,19 +97,21 @@ function ProGroup() {
   }
   if (!pro) {
     return (
-      <SettingsGroup title={t.pro.title}>
-        <SettingsRow label={t.settings.free} hint={fmt(t.pro.trial, { days: PRICING.trialDays })}>
+      <SettingsGroup title={t.profile.plan}>
+        <SettingsRow label={t.profile.free} hint={IS_APP ? t.paywall.free : fmt(t.pro.trial, { days: PRICING.trialDays })}>
           <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('profile', { asked: true })}>
             {t.settings.seePlans}
           </Button>
         </SettingsRow>
+        {IS_APP && <RestoreRow />}
       </SettingsGroup>
     )
   }
+  const trialUntil = keyActive && l.trial && l.expiresAt ? fmt(t.profile.trialUntil, { date: fmtDate(Date.parse(l.expiresAt), s.lang) }) : null
   return (
-    <SettingsGroup title={t.pro.title} action={<Badge tone="pro">Pro</Badge>}>
+    <SettingsGroup title={t.profile.plan} action={<Badge tone="pro">Pro</Badge>}>
       <SettingsRow
-        label={keyActive ? (l.lifetime ? t.pro.lifetime : t.pro.active) : t.account.proActive}
+        label={trialUntil ?? (keyActive ? (l.lifetime ? t.pro.lifetime : t.pro.active) : t.account.proActive)}
         hint={
           keyActive
             ? [
@@ -161,6 +147,7 @@ function ProGroup() {
           </a>
         )}
       </SettingsRow>
+      {IS_APP && !l?.lifetime && <RestoreRow />}
       {keyActive && l.provider === 'lemonsqueezy' && (
         <SettingsRow label={t.pro.deactivate}>
           <Button
@@ -176,6 +163,35 @@ function ProGroup() {
         </SettingsRow>
       )}
     </SettingsGroup>
+  )
+}
+
+/** Store apps: ask the store for purchases made before (new phone, reinstall). */
+function RestoreRow() {
+  const t = useT()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  return (
+    <SettingsRow label={t.profile.restoreLabel}>
+      <Button
+        variant="secondary"
+        size="sm"
+        loading={busy}
+        onClick={async () => {
+          setBusy(true)
+          try {
+            const ok = await import('../lib/purchases').then((m) => m.restore())
+            toast(ok ? t.pro.restored : t.pro.nothingToRestore)
+          } catch {
+            toast(t.pro.storeError)
+          } finally {
+            setBusy(false)
+          }
+        }}
+      >
+        {t.pro.restore}
+      </Button>
+    </SettingsRow>
   )
 }
 
@@ -258,12 +274,11 @@ function DataGroup() {
 /** Restring reminders: a notification on the day a racket's strings run out. */
 function RemindersGroup() {
   const t = useT()
-  const hoursPerWeek = useStore((s) => s.profile.hoursPerWeek)
-  const setProfile = useStore((s) => s.setProfile)
   const { supported, permission, enable } = useReminders()
+  if (!supported) return null
   return (
     <SettingsGroup title={t.journal.reminders}>
-      {supported && (
+      {(
         <SettingsRow label={t.journal.remindersRow} hint={permission === 'denied' ? t.journal.remindersBlocked : t.journal.remindersHint}>
           {permission === 'granted' ? (
             <span className="flex items-center gap-1.5 text-sm font-medium">
@@ -276,9 +291,6 @@ function RemindersGroup() {
           )}
         </SettingsRow>
       )}
-      <SettingsRow label={t.journal.hoursPerWeek} hint={t.journal.hoursPerWeekHint}>
-        <NumberField inline label={t.journal.hoursPerWeek} unit="h" min={0} max={40} value={hoursPerWeek} onChange={(v) => setProfile({ hoursPerWeek: v })} />
-      </SettingsRow>
     </SettingsGroup>
   )
 }

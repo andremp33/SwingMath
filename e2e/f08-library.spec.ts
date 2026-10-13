@@ -73,7 +73,8 @@ test.describe('F08 library and custom rackets', () => {
 
 test.describe('F09 Pro and settings', () => {
   test('F09-E1 without a store, the sheet says so', async ({ page }) => {
-    await start(page, { path: '/settings' })
+    // The plan lives on the profile.
+    await start(page, { path: '/perfil' })
     await page.getByRole('button', { name: 'Ver planos' }).click()
     await expect(page.getByRole('dialog').getByText('A loja ainda não está configurada nesta versão.')).toBeVisible()
     await a11y(page)

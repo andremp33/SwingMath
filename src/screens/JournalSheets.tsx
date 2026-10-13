@@ -135,9 +135,11 @@ export function OwnedSheet({ value, onClose, initialBed }: { value: OwnedRacket 
     const clash = await db.owned.filter((o) => o.id !== draft.id && o.name.trim().toLowerCase() === name.toLowerCase()).count()
     if (clash) return setError(t.journal.racketNameTaken)
     const now = Date.now()
-    await saveOwned({ ...draft, name, notes: draft.notes?.trim() || undefined, updatedAt: now + (isNew ? 1 : 0) })
+    // The strings first: saving the racket changes the page behind this
+    // sheet (the first racket ends the journal's welcome), so it goes last.
     if (isNew)
       await saveStringing({ id: uid(), ownedId: draft.id, label: name, racketId: draft.racketId, setupId: draft.setupId, date: strungOn, bed, createdAt: now, updatedAt: now })
+    await saveOwned({ ...draft, name, notes: draft.notes?.trim() || undefined, updatedAt: now + (isNew ? 1 : 0) })
     toast(t.journal.racketSaved)
     onClose()
   }
