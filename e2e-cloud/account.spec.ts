@@ -139,6 +139,8 @@ async function openCommunity(page: Page) {
 }
 
 test('a recipe says what it is for, filters by goal, and republishing updates it', async ({ browser }) => {
+  // Three players and two pages of the app: longer than the default.
+  test.setTimeout(90_000)
   const author = await open(browser)
   await signIn(author, emailOf('recipe'))
   await saveSetup(author, `Estável ${stamp}`)
@@ -175,6 +177,13 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   await expect(row).toContainText('Base de catálogo')
   await row.getByRole('button', { name: 'Experimentar' }).click()
   await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveValue('0.5')
+
+  // The library says how many recipes a frame has, and opens them.
+  const lib = await open(browser)
+  await lib.goto('/rackets')
+  await lib.getByRole('button', { name: /setups? ?: Ver os setups da comunidade para a Babolat Pure Aero 98$/ }).first().click()
+  await expect(lib.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
+  await expect(lib.getByRole('region', { name: 'Comunidade' }).getByRole('button', { name: /^Comunidade/ })).toHaveAttribute('aria-expanded', 'true')
 })
 
 test('measurements: the median shows from 3 players, then account deletion', async ({ browser }) => {

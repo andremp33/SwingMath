@@ -8,10 +8,11 @@ import { defaultConfig, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
 import { Badge, Button, Card, CardTitle, EmptyState, IconButton, PageTitle, Select } from '../ui/basics'
-import { InfoTip } from '../ui/disclosure'
+import { InfoTip, openCollapsible } from '../ui/disclosure'
 import { MyRacketsSection } from '../ui/MyRackets'
 import { RacketMap } from '../ui/RacketMap'
 import { useToast } from '../ui/overlay'
+import { useSetupCounts } from './Community'
 import { matchesQuery } from '../ui/RacketPicker'
 
 /** Frame types wear the colour of the sensation they lean to. */
@@ -37,6 +38,7 @@ export function Library() {
   const t = useT()
   const nav = useNavigate()
   const all = useAllRackets()
+  const counts = useSetupCounts()
   const [q, setQ] = useState('')
   const [type, setType] = useState<RacketType | 'all'>('all')
   const [brand, setBrand] = useState('all')
@@ -149,7 +151,7 @@ export function Library() {
               <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {grp.items.map((r) => (
                   <li key={r.id} className="flex">
-                    <RacketCard racket={r} showBrand={!grp.name} />
+                    <RacketCard racket={r} showBrand={!grp.name} community={counts.get(r.id)} />
                   </li>
                 ))}
               </ul>
@@ -161,7 +163,7 @@ export function Library() {
   )
 }
 
-function RacketCard({ racket: r, showBrand }: { racket: Racket; showBrand: boolean }) {
+function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showBrand: boolean; community?: number }) {
   const t = useT()
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
@@ -243,9 +245,23 @@ function RacketCard({ racket: r, showBrand }: { racket: Racket; showBrand: boole
       <p className="num mb-3 text-sm text-muted">{facts.join(' · ')}</p>
 
       <div className="mt-auto flex items-center gap-1">
-        <Button variant="secondary" size="sm" icon={Calculator} className="mr-auto" onClick={openInCalc}>
+        <Button variant="secondary" size="sm" icon={Calculator} className={community ? undefined : 'mr-auto'} onClick={openInCalc}>
           {t.library.useInCalc}
         </Button>
+        {!!community && (
+          <button
+            type="button"
+            onClick={() => {
+              openInCalc()
+              openCollapsible('community')
+            }}
+            className="num mr-auto min-h-9 rounded-md px-1.5 text-sm text-muted hover:bg-surface-2 hover:text-text"
+          >
+            <span aria-hidden>· </span>
+            {community === 1 ? t.community.countOne : fmt(t.community.count, { n: community })}
+            <span className="sr-only">: {fmt(t.community.countHint, { name: `${r.brand} ${r.model}` })}</span>
+          </button>
+        )}
         <IconButton icon={Diamond} label={onMap ? t.library.map.remove : t.library.map.add} active={onMap} aria-pressed={onMap} onClick={() => toggleMap(r.id)} />
         <IconButton icon={Copy} label={t.common.duplicate} onClick={duplicate} />
         {!r.isStock && <IconButton icon={Pencil} label={t.common.edit} onClick={() => nav(`/rackets/${r.id}`)} />}
