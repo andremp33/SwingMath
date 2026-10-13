@@ -75,8 +75,8 @@ export function IconButton({
 }
 
 /** A section of a page: a hairline on top and room to breathe, no box. */
-export function Card({ className, children, as: As = 'section', label }: { className?: string; children: ReactNode; as?: 'section' | 'div' | 'article'; label?: string }) {
-  return <As aria-label={label} className={cx('border-t border-border pt-4 pb-5', className)}>{children}</As>
+export function Card({ className, children, as: As = 'section', label, id }: { className?: string; children: ReactNode; as?: 'section' | 'div' | 'article'; label?: string; id?: string }) {
+  return <As id={id} aria-label={label} className={cx('border-t border-border pt-4 pb-5', className)}>{children}</As>
 }
 
 export function CardTitle({ children, action, info }: { children: ReactNode; action?: ReactNode; info?: ReactNode }) {

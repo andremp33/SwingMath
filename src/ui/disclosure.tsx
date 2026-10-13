@@ -1,5 +1,5 @@
 import { ChevronDown, CircleHelp } from 'lucide-react'
-import { useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useT } from '../i18n'
 import { Card, cx } from './basics'
@@ -31,6 +31,28 @@ export function InfoTip({ title, children }: { title: string; children: ReactNod
 }
 
 const KEY = (id: string) => `swingmath-open:${id}`
+const OPEN_EVENT = 'swingmath-open'
+
+/**
+ * Opens a collapsible card from elsewhere (a link, another page) and scrolls
+ * to it once it is on screen. Remembered like a tap on its title.
+ */
+export function openCollapsible(id: string) {
+  try {
+    localStorage.setItem(KEY(id), '1')
+  } catch {
+    // Not remembered; the event below still opens it.
+  }
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: id }))
+  // The card may be on a page that is still loading: look for a second.
+  let tries = 0
+  const find = () => {
+    const el = document.getElementById(`card-${id}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else if (tries++ < 60) requestAnimationFrame(find)
+  }
+  requestAnimationFrame(find)
+}
 
 /** Open on wide screens, closed on phones, until the player chooses. */
 function useOpen(id: string): [boolean, (v: boolean) => void] {
@@ -43,6 +65,11 @@ function useOpen(id: string): [boolean, (v: boolean) => void] {
     }
     return typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
   })
+  useEffect(() => {
+    const on = (e: Event) => (e as CustomEvent<string>).detail === id && setOpen(true)
+    window.addEventListener(OPEN_EVENT, on)
+    return () => window.removeEventListener(OPEN_EVENT, on)
+  }, [id])
   return [
     open,
     (v) => {
@@ -61,7 +88,7 @@ export function CollapsibleCard({ id, title, summary, info, children }: { id: st
   const [open, setOpen] = useOpen(id)
   const bodyId = useId()
   return (
-    <Card label={title}>
+    <Card label={title} id={`card-${id}`} className="scroll-mt-20">
       <div className="flex items-center gap-2">
         <h2 className="min-w-0 flex-1">
           <button

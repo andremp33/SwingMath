@@ -1,7 +1,7 @@
 import { scrollToTop } from '../app/Shell'
-import { Flag, Send, Trash2, Upload, Users } from 'lucide-react'
+import { ArrowRight, Flag, RefreshCw, Send, Trash2, Upload, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useOwned, useSessions, useStringings } from '../data/hooks'
+import { useOwned, useSessions, useSetups, useStringings } from '../data/hooks'
 import { useStore } from '../data/store'
 import { SESSION_RATINGS, setupResults } from '../domain/journal'
 import { compute } from '../domain/physics'
@@ -15,10 +15,12 @@ import {
   GOALS,
   LEVELS,
   publicSetups,
-  publishedId,
+  myRecipe,
   publishSetup,
+  rankPublicSetups,
   reportSetup,
   roundResults,
+  setupCounts,
   STYLES,
   submitMeasurement,
   type Goal,
@@ -29,25 +31,67 @@ import {
   type Style,
 } from '../lib/community'
 import { fmtNum, leadParts } from '../lib/format'
-import { Button, Card, CardTitle, IconButton, MultiChoiceChips, Segmented, Select, TextField, Toggle } from '../ui/basics'
-import { CollapsibleCard, InfoTip } from '../ui/disclosure'
+import { Badge, Button, Card, CardTitle, ChoiceChips, IconButton, MultiChoiceChips, Segmented, Select, TextField, Toggle } from '../ui/basics'
+import { CollapsibleCard, InfoTip, openCollapsible } from '../ui/disclosure'
 import { useToast } from '../ui/overlay'
 
-/** Calculator card: what players measured, and setups they published. */
+/** Visible community setups per frame, for links into the calculator. */
+export function useSetupCounts() {
+  const [counts, setCounts] = useState<Map<string, number>>(() => new Map())
+  useEffect(() => {
+    let alive = true
+    setupCounts().then((c) => alive && setCounts(c))
+    return () => {
+      alive = false
+    }
+  }, [])
+  return counts
+}
+
+/** Under the racket picker: "3 community setups for this racket →". */
+export function CommunityLink({ racket }: { racket: Racket }) {
+  const t = useT()
+  const n = useSetupCounts().get(racket.id) ?? 0
+  if (!communityEnabled() || !racket.isStock || n < 1) return null
+  return (
+    <button
+      type="button"
+      onClick={() => openCollapsible('community')}
+      className="-mx-1 flex min-h-9 items-center gap-1 rounded-md px-1 text-sm text-muted hover:bg-surface-2 hover:text-text"
+    >
+      <Users className="size-4 shrink-0" aria-hidden />
+      {n === 1 ? t.community.forRacketOne : fmt(t.community.forRacket, { n })}
+      <ArrowRight className="size-4 shrink-0" aria-hidden />
+    </button>
+  )
+}
+
+const SHOWN = 5
+
+/** Calculator card: what players measured, and the recipes they published. */
 export function CommunityCard({ racket }: { racket: Racket }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const account = useStore((s) => s.account)
   const loadConfig = useStore((s) => s.loadConfig)
+  const masses = useStore((s) => s.masses)
+  const mySetups = useSetups()
+  const owned = useOwned()
+  const stringings = useStringings()
+  const sessions = useSessions()
   const toast = useToast()
   const [stats, setStats] = useState<MeasurementStats[]>()
   const [setups, setSetups] = useState<PublicSetup[]>()
   const [version, setVersion] = useState(0)
+  const [goal, setGoal] = useState<Goal | 'all'>('all')
+  const [all, setAll] = useState(false)
 
   useEffect(() => {
     let alive = true
     setStats(undefined)
     setSetups(undefined)
+    setGoal('all')
+    setAll(false)
     measurementStats(racket.id).then((s) => alive && setStats(s))
     publicSetups(racket.id).then((s) => alive && setSetups(s))
     return () => {
@@ -66,12 +110,37 @@ export function CommunityCard({ racket }: { racket: Racket }) {
     }
   }
 
+  // My own recipe, republished from the saved setup it came from.
+  const update = (p: PublicSetup, local: Setup) =>
+    signedIn(async () => {
+      const { result } = compute({ spec: racket, ...local, masses })
+      const results = p.results && owned && stringings && sessions ? setupResults(local.id, owned, stringings, sessions) : null
+      await publishSetup({
+        name: local.name,
+        author: p.author ?? undefined,
+        config: local,
+        racket,
+        specs: result,
+        goals: p.goals,
+        level: p.level ?? undefined,
+        style: p.style ?? undefined,
+        results,
+        setupRef: local.id,
+      })
+      toast(t.community.updated)
+      setVersion((v) => v + 1)
+    })
+
+  const list = setups ?? []
+  const goalsHere = GOALS.filter((g) => list.some((p) => p.goals.includes(g)))
+  const ranked = rankPublicSetups(list, goal === 'all' ? undefined : goal)
+  const shown = all ? ranked : ranked.slice(0, SHOWN)
   const measured = (stats ?? []).reduce((n, x) => n + x.n, 0)
   return (
     <CollapsibleCard
       id="community"
       title={t.community.title}
-      summary={[measured ? fmt(t.community.measuredShort, { n: measured }) : '', setups?.length ? fmt(t.community.setupsShort, { n: setups.length }) : ''].filter(Boolean).join(' · ') || undefined}
+      summary={[measured ? fmt(t.community.measuredShort, { n: measured }) : '', list.length ? fmt(t.community.setupsShort, { n: list.length }) : ''].filter(Boolean).join(' · ') || undefined}
       info={<InfoTip title={t.community.title}>{t.community.medianHint}</InfoTip>}
     >
       <div className="space-y-2 text-sm">
@@ -112,69 +181,114 @@ export function CommunityCard({ racket }: { racket: Racket }) {
         )}
       </div>
 
-      <h3 className="mb-1 mt-4 text-sm font-medium">{t.community.setups}</h3>
-      {setups === undefined ? null : setups.length === 0 ? (
+      <h3 className="mb-2 mt-4 text-sm font-medium">{t.community.setups}</h3>
+      {setups === undefined ? null : list.length === 0 ? (
         <p className="text-sm text-muted">{t.community.noSetups}</p>
       ) : (
-        <ul className="divide-y divide-border">
-          {setups.map((p) => {
-            const mine = account?.userId === p.user_id
-            return (
-              <li key={p.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start">
-                <div className="min-w-0 flex-1 text-sm">
-                  <p className="truncate font-medium">
-                    {p.name} <span className="font-normal text-muted">· {p.author || t.community.anon}</span>
-                  </p>
-                  <p className="num text-muted">
-                    {fmtNum(p.specs.weightG, 1, lang)} g · {fmtNum(p.specs.balanceCm * 10, 1, lang)} mm · SW {fmtNum(p.specs.swingweight, 1, lang)}
-                  </p>
-                  <p className="num text-muted">
-                    {leadParts(p.config, t, lang).join(' · ') || t.setups.noLead} · {p.copies === 1 ? t.community.copyOne : fmt(t.community.copies, { n: p.copies })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      loadConfig({ ...p.config, racketId: racket.id }, null)
-                      void countCopy(p.id)
-                      toast(t.community.tried)
-                      scrollToTop()
-                    }}
-                  >
-                    {t.community.tryIt}
-                  </Button>
-                  {mine ? (
-                    <IconButton
-                      icon={Trash2}
-                      label={`${t.community.remove} ${p.name}`}
-                      onClick={signedIn(async () => {
-                        await deletePublicSetup(p.id)
-                        setVersion((v) => v + 1)
-                      })}
-                    />
-                  ) : (
-                    <IconButton
-                      icon={Flag}
-                      label={`${t.community.report} ${p.name}`}
-                      onClick={signedIn(async () => {
-                        await reportSetup(p.id)
-                        toast(t.community.reported)
-                      })}
-                    />
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+        <>
+          {goalsHere.length > 0 && (
+            <div className="mb-1">
+              <ChoiceChips<Goal | 'all'>
+                label={t.community.filter}
+                value={goal}
+                onChange={(g) => {
+                  setGoal(g)
+                  setAll(false)
+                }}
+                options={[{ value: 'all', label: t.community.all }, ...goalsHere.map((g) => ({ value: g, label: t.community.goals[g] }))]}
+              />
+            </div>
+          )}
+          <ul className="divide-y divide-border">
+            {shown.map((p) => {
+              const mine = account?.userId === p.user_id
+              const local = mine && p.setup_ref ? mySetups?.find((x) => x.id === p.setup_ref) : undefined
+              const tags = [...p.goals.map((g) => t.community.goals[g]), p.level && t.community.levels[p.level], p.style && t.community.styles[p.style]].filter(Boolean) as string[]
+              return (
+                <li key={p.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start">
+                  <div className="min-w-0 flex-1 space-y-1 text-sm">
+                    <p className="font-medium">
+                      {p.name}{' '}
+                      {p.partner ? (
+                        <Badge tone="accent">{fmt(t.community.partner, { name: p.partner })}</Badge>
+                      ) : (
+                        <span className="font-normal text-muted">· {p.author || t.community.anon}</span>
+                      )}
+                    </p>
+                    {tags.length > 0 && (
+                      <p className="flex flex-wrap gap-1">
+                        {tags.map((x) => (
+                          <Badge key={x}>{x}</Badge>
+                        ))}
+                      </p>
+                    )}
+                    <p className="num text-muted">
+                      {fmtNum(p.specs.weightG, 0, lang)} g · {fmtNum(p.specs.balanceCm * 10, 0, lang)} mm · SW {fmtNum(p.specs.swingweight, 0, lang)} ·{' '}
+                      {p.config.baseMode === 'measured' ? t.community.baseMeasured : t.community.baseCatalog}
+                    </p>
+                    <p className="num text-muted">
+                      {leadParts(p.config, t, lang).join(' · ') || t.setups.noLead} · {p.copies === 1 ? t.community.copyOne : fmt(t.community.copies, { n: p.copies })}
+                    </p>
+                    {p.results && (
+                      <p className="num">
+                        {resultsLine(p.results, t, lang, { outOf: true })} <span className="text-xs text-muted">({t.community.fromJournal})</span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        loadConfig({ ...p.config, racketId: racket.id }, null)
+                        void countCopy(p.id)
+                        toast(t.community.tried)
+                        scrollToTop()
+                      }}
+                    >
+                      {t.community.tryIt}
+                    </Button>
+                    {local && (
+                      <Button size="sm" variant="ghost" icon={RefreshCw} onClick={update(p, local)}>
+                        {t.community.updateMine}
+                      </Button>
+                    )}
+                    {mine ? (
+                      <IconButton
+                        icon={Trash2}
+                        label={`${t.community.remove} ${p.name}`}
+                        onClick={signedIn(async () => {
+                          await deletePublicSetup(p.id)
+                          setVersion((v) => v + 1)
+                        })}
+                      />
+                    ) : (
+                      <IconButton
+                        icon={Flag}
+                        label={`${t.community.report} ${p.name}`}
+                        onClick={signedIn(async () => {
+                          await reportSetup(p.id)
+                          toast(t.community.reported)
+                        })}
+                      />
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          {!all && ranked.length > SHOWN && (
+            <Button variant="ghost" className="mt-2 w-full" onClick={() => setAll(true)}>
+              {fmt(t.community.seeAll, { n: ranked.length })}
+            </Button>
+          )}
+        </>
       )}
     </CollapsibleCard>
   )
 }
 
 /** "12 sessions · 9 h · overall 4.3 · comfort 4.1": exactly what is public. */
-export function resultsLine(r: PublicResults, t: Dict, lang: string, opts: { hours?: boolean; outOf?: boolean } = {}) {
+function resultsLine(r: PublicResults, t: Dict, lang: string, opts: { hours?: boolean; outOf?: boolean } = {}) {
   const parts = [fmt(t.community.sessions, { n: r.sessions })]
   if (opts.hours) parts.push(fmt(t.community.hours, { h: fmtNum(r.hours, r.hours % 1 ? 1 : 0, lang) }))
   for (const k of SESSION_RATINGS) {
@@ -205,9 +319,19 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
   const [tried, setTried] = useState(false)
   const [publishedAs, setPublishedAs] = useState<string | null>(null)
 
+  // Already published: the form starts from the recipe as it is now.
   useEffect(() => {
     let alive = true
-    if (account && communityEnabled()) publishedId(setup.id).then((id) => alive && setPublishedAs(id))
+    if (account && communityEnabled())
+      myRecipe(setup.id).then((r) => {
+        if (!alive || !r) return
+        setPublishedAs(r.id)
+        setGoals(r.goals)
+        setLevel(r.level ?? '')
+        setStyle(r.style ?? '')
+        setAuthor(r.author ?? '')
+        setWithResults(!!r.results)
+      })
     return () => {
       alive = false
     }

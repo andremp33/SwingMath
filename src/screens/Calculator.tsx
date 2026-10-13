@@ -16,7 +16,7 @@ import { MyRacketsRow } from '../ui/MyRackets'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
 import { ComfortCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
-import { CommunityCard } from './Community'
+import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { usePaywall } from './Pro'
 import { InfoTip } from '../ui/disclosure'
@@ -106,7 +106,10 @@ export function Calculator() {
         <div className="contents xl:block xl:space-y-4">
           <Card className="order-1 border-t-0 pt-0 xl:order-none">
             <div className="space-y-4">
-              <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
+              <div>
+                <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
+                <CommunityLink racket={racket} />
+              </div>
               <MyRacketsRow />
               {config.baseMode === 'reference' ? (
                 <div>

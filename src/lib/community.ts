@@ -184,8 +184,18 @@ async function myId(cl: SupabaseClient) {
   return (await cl.auth.getSession()).data.session?.user.id
 }
 
-/** The id of my published copy of a saved setup, if there is one. */
-export async function publishedId(setupRef: string): Promise<string | null> {
+/** My published copy of a saved setup, if there is one. */
+export async function myRecipe(setupRef: string): Promise<PublicSetup | null> {
+  const c = cloud()
+  if (!c) return null
+  const cl = await c
+  const uid = await myId(cl)
+  if (!uid) return null
+  const { data } = await cl.from('public_setups').select(COLUMNS).eq('user_id', uid).eq('setup_ref', setupRef).maybeSingle()
+  return data ? (parsePublicSetups([data])[0] ?? null) : null
+}
+
+async function publishedId(setupRef: string): Promise<string | null> {
   const c = cloud()
   if (!c) return null
   const cl = await c

@@ -6,6 +6,8 @@ const admin = createClient(env.url, env.serviceKey, { auth: { persistSession: fa
 const MAILPIT = 'http://127.0.0.1:54324'
 const stamp = Date.now()
 const emailOf = (name: string) => `${name}-${stamp}@example.test`
+/** The app shows the beta or the real subscription, depending on the build. */
+const BETA_OFF = process.env.VITE_PRO_BETA === 'false'
 
 test.afterAll(async () => {
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
@@ -53,7 +55,7 @@ async function saveSetup(page: Page, name: string) {
   await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
   await page.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
   const d = page.getByRole('dialog')
-  await d.getByLabel('Nome').fill(name)
+  await d.getByLabel('Nome do setup').fill(name)
   await d.getByRole('button', { name: 'Guardar' }).click()
   await expect(page.getByText(`A editar: ${name}`)).toBeVisible()
 }
@@ -70,6 +72,8 @@ test('wrong code is refused; during the beta every account has Pro', async ({ br
   await expect(card.getByText('Código errado ou expirado.')).toBeVisible()
   await card.getByRole('button', { name: 'Usar outro email' }).click()
   await signIn(page, email)
+  // Run with VITE_PRO_BETA=false, an account without a subscription has no Pro.
+  if (BETA_OFF) return expect(card).toContainText('Esta conta não tem subscrição')
   await expect(card).toContainText('Pro grátis durante a beta')
   await expect(card.getByRole('button', { name: 'Sincronizar agora' })).toBeVisible()
 })
@@ -80,7 +84,7 @@ test('Pro through the account syncs setups to a second device', async ({ browser
   const a = await open(browser)
   await saveSetup(a, 'Antes da conta')
   const cardA = await signIn(a, email)
-  await expect(cardA.getByText('Pro pela conta')).toBeVisible()
+  await expect(cardA.getByText(BETA_OFF ? 'Pro pela conta' : 'Pro grátis durante a beta, sincronização incluída.')).toBeVisible()
   await expect(cardA).toContainText(/Sincronizado (agora mesmo|há)/)
 
   const b = await open(browser)
@@ -107,12 +111,14 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   await author.getByRole('button', { name: 'Partilhar' }).first().click()
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
   await author.getByRole('dialog').getByLabel(/Assinar como/).fill('Ana')
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Potência' }).click()
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
   await expect(author.getByText('Setup publicado')).toBeVisible()
 
   const visitor = await open(browser)
   await visitor.goto('/')
   const card = visitor.getByRole('region', { name: 'Comunidade' })
+  await openCommunity(visitor)
   const row = card.getByRole('listitem').filter({ hasText: 'Plow extra' })
   await expect(row).toContainText('Ana')
   await expect(row).toContainText('12h 0,5 g')
@@ -122,6 +128,53 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   // Reporting needs an account.
   await row.getByRole('button', { name: /Denunciar/ }).click()
   await expect(visitor.getByText('Precisas de conta para isto.')).toBeVisible()
+})
+
+/** The calculator's community card, opened. */
+async function openCommunity(page: Page) {
+  const card = page.getByRole('region', { name: 'Comunidade' })
+  const toggle = card.getByRole('button', { name: /^Comunidade/ })
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+  return card
+}
+
+test('a recipe says what it is for, filters by goal, and republishing updates it', async ({ browser }) => {
+  const author = await open(browser)
+  await signIn(author, emailOf('recipe'))
+  await saveSetup(author, `Estável ${stamp}`)
+  await author.goto('/setups')
+  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  const d = author.getByRole('dialog')
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  // A goal is required.
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(d.getByRole('alert')).toHaveText('Escolhe pelo menos um objetivo.')
+  await d.getByRole('checkbox', { name: 'Estabilidade' }).click()
+  await d.getByLabel('Nível').selectOption({ label: 'Avançado' })
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+
+  // Publishing the same setup again updates the recipe.
+  await author.keyboard.press('Escape')
+  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Conforto' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
+  await expect(author.getByText('Setup atualizado na comunidade')).toBeVisible()
+  const rows = await admin.from('public_setups').select('goals, level').eq('name', `Estável ${stamp}`)
+  expect(rows.data).toEqual([{ goals: ['stability', 'comfort'], level: 'advanced' }])
+
+  const visitor = await open(browser)
+  await visitor.goto('/')
+  await visitor.getByRole('button', { name: /setups? da comunidade para esta raquete/ }).click()
+  const card = visitor.getByRole('region', { name: 'Comunidade' })
+  await expect(card.getByRole('button', { name: /^Comunidade/ })).toHaveAttribute('aria-expanded', 'true')
+  await card.getByRole('radio', { name: 'Estabilidade' }).click()
+  const row = card.getByRole('listitem').filter({ hasText: `Estável ${stamp}` })
+  await expect(row).toContainText('Avançado')
+  await expect(row).toContainText('Base de catálogo')
+  await row.getByRole('button', { name: 'Experimentar' }).click()
+  await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveValue('0.5')
 })
 
 test('measurements: the median shows from 3 players, then account deletion', async ({ browser }) => {
@@ -143,7 +196,7 @@ test('measurements: the median shows from 3 players, then account deletion', asy
   await share.getByRole('button', { name: 'Partilhar com a comunidade' }).click()
   await expect(page.getByText('Obrigado! A tua medição foi partilhada.')).toBeVisible()
   await page.goto('/')
-  const card = page.getByRole('region', { name: 'Comunidade' })
+  const card = await openCommunity(page)
   await expect(card).toContainText(/3 jogadores mediram esta raquete com cordas/)
   await expect(card).toContainText('323,0 g')
 
