@@ -401,6 +401,53 @@ export function ChoiceChips<T extends string>({
   )
 }
 
+/** ChoiceChips that take several: each chip is a checkbox. Past `max`, a
+ *  new pick replaces the oldest, so a tap is never ignored. */
+export function MultiChoiceChips<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+  max,
+}: {
+  label: string
+  value: T[]
+  onChange: (v: T[]) => void
+  options: { value: T; label: ReactNode }[]
+  max?: number
+}) {
+  const toggle = (v: T) => {
+    if (value.includes(v)) return onChange(value.filter((x) => x !== v))
+    const next = [...value, v]
+    onChange(max !== undefined && next.length > max ? next.slice(next.length - max) : next)
+  }
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-muted">{label}</span>
+      <div role="group" aria-label={label} className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const on = value.includes(o.value)
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              onClick={() => toggle(o.value)}
+              className={cx(
+                'min-h-10 rounded-full border px-3.5 text-sm transition-colors',
+                on ? 'border-text bg-text font-semibold text-bg' : 'border-border-input text-text hover:bg-surface-2',
+              )}
+            >
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function EmptyState({ icon: Icon, text, action }: { icon: LucideIcon; text: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-start gap-3 py-8">
