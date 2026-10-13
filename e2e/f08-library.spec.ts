@@ -110,3 +110,15 @@ test.describe('F09 Pro and settings', () => {
     await expect(page.getByText('Não encontrado')).toBeVisible()
   })
 })
+
+test.describe('F18 the community lives in the app', () => {
+  test('F18-E1 the website shows no community in the calculator or the library', async ({ page }) => {
+    await start(page)
+    await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Comunidade' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /da comunidade para esta raquete/ })).toHaveCount(0)
+    await page.goto('/rackets')
+    await expect(page.getByRole('article').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /Ver os setups da comunidade/ })).toHaveCount(0)
+  })
+})

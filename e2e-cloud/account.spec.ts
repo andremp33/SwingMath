@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { env } from '../cloud/env'
@@ -130,6 +131,12 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   await expect(visitor.getByText('Precisas de conta para isto.')).toBeVisible()
 })
 
+/** No WCAG A/AA problems inside one part of the page. */
+async function a11y(page: Page, selector: string) {
+  const r = await new AxeBuilder({ page }).include(selector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
+  expect(r.violations.map((x) => `${x.id}: ${x.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`)).toEqual([])
+}
+
 /** The calculator's community card, opened. */
 async function openCommunity(page: Page) {
   const card = page.getByRole('region', { name: 'Comunidade' })
@@ -153,6 +160,7 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   await expect(d.getByRole('alert')).toHaveText('Escolhe pelo menos um objetivo.')
   await d.getByRole('checkbox', { name: 'Estabilidade' }).click()
   await d.getByLabel('Nível').selectOption({ label: 'Avançado' })
+  await a11y(author, 'dialog[open]')
   await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
   await expect(author.getByText('Setup publicado')).toBeVisible()
 
@@ -175,6 +183,7 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   const row = card.getByRole('listitem').filter({ hasText: `Estável ${stamp}` })
   await expect(row).toContainText('Avançado')
   await expect(row).toContainText('Base de catálogo')
+  await a11y(visitor, '#card-community')
   await row.getByRole('button', { name: 'Experimentar' }).click()
   await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveValue('0.5')
 
