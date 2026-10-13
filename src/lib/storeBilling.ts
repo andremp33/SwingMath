@@ -30,6 +30,8 @@ export function licenseFrom(info: CustomerInfo, now = Date.now()): License | nul
     expiresAt: e.expirationDate,
     willRenew: e.willRenew,
     trial: e.periodType === 'TRIAL',
+    // A lifetime purchase has no end.
+    lifetime: e.expirationDate === null,
   }
 }
 

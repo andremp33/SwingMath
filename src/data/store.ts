@@ -31,6 +31,8 @@ export interface License {
   willRenew?: boolean
   /** Store subscriptions: still in the free trial. */
   trial?: boolean
+  /** Bought once, for good: no period, nothing to manage. */
+  lifetime?: boolean
 }
 
 export interface Account {
@@ -198,4 +200,3 @@ export const MAP_MAX = 8
 export const FREE_SETUP_LIMIT = 3
 export const FREE_PRO_RUNS = 3
 /** Sessions the free journal shows. */
-export const FREE_SESSIONS = 10

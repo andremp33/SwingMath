@@ -14,11 +14,13 @@ import type { License } from '../data/store'
  *  build asks for it with VITE_PRO_BETA=true, so a store build sells Pro. */
 export const PRO_BETA = (import.meta.env.VITE_PRO_BETA as string | undefined) === 'true'
 
-export type Plan = 'monthly' | 'annual'
-export const PLANS: Plan[] = ['monthly', 'annual']
+/** The store apps sell all three; the website (Lemon Squeezy) only subscriptions. */
+export type Plan = 'monthly' | 'annual' | 'lifetime'
+export type WebPlan = Exclude<Plan, 'lifetime'>
+export const PLANS: WebPlan[] = ['monthly', 'annual']
 
 const env = import.meta.env
-export const CHECKOUT: Record<Plan, string | undefined> = {
+export const CHECKOUT: Record<WebPlan, string | undefined> = {
   monthly: (env.VITE_LS_CHECKOUT_MONTHLY as string | undefined) || undefined,
   annual: (env.VITE_LS_CHECKOUT_ANNUAL as string | undefined) || undefined,
 }

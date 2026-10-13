@@ -1,7 +1,8 @@
 import { Capacitor } from '@capacitor/core'
-import { LOG_LEVEL, Purchases, type CustomerInfo, type PurchasesPackage } from '@revenuecat/purchases-capacitor'
+import { INTRO_ELIGIBILITY_STATUS, LOG_LEVEL, Purchases, type CustomerInfo, type PurchasesPackage } from '@revenuecat/purchases-capacitor'
 import { useStore } from '../data/store'
 import type { Plan } from './entitlement'
+import { orderPlans } from './paywall'
 import { licenseFrom, rcKey, trialDays } from './storeBilling'
 
 /** Store apps only (loaded on demand): buying, restoring and following Pro
@@ -47,17 +48,55 @@ export interface StorePlan {
   pkg: PurchasesPackage
   /** Formatted by the store, in the player's currency. */
   price: string
+  /** The bare amount, to work out the annual saving. */
+  amount: number
+  /** Annual: the store's own price per month. */
+  pricePerMonth: string | null
+  /** Only when this player may start a free trial. */
   trialDays: number | null
 }
 
-/** The plans of the current offering, with the store's own prices. */
+/** The plans of the current offering ($rc_annual, $rc_lifetime, $rc_monthly),
+ *  with the store's own prices, annual first. */
 export async function storePlans(): Promise<StorePlan[]> {
+  // Development in a browser: a pretend store, to see the paywall.
+  if (import.meta.env.DEV && import.meta.env.VITE_FAKE_STORE === 'true') return (await import('./fakeStore')).fakePlans()
   if (!(await initPurchases())) return []
   const { current } = await Purchases.getOfferings()
-  const out: StorePlan[] = []
-  for (const [plan, pkg] of [['monthly', current?.monthly], ['annual', current?.annual]] as const)
-    if (pkg) out.push({ plan, pkg, price: pkg.product.priceString, trialDays: trialDays(pkg.product) })
-  return out
+  const found = (
+    [
+      ['annual', current?.annual],
+      ['lifetime', current?.lifetime],
+      ['monthly', current?.monthly],
+    ] as const
+  ).filter((x): x is readonly [Plan, PurchasesPackage] => !!x[1])
+  // iOS: Apple gives each Apple ID one trial, so ask before promising it.
+  // (Google Play only offers the free phase to who may take it.)
+  let eligible: Record<string, { status: INTRO_ELIGIBILITY_STATUS }> | null = null
+  if (Capacitor.getPlatform() === 'ios')
+    eligible = await Purchases.checkTrialOrIntroductoryPriceEligibility({ productIdentifiers: found.map(([, p]) => p.product.identifier) }).catch(() => ({}))
+  return orderPlans(
+    found.map(([plan, pkg]) => {
+      const p = pkg.product
+      const mayTry = !eligible || eligible[p.identifier]?.status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE
+      return {
+        plan,
+        pkg,
+        price: p.priceString,
+        amount: p.price,
+        pricePerMonth: plan === 'annual' ? p.pricePerMonthString : null,
+        trialDays: plan === 'lifetime' || !mayTry ? null : trialDays(p),
+      }
+    }),
+  )
+}
+
+/** A switch in the current offering's metadata (RevenueCat dashboard), off
+ *  unless set to true there: lets an offer be tried without a new build. */
+export async function offeringFlag(key: string): Promise<boolean> {
+  if (!(await initPurchases())) return false
+  const { current } = await Purchases.getOfferings().catch(() => ({ current: null }))
+  return current?.metadata?.[key] === true
 }
 
 /** 'cancelled' when the player closed the store's sheet. */

@@ -1,6 +1,6 @@
 import { Check, Lock, Sparkles } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { isPro, useStore, type Account } from '../data/store'
+import { FREE_SETUP_LIMIT, isPro, useStore, type Account } from '../data/store'
 import { fmt, useT } from '../i18n'
 import {
   activateLicense,
@@ -13,18 +13,25 @@ import {
   revalidate,
   storeConfigured,
   type Plan,
+  type WebPlan,
 } from '../lib/entitlement'
 import { LOCALE } from '../lib/format'
 import { IS_APP } from '../lib/platform'
+import { offerCopy, savingPct, type PaywallReason } from '../lib/paywall'
 import type { StorePlan } from '../lib/purchases'
 import { Badge, Button, Card, cx, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { LegalSheet, type LegalKind } from './Legal'
 
-const PaywallCtx = createContext<(reason?: string) => void>(() => {})
+type OpenPaywall = (reason: PaywallReason, opts?: { asked?: boolean }) => void
+const PaywallCtx = createContext<OpenPaywall>(() => {})
 
-/** Opens the Pro sheet. Pass a reason to say why it appeared. */
+/** Opens the Pro sheet, saying why. `asked`: the player tapped to see the
+ *  plans; otherwise a limit opened it, which happens once per session. */
 export const usePaywall = () => useContext(PaywallCtx)
+
+/** A paywall nobody asked for opens once per session; after that, a note. */
+let unaskedShown = false
 
 /** Checks the subscription again every few days, when the app is opened. */
 function useLicenseCheck() {
@@ -48,20 +55,25 @@ function useLicenseCheck() {
 }
 
 export function PaywallProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState<string>()
-  const show = useCallback((r?: string) => {
-    setReason(r)
-    setOpen(true)
-  }, [])
+  const [reason, setReason] = useState<PaywallReason | null>(null)
+  const toast = useToast()
   const t = useT()
+  const show = useCallback<OpenPaywall>(
+    (r, opts) => {
+      if (!opts?.asked) {
+        if (unaskedShown) return toast(t.paywall.isPro, { label: t.paywall.seePro, run: () => setReason(r) })
+        unaskedShown = true
+      }
+      setReason(r)
+    },
+    [toast, t],
+  )
   useLicenseCheck()
   return (
     <PaywallCtx.Provider value={show}>
       {children}
-      <Sheet open={open} onClose={() => setOpen(false)} title={t.pro.title}>
-        {reason && <p className="mb-4 rounded-md bg-surface-2 px-3 py-2 text-sm">{reason}</p>}
-        <ProPanel onDone={() => setOpen(false)} />
+      <Sheet open={reason !== null} onClose={() => setReason(null)} title={t.pro.title}>
+        {reason && <ProPanel reason={reason} onDone={() => setReason(null)} />}
       </Sheet>
     </PaywallCtx.Provider>
   )
@@ -85,7 +97,7 @@ export function usePrice() {
 }
 
 /** Subscribe: pick a plan, start the trial, or activate a key. */
-export function ProPanel({ onDone }: { onDone?: () => void }) {
+export function ProPanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => void }) {
   const t = useT()
   const toast = useToast()
   const price = usePrice()
@@ -93,7 +105,7 @@ export function ProPanel({ onDone }: { onDone?: () => void }) {
   const account = useStore((s) => s.account)
   const setLicense = useStore((s) => s.setLicense)
   const pro = useStore(isPro)
-  const [plan, setPlan] = useState<Plan>('annual')
+  const [plan, setPlan] = useState<WebPlan>('annual')
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
@@ -108,7 +120,7 @@ export function ProPanel({ onDone }: { onDone?: () => void }) {
     )
   }
   // The store apps sell through the App Store and Google Play only.
-  if (IS_APP) return <StorePanel onDone={onDone} />
+  if (IS_APP) return <StorePanel reason={reason} onDone={onDone} />
 
   const activate = async () => {
     setBusy(true)
@@ -125,12 +137,13 @@ export function ProPanel({ onDone }: { onDone?: () => void }) {
     }
   }
 
-  const amount = (p: Plan) => (p === 'monthly' ? PRICING.monthly : PRICING.annual)
+  const amount = (p: WebPlan) => (p === 'monthly' ? PRICING.monthly : PRICING.annual)
   const url = checkoutUrl(CHECKOUT[plan] ?? CHECKOUT.monthly ?? CHECKOUT.annual, account)
 
   return (
     <div className="space-y-4">
       {license && license.status !== 'active' && <LapsedNote />}
+      <ReasonHeader reason={reason} />
       <p className="font-semibold">{fmt(t.pro.trial, { days: PRICING.trialDays })}</p>
       <Features />
 
@@ -220,9 +233,25 @@ function Features() {
 
 const storeName = () => (/iPhone|iPad|Mac/.test(navigator.userAgent) ? 'App Store' : 'Google Play')
 
-/** The store apps' paywall: the store's own prices and trial, restore, and
- *  the renewal terms both stores ask for next to the button. */
-function StorePanel({ onDone }: { onDone?: () => void }) {
+/** What opened the paywall, as its title. */
+function ReasonHeader({ reason }: { reason: PaywallReason }) {
+  const t = useT()
+  if (reason === 'profile') return null
+  const sub = fmt(t.paywall.subs[reason], { n: FREE_SETUP_LIMIT })
+  return (
+    <div>
+      <h3 className="text-lg font-semibold tracking-tight">{t.paywall.titles[reason]}</h3>
+      {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
+    </div>
+  )
+}
+
+/**
+ * The store apps' paywall: why it opened, three outcomes, what stays free,
+ * the plans with the store's own prices (annual chosen), and the renewal
+ * terms both stores ask for next to the button. The X is there from the start.
+ */
+function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => void }) {
   const t = useT()
   const toast = useToast()
   const license = useStore((s) => s.license)
@@ -243,9 +272,8 @@ function StorePanel({ onDone }: { onDone?: () => void }) {
   }, [])
 
   const chosen = plans?.find((p) => p.plan === plan) ?? plans?.[0]
-  const monthly = plans?.find((p) => p.plan === 'monthly')?.pkg.product.price
-  const annual = plans?.find((p) => p.plan === 'annual')?.pkg.product.price
-  const saving = monthly && annual ? Math.round((1 - annual / (12 * monthly)) * 100) : 0
+  const saving = savingPct(plans?.find((p) => p.plan === 'annual')?.amount, plans?.find((p) => p.plan === 'monthly')?.amount)
+  const copy = (p: StorePlan) => offerCopy(p, t.paywall, storeName())
 
   const run = async (kind: 'buy' | 'restore') => {
     setBusy(kind)
@@ -270,8 +298,16 @@ function StorePanel({ onDone }: { onDone?: () => void }) {
   return (
     <div className="space-y-4">
       {license?.provider === 'store' && license.status === 'ended' && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.pro.ended}</p>}
-      {chosen?.trialDays ? <p className="font-semibold">{fmt(t.pro.trial, { days: chosen.trialDays })}</p> : null}
-      <Features />
+      <ReasonHeader reason={reason} />
+      <ul className="space-y-2">
+        {t.paywall.benefits.map((f) => (
+          <li key={f} className="flex gap-2 text-sm">
+            <Check className="mt-0.5 size-4 shrink-0 text-accent-text" strokeWidth={2} aria-hidden />
+            {f}
+          </li>
+        ))}
+      </ul>
+      <p className="text-sm text-muted">{t.paywall.free}</p>
 
       {plans === null ? (
         <p className="text-sm text-muted">{t.pro.loadingPlans}</p>
@@ -281,34 +317,37 @@ function StorePanel({ onDone }: { onDone?: () => void }) {
         <>
           <fieldset>
             <legend className="sr-only">{t.pro.title}</legend>
-            <div className="grid grid-cols-2 gap-2">
-              {plans.map((p) => (
-                <label
-                  key={p.plan}
-                  className={cx(
-                    'relative flex cursor-pointer flex-col gap-0.5 rounded-md border px-3 py-2.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent',
-                    chosen.plan === p.plan ? 'border-text bg-surface-2' : 'border-border hover:border-text/40',
-                  )}
-                >
-                  <input type="radio" name="plan" value={p.plan} checked={chosen.plan === p.plan} onChange={() => setPlan(p.plan)} className="sr-only" />
-                  <span className="flex items-center justify-between gap-2 text-sm font-semibold">
-                    {t.pro.plans[p.plan]}
-                    {p.plan === 'annual' && saving > 0 && <Badge tone="accent">{fmt(t.pro.save, { n: saving })}</Badge>}
-                  </span>
-                  <span className="num text-lg font-semibold">
-                    {p.price}
-                    <span className="text-sm font-normal text-muted">{t.pro.per[p.plan]}</span>
-                  </span>
-                </label>
-              ))}
+            <div className="space-y-2">
+              {plans.map((p) => {
+                const on = chosen.plan === p.plan
+                return (
+                  <label
+                    key={p.plan}
+                    className={cx(
+                      'flex cursor-pointer items-center gap-3 rounded-md border px-3 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent',
+                      on ? 'border-text bg-surface-2' : 'border-border hover:border-text/40',
+                    )}
+                  >
+                    <input type="radio" name="plan" value={p.plan} checked={on} onChange={() => setPlan(p.plan)} className="sr-only" />
+                    <span aria-hidden className={cx('grid size-5 shrink-0 place-items-center rounded-full border-2', on ? 'border-text' : 'border-border-input')}>
+                      {on && <span className="size-2.5 rounded-full bg-text" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2 font-semibold">
+                        {t.paywall.plans[p.plan]}
+                        {p.plan === 'annual' && saving && <Badge tone="accent">{fmt(t.paywall.save, { n: saving })}</Badge>}
+                      </span>
+                      <span className="num block text-sm text-muted">{copy(p).line}</span>
+                    </span>
+                  </label>
+                )
+              })}
             </div>
           </fieldset>
           <Button variant="primary" icon={Sparkles} className="h-12 w-full" loading={busy === 'buy'} disabled={busy !== null} onClick={() => run('buy')}>
-            {chosen.trialDays ? fmt(t.pro.start, { days: chosen.trialDays }) : t.pro.subscribe}
+            {copy(chosen).cta}
           </Button>
-          <p className="text-xs text-muted">
-            {fmt(chosen.trialDays ? t.pro.storeFineTrial : t.pro.storeFine, { price: chosen.price, per: t.pro.per[chosen.plan], store: storeName() })}
-          </p>
+          <p className="text-xs text-muted">{copy(chosen).legal}</p>
         </>
       )}
       <Button variant="ghost" className="w-full" loading={busy === 'restore'} disabled={busy !== null} onClick={() => run('restore')}>
@@ -359,7 +398,7 @@ function LapsedNote() {
 
 /** Shows children for Pro users; otherwise a card that opens the paywall.
  *  `bare` drops the card when it already sits inside one. */
-export function ProGate({ children, title, bare }: { children: ReactNode; title: string; bare?: boolean }) {
+export function ProGate({ children, title, reason, bare }: { children: ReactNode; title: string; reason: PaywallReason; bare?: boolean }) {
   const pro = useStore(isPro)
   const paywall = usePaywall()
   const t = useT()
@@ -371,7 +410,7 @@ export function ProGate({ children, title, bare }: { children: ReactNode; title:
         <p className="font-semibold">{title}</p>
         <p className="text-sm text-muted">{t.pro.locked}</p>
       </div>
-      <Button variant="primary" icon={Sparkles} onClick={() => paywall()}>
+      <Button variant="primary" icon={Sparkles} onClick={() => paywall(reason, { asked: true })}>
         {t.pro.unlock}
       </Button>
     </>

@@ -52,7 +52,9 @@ test.describe('F03 save, name and rate a setup', () => {
     await page.getByRole('button', { name: 'Guardar como novo' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
     await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toBeVisible()
-    await expect(page.getByRole('dialog')).toContainText('até 3 setups')
+    // The sheet says why it opened.
+    await expect(page.getByRole('dialog')).toContainText('Guarda todos os teus setups')
+    await expect(page.getByRole('dialog')).toContainText('O plano grátis guarda 3 setups.')
   })
 
   test('F03-N2 delete with undo', async ({ page }) => {

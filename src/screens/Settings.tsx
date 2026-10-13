@@ -115,7 +115,7 @@ function ProGroup() {
     return (
       <SettingsGroup title={t.pro.title}>
         <SettingsRow label={t.settings.free} hint={fmt(t.pro.trial, { days: PRICING.trialDays })}>
-          <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall()}>
+          <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('profile', { asked: true })}>
             {t.settings.seePlans}
           </Button>
         </SettingsRow>
@@ -125,7 +125,7 @@ function ProGroup() {
   return (
     <SettingsGroup title={t.pro.title} action={<Badge tone="pro">Pro</Badge>}>
       <SettingsRow
-        label={keyActive ? t.pro.active : t.account.proActive}
+        label={keyActive ? (l.lifetime ? t.pro.lifetime : t.pro.active) : t.account.proActive}
         hint={
           keyActive
             ? [
@@ -137,7 +137,8 @@ function ProGroup() {
             : undefined
         }
       >
-        {l?.provider === 'store' && keyActive ? (
+        {/* Lifetime has nothing to manage; a subscription opens the store's own page. */}
+        {l?.provider === 'store' && keyActive && !l.lifetime ? (
           <Button
             variant="secondary"
             size="sm"

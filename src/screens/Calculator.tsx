@@ -560,7 +560,7 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
   const save = async () => {
     if (!pro && count >= FREE_SETUP_LIMIT) {
       onClose()
-      paywall(fmt(t.setups.limit, { n: FREE_SETUP_LIMIT }))
+      paywall('setups')
       return
     }
     const now = Date.now()

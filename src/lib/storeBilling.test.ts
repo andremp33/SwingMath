@@ -23,7 +23,12 @@ describe('store subscription', () => {
       expiresAt: '2026-11-12T00:00:00Z',
       willRenew: true,
       trial: false,
+      lifetime: false,
     })
+  })
+
+  it('a purchase with no expiry is lifetime', () => {
+    expect(licenseFrom(info({ pro: ent({ expirationDate: null, willRenew: false }) }))).toMatchObject({ status: 'active', lifetime: true, expiresAt: null })
   })
 
   it('a trial, and a cancelled one that still runs', () => {

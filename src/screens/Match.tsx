@@ -25,11 +25,10 @@ function useTryFirst() {
   const used = useStore((s) => s.freeRunsUsed)
   const spend = useStore((s) => s.spendFreeRun)
   const paywall = usePaywall()
-  const t = useT()
   return () => {
     if (pro) return true
     if (used >= FREE_PRO_RUNS) {
-      paywall(fmt(t.pro.tryFree, { n: used, max: FREE_PRO_RUNS }))
+      paywall('solver')
       return false
     }
     spend()

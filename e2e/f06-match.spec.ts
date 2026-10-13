@@ -41,7 +41,14 @@ test.describe('F06 hit a target', () => {
     await run.click()
     const sheet = page.getByRole('dialog', { name: 'SwingMath Pro' })
     await expect(sheet).toBeVisible()
-    await expect(sheet).toContainText('3 de 3 cálculos grátis usados')
+    await expect(sheet).toContainText('Usaste os 3 cálculos grátis do Igualar.')
+    // A paywall nobody asked for opens once per session; then a note with a way in.
+    await sheet.getByRole('button', { name: 'Fechar' }).click()
+    await run.click()
+    await expect(sheet).toBeHidden()
+    await expect(page.getByText('Esta é uma função Pro.')).toBeVisible()
+    await page.getByRole('button', { name: 'Ver o Pro' }).click()
+    await expect(sheet).toBeVisible()
   })
 
   test('F06-E2 open the plan in the calculator', async ({ page }) => {

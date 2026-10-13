@@ -3,7 +3,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { uid } from '../data/db'
 import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hooks'
-import { FREE_SESSIONS, isPro, useStore } from '../data/store'
+import { useStore } from '../data/store'
 import { insights, latestOf, lifeOf, weeklyHours, type OwnedRacket, type Session, type Stringing } from '../domain/journal'
 import { DEFAULT_STRINGBED } from '../domain/strings'
 import { fmt, useT } from '../i18n'
@@ -27,7 +27,6 @@ function weekStart(ms: number) {
 
 export function Journal() {
   const t = useT()
-  const pro = useStore(isPro)
   const config = useStore((s) => s.config)
   const owned = useOwned()
   const stringings = useStringings()
@@ -121,7 +120,7 @@ export function Journal() {
       </>
     )
 
-  const shown = pro ? sessions : sessions.slice(0, FREE_SESSIONS)
+  const shown = sessions
 
   return (
     <>
@@ -157,12 +156,11 @@ export function Journal() {
           ) : (
             <Timeline sessions={shown} stringings={stringings} owned={owned} now={now} onOpen={setLogging} />
           )}
-          {!pro && sessions.length > FREE_SESSIONS && <p className="mt-3 text-sm text-muted">{fmt(t.journal.historyLocked, { n: FREE_SESSIONS })}</p>}
         </section>
 
         <Card label={t.journal.insights}>
           <CardTitle info={<InfoTip title={t.journal.insights}>{t.journal.insightsHint}</InfoTip>}>{t.journal.insights}</CardTitle>
-          <ProGate title={t.journal.insights} bare>
+          <ProGate title={t.journal.insights} reason="journal" bare>
             <Insights stringings={stringings} sessions={sessions} owned={owned} />
           </ProGate>
         </Card>

@@ -96,12 +96,12 @@ test.describe('F14 journal', () => {
     await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Diário \(1\)/ })).toBeVisible()
   })
 
-  test('F14-E2 free journal shows the last 10 sessions', async ({ page }) => {
+  test('F14-E2 the whole history is free', async ({ page }) => {
     await start(page, { path: '/diario' })
     await addRacket(page, 'X')
     for (let i = 0; i < 11; i++) await logSession(page, 30)
-    await expect(page.getByRole('region', { name: 'Sessões' }).getByRole('listitem')).toHaveCount(10)
-    await expect(page.getByText(/Mostramos as últimas 10 sessões/)).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Sessões' }).getByRole('listitem')).toHaveCount(11)
+    await expect(page.getByText(/Mostramos as últimas/)).toHaveCount(0)
   })
 
   test('F14-H4 saving a setup in the calculator puts the racket in your rackets', async ({ page }) => {

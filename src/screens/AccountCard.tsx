@@ -6,8 +6,9 @@ import { fmt, useT, type Dict } from '../i18n'
 import { cloudConfigured } from '../lib/cloud'
 import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
-import { Badge, Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
+import { Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
+import { usePaywall } from './Pro'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -121,6 +122,7 @@ function SignedIn() {
   const account = useStore((s) => s.account)!
   const accountPro = useStore((s) => s.accountPro)
   const sync = useStore((s) => s.sync)
+  const paywall = usePaywall()
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState(false)
   // During the beta every account has Pro, sync included.
@@ -175,7 +177,9 @@ function SignedIn() {
             {t.account.syncNow}
           </Button>
         ) : (
-          <Badge tone="pro">Pro</Badge>
+          <Button variant="secondary" size="sm" onClick={() => paywall('sync', { asked: true })}>
+            {t.settings.seePlans}
+          </Button>
         )}
       </SettingsRow>
       <SettingsRow label={t.account.deleteAccount} hint={t.account.deleteHint} danger>
