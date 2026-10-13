@@ -16,7 +16,6 @@ import { useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { fmtNum, kgToLb } from '../lib/format'
 import { cx, NumberField, Select, Toggle } from './basics'
-import { Ring } from './specs'
 
 /** "Poli 23 kg", or "Poli 24 / Multi 22 kg" for a hybrid. */
 export function bedLabel(bed: Stringbed, t: Dict, lang: string) {
@@ -145,16 +144,23 @@ export function StiffnessScale({ frame, bed }: { frame: FrameForStrings; bed: St
   )
 }
 
-/** Stringbed stiffness and how the bed plays, as rings. */
+/** Stringbed stiffness and how the bed plays. The feel is four thin bars,
+ *  not rings: the calculator already has the frame's feel as rings. */
 export function StringbedSummary({ frame, bed }: { frame: FrameForStrings; bed: Stringbed }) {
   const t = useT()
   const f = stringFeel(frame, bed)
   return (
     <div className="space-y-4">
       <StiffnessScale frame={frame} bed={bed} />
-      <div className="grid grid-cols-4 gap-x-1">
+      <div className="space-y-2">
         {STRING_FEEL_KEYS.map((k) => (
-          <Ring key={k} value={f[k]} label={t.strings.feel[k]} color={`var(--c-${k})`} small />
+          <div key={k} role="meter" aria-label={t.strings.feel[k]} aria-valuenow={Math.round(f[k])} aria-valuemin={0} aria-valuemax={100} className="grid grid-cols-[6rem_minmax(0,1fr)_2rem] items-center gap-3 text-sm">
+            <span className="text-muted">{t.strings.feel[k]}</span>
+            <span aria-hidden className="relative h-1.5 overflow-hidden rounded-full bg-border">
+              <span className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out" style={{ width: `${f[k]}%`, background: `var(--c-${k})` }} />
+            </span>
+            <span className="num text-right font-semibold">{Math.round(f[k])}</span>
+          </div>
         ))}
       </div>
     </div>
