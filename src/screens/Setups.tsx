@@ -199,7 +199,7 @@ function SetupCard({
         </p>
       )}
       {s.strings && (
-        <p className="num mt-0.5 text-sm text-muted [overflow-wrap:anywhere]">
+        <p className="num mt-0.5 text-sm text-muted wrap-anywhere">
           {t.strings.title}: {bedLabel(s.strings, t, lang)}
         </p>
       )}

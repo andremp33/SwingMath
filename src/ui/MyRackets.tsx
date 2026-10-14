@@ -101,7 +101,7 @@ export function MyRacketsSection() {
                   </p>
                   {r && <p className="truncate text-sm text-muted">{`${r.brand} ${r.model}`}</p>}
                   {/* The strings may be long (a hybrid with names): they wrap. */}
-                  {st && <p className="num text-sm text-muted [overflow-wrap:anywhere]">{bedLabel(st.bed, t, lang)}</p>}
+                  {st && <p className="num text-sm text-muted wrap-anywhere">{bedLabel(st.bed, t, lang)}</p>}
                 </div>
                 <IconButton
                   icon={Calculator}

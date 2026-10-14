@@ -240,7 +240,7 @@ function RacketCard({
       {life && st ? (
         <>
           <LifeBar life={life} compact />
-          <p className="num text-sm text-muted [overflow-wrap:anywhere]">
+          <p className="num text-sm text-muted wrap-anywhere">
             {bedLabel(st.bed, t, lang)} · {days === 0 ? t.journal.strungToday : fmt(t.journal.strungAgo, { n: days })} · {fmt(t.journal.hours, { h: fmtNum(life.hours, 1, lang) })}
           </p>
         </>

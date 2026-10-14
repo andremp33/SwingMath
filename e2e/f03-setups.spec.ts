@@ -91,8 +91,8 @@ test.describe('F04 compare two setups', () => {
     await expect(page.getByRole('heading', { name: 'Comparar setups' })).toBeVisible()
     await expect(page.getByRole('table')).toContainText('Leve')
     await expect(page.getByRole('table')).toContainText('Pesada')
-    // Columns follow the pick order: newest first in the list, so B − A = Leve − Pesada.
-    await expect(page.getByRole('table')).toContainText('−1,0')
+    // Columns follow the pick order (Pesada, then Leve): 2 − 1 = Leve − Pesada, 1 g lighter.
+    await expect(page.getByRole('row', { name: /^Peso/ }).getByRole('cell').nth(2)).toHaveText(/^↓\s*menos\s*1,0$/)
     await a11y(page)
   })
 
