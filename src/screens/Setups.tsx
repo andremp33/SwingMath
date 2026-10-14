@@ -1,4 +1,4 @@
-import { Calculator, ClipboardList, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2, X } from 'lucide-react'
+import { Calculator, ClipboardList, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2, UserRound, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { OwnedRacket } from '../domain/journal'
@@ -110,9 +110,17 @@ export function Setups() {
             <span className="text-sm font-medium" aria-live="polite">
               {picked.length === 1 ? t.setups.selectedOne : fmt(t.setups.selected, { n: picked.length })}
             </span>
-            <Button variant="primary" icon={GitCompareArrows} disabled={picked.length !== 2} onClick={() => nav('/setups/compare')}>
-              {t.setups.compare}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* The second place can be a pro. */}
+              {picked.length === 1 && (
+                <Button icon={UserRound} onClick={() => nav(`/setups/pro/${picked[0]}`)}>
+                  {t.setups.withPro}
+                </Button>
+              )}
+              <Button variant="primary" icon={GitCompareArrows} disabled={picked.length !== 2} onClick={() => nav('/setups/compare')}>
+                {t.setups.compare}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -244,6 +252,7 @@ function SetupCard({
           label={fmt(t.setups.more, { name: s.name })}
           items={[
             { label: t.setups.compare, icon: GitCompareArrows, onSelect: onCompare },
+            { label: t.setups.comparePro, icon: UserRound, onSelect: () => nav(`/setups/pro/${s.id}`) },
             { label: t.common.edit, icon: Pencil, onSelect: onEdit },
             { label: t.setups.share, icon: Share2, onSelect: onShare },
             { label: t.setups.sheet, icon: Printer, onSelect: () => nav(`/ficha/${s.id}`) },

@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { geometry } from '../domain/physics'
 import { DEFAULT_STRINGBED } from '../domain/strings'
 import { emptyLead, POSITIONS, type Position, type Racket, type Setup, type Specs } from '../domain/types'
@@ -552,14 +552,18 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
   const suggested = active.find((o) => o.racketId === config.racketId)?.id ?? (active.length ? 'none' : 'new')
   const [on, setOn] = useState<string>(suggested)
   const lang = useStore((s) => s.lang)
-  useEffect(() => {
-    if (!open) return
-    setOn(suggested)
-    // A name to start from: the frame and what changed most. Editable.
-    setName(suggestSetupName(config, racket, t, lang))
-    // Only when the sheet opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  // When the sheet opens, in the same render (not an effect, which would
+  // land after the field shows and could mix with what is being typed):
+  // where to put it, and a name to start from, the frame and what changed
+  // most. Editable.
+  const [wasOpen, setWasOpen] = useState(false)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      setOn(suggested)
+      setName(suggestSetupName(config, racket, t, lang))
+    }
+  }
   const fallback = fmt(t.setups.defaultName, { n: count + 1 })
 
   const save = async () => {

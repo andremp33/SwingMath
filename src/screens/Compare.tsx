@@ -1,6 +1,6 @@
-import { ArrowLeft, GitCompareArrows } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, GitCompareArrows, Target as TargetIcon } from 'lucide-react'
+import { useMemo, type ReactNode } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { Feel } from '../domain/feel'
 import { FEEL_KEYS } from '../domain/feel'
 import { stringbedIndex, type Stringbed } from '../domain/strings'
@@ -8,11 +8,16 @@ import { POSITIONS, STROKES, type Racket, type Setup, type Specs } from '../doma
 import { useComputed, useRacket, useSetups } from '../data/hooks'
 import { racketFeel } from '../data/racketFeel'
 import { shortName } from '../data/stringCatalog'
-import { useStore } from '../data/store'
+import { PRO_TARGETS, withStrings, type ProTarget } from '../data/pros'
+import { defaultConfig, useStore } from '../data/store'
+import { compute, ptsHeadLight, recoilWeight } from '../domain/physics'
 import { fmt, useT, type Dict } from '../i18n'
 import { bedLabel } from '../lib/bedLabel'
 import { extraLabel, fmtNum, racketLabel } from '../lib/format'
-import { Button, Card, CardTitle, cx, EmptyState, PageTitle } from '../ui/basics'
+import { Badge, Button, Card, CardTitle, cx, EmptyState, PageTitle } from '../ui/basics'
+import { monthYear, ProList } from '../ui/ProPicker'
+import type { MatchHandoff } from './Match'
+import { useTryFirst } from './tryFirst'
 
 export function Compare() {
   const t = useT()
@@ -64,6 +69,8 @@ export interface CompareSide {
   specs: Partial<Pick<Specs, 'weightG' | 'balanceCm' | 'swingweight' | 'twistweight' | 'recoilWeight' | 'sweetSpotCm'>>
   stringName?: string
   tensionKg?: number
+  /** The tension as the source says it ("27–28 / 26–27 kg"), for a pro. */
+  tensionText?: string
   stiffness?: number
   accessories?: string
   feel?: Feel
@@ -177,7 +184,12 @@ export function CompareView({ a, b, below }: { a: CompareSide; b: CompareSide; b
           </tbody>
           <tbody className="divide-y divide-border/70 border-t-2 border-border">
             {row(t.compare.string, a.stringName ?? '—', b.stringName ?? '—', '')}
-            {row(t.strings.tension, num(a.tensionKg, 1, 'kg'), num(b.tensionKg, 1, 'kg'), <Diff a={a.tensionKg} b={b.tensionKg} digits={1} />)}
+            {row(
+              t.strings.tension,
+              a.tensionText ?? num(a.tensionKg, 1, 'kg'),
+              b.tensionText ?? num(b.tensionKg, 1, 'kg'),
+              <Diff a={a.tensionKg} b={b.tensionKg} digits={1} />,
+            )}
             {row(t.compare.stiffness, num(a.stiffness, 0), num(b.stiffness, 0), <Diff a={a.stiffness} b={b.stiffness} digits={0} />)}
             {row(t.acc.title, a.accessories ?? '—', b.accessories ?? '—', '')}
           </tbody>
@@ -186,14 +198,13 @@ export function CompareView({ a, b, below }: { a: CompareSide; b: CompareSide; b
       {below}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card label={t.calc.feel}>
-          <CardTitle>{t.calc.feel}</CardTitle>
-          {a.feel && b.feel ? (
+        {/* Only with something to estimate it from (a pro's stock frame). */}
+        {a.feel && b.feel && (
+          <Card label={t.calc.feel}>
+            <CardTitle>{t.calc.feel}</CardTitle>
             <FeelBars a={a} b={b} />
-          ) : (
-            <p className="text-sm text-muted">{t.compare.noFeel}</p>
-          )}
-        </Card>
+          </Card>
+        )}
         {a.setup && b.setup && <RatingsAndLead a={a.setup} b={b.setup} />}
       </div>
     </div>
@@ -288,5 +299,124 @@ function RatingsAndLead({ a, b }: { a: Setup; b: Setup }) {
       </dl>
       <p className="mt-3 text-xs text-muted">{fmt(t.compare.order, { a: a.name, b: b.name })}</p>
     </Card>
+  )
+}
+
+/** A saved setup next to a pro: both strung. The pro's numbers are the
+ *  source's, converted to strung when it measured the bare frame, and only
+ *  those it published; the feel only from the pro's stock frame, and said
+ *  to be estimated. */
+export function ProCompare() {
+  const t = useT()
+  const nav = useNavigate()
+  const { id } = useParams()
+  const [params, setParams] = useSearchParams()
+  const setups = useSetups()
+  const setup = setups?.find((s) => s.id === id)
+  const pro = PRO_TARGETS.find((p) => p.id === params.get('pro'))
+
+  return (
+    <>
+      <PageTitle>
+        <span className="flex items-center gap-2">
+          <button type="button" onClick={() => nav('/setups')} aria-label={t.common.back} className="rounded-full p-1.5 text-muted hover:bg-surface-2">
+            <ArrowLeft className="size-5" aria-hidden />
+          </button>
+          {t.compare.proTitle}
+        </span>
+      </PageTitle>
+      {setups === undefined ? null : !setup ? (
+        <EmptyState icon={GitCompareArrows} text={t.errors.notFound} action={<Button onClick={() => nav('/setups')}>{t.compare.pick}</Button>} />
+      ) : !pro ? (
+        <Card label={t.compare.pickPro}>
+          <CardTitle>{t.compare.pickPro}</CardTitle>
+          <p className="mb-3 text-sm text-muted">{fmt(t.compare.pickProFor, { name: setup.name })}</p>
+          <ProList selected="" fromStrung onPick={(p) => setParams({ pro: p.id })} />
+        </Card>
+      ) : (
+        <SetupVsPro setup={setup} pro={pro} onOther={() => setParams({})} />
+      )}
+    </>
+  )
+}
+
+function SetupVsPro({ setup, pro, onOther }: { setup: Setup; pro: ProTarget; onOther: () => void }) {
+  const t = useT()
+  const nav = useNavigate()
+  const lang = useStore((s) => s.lang)
+  const masses = useStore((s) => s.masses)
+  const canRun = useTryFirst()
+  const r = useRacket(setup.racketId)
+  const stock = useRacket(pro.baseRacketId)
+  // The same basis: the setup with its strings on.
+  const strungSetup = useMemo(() => ({ ...setup, accessories: { ...setup.accessories, strings: true } }), [setup])
+  const computed = useComputed(strungSetup, r)
+  if (!r || !computed) return null
+
+  const p = withStrings(pro, pro, pro.strung, true)
+  const proSpecs: Specs | undefined = stock && {
+    ...compute({ spec: stock, ...defaultConfig(stock.id), masses }).result,
+    weightG: p.weightG,
+    balanceCm: p.balanceCm,
+    swingweight: p.swingweight,
+    recoilWeight: recoilWeight(p.swingweight, p.weightG, p.balanceCm),
+    ptsHL: ptsHeadLight(pro.lengthCm, p.balanceCm),
+    twistweight: undefined,
+    twistweightEstimated: true,
+  }
+  const b: CompareSide = {
+    id: `pro-${pro.id}`,
+    title: pro.player,
+    racket: pro.racket,
+    strings: pro.strings && [pro.strings.name, pro.strings.tension].filter(Boolean).join(' · '),
+    about: <ProAbout pro={pro} />,
+    specs: { weightG: p.weightG, balanceCm: p.balanceCm, swingweight: p.swingweight },
+    stringName: pro.strings?.name,
+    tensionText: pro.strings?.tension,
+    feel: stock && proSpecs ? racketFeel(stock, proSpecs) : undefined,
+    feelEstimated: !!stock,
+  }
+  const howTo = () => {
+    if (!canRun()) return
+    const handoff: MatchHandoff = { from: `setup:${setup.id}`, pro: pro.id, run: true }
+    nav('/match', { state: handoff })
+  }
+
+  return (
+    <CompareView
+      a={setupSide(strungSetup, r, computed.result, t, lang)}
+      b={b}
+      below={
+        <div className="space-y-3">
+          <p className="text-sm text-muted">{t.compare.strungBasis}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" icon={TargetIcon} onClick={howTo}>
+              {t.compare.howTo}
+            </Button>
+            <Button variant="ghost" onClick={onOther}>
+              {t.compare.otherPro}
+            </Button>
+          </div>
+          <p className="text-xs text-muted">{t.compare.howToHint}</p>
+          <p className="text-xs text-muted">{t.match.proDisclaimer}</p>
+        </div>
+      }
+    />
+  )
+}
+
+/** Under the pro's name: measured or reported, the source with its date,
+ *  and the conversion when the source measured the bare frame. */
+function ProAbout({ pro }: { pro: ProTarget }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  return (
+    <span className="mt-1 block space-y-1 text-xs font-normal">
+      <Badge tone={pro.evidence === 'measured' ? 'accent' : 'neutral'}>{t.match.evidence[pro.evidence]}</Badge>
+      <a href={pro.url} target="_blank" rel="noreferrer" className="block underline underline-offset-2 wrap-anywhere">
+        {fmt(t.match.proSource, { source: pro.source, date: monthYear(pro.date, lang) })}
+      </a>
+      {!pro.strung && <span className="block font-medium">{t.compare.convertedStrung}</span>}
+    </span>
   )
 }

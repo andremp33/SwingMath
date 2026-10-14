@@ -11,6 +11,7 @@ import { ToastProvider } from './ui/overlay'
 // The calculator loads first in the app, the front page on the website;
 // everything else comes in its own chunk.
 const Compare = lazy(() => import('./screens/Compare').then((m) => ({ default: m.Compare })))
+const ProCompare = lazy(() => import('./screens/Compare').then((m) => ({ default: m.ProCompare })))
 const DesignPage = lazy(() => import('./screens/DesignPage').then((m) => ({ default: m.DesignPage })))
 const Landing = lazy(() => import('./screens/Landing').then((m) => ({ default: m.Landing })))
 const LegalPage = lazy(() => import('./screens/Landing').then((m) => ({ default: m.LegalPage })))
@@ -51,6 +52,7 @@ const APP_ROUTES = [
       { path: '/rackets/:id', element: L(<RacketForm />) },
       { path: '/setups', element: L(<Setups />) },
       { path: '/setups/compare', element: L(<Compare />) },
+      { path: '/setups/pro/:id', element: L(<ProCompare />) },
       { path: '/match', element: L(<Match />) },
       { path: '/diario', element: L(<Journal />) },
       { path: '/cordas', element: L(<StringCalc />) },

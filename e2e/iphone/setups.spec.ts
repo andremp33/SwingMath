@@ -36,9 +36,9 @@ test('S02 a card: the numbers, the strings, Open, and the rest under ⋯', async
   // The date on one line.
   const date = card.getByText(/^Editado /)
   expect((await date.boundingBox())!.height).toBeLessThan(22)
-  // Under ⋯: compare, edit, share, the stringer's sheet, delete.
+  // Under ⋯: compare (with a setup or a pro), edit, share, the stringer's sheet, delete.
   await card.getByRole('button', { name: 'Mais ações: Torneio' }).click()
-  await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText(['Comparar', 'Editar', 'Partilhar', 'Ficha para o encordoador', 'Apagar'])
+  await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText(['Comparar', 'Comparar com um profissional', 'Editar', 'Partilhar', 'Ficha para o encordoador', 'Apagar'])
   await a11y(page)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('menu')).toHaveCount(0)
@@ -71,7 +71,7 @@ test('S03 compare: a box on each card, two at most, and a bar at the bottom', as
 test('S04 “Compare” from a card’s menu starts with that setup ticked', async ({ page }) => {
   await threeSetups(page)
   await page.getByRole('button', { name: 'Mais ações: Média' }).click()
-  await page.getByRole('menuitem', { name: 'Comparar' }).click()
+  await page.getByRole('menuitem', { name: 'Comparar', exact: true }).click()
   await expect(page.getByRole('checkbox', { name: 'Selecionar Média' })).toBeChecked()
   await expect(page.getByRole('region', { name: 'Comparar' })).toContainText('1 selecionado')
   // Cancel leaves the mode and the selection.

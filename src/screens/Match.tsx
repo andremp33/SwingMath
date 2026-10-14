@@ -1,6 +1,6 @@
-import { Calculator, ExternalLink, Play, Plus, Sparkles, Target as TargetIcon, X } from 'lucide-react'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Calculator, Plus, Sparkles, Target as TargetIcon, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { matchRackets, solveTarget, type BatchResult, type MatchResult, type Target, type TargetKey } from '../domain/match'
 import type { Base } from '../domain/physics'
 import { latestOf, type OwnedRacket, type Stringing } from '../domain/journal'
@@ -9,33 +9,17 @@ import { findRacket } from '../data/db'
 import { useAllRackets, useCustomRackets, useOwned, useRacket, useSetups, useStringings } from '../data/hooks'
 import { compute } from '../domain/physics'
 import { defaultConfig, FREE_PRO_RUNS, isPro, useStore } from '../data/store'
-import { PRO_TARGETS, withStrings, type PlainSpecs, type ProTarget } from '../data/pros'
+import { PRO_TARGETS, withStrings, type PlainSpecs } from '../data/pros'
 import { fmt, useT } from '../i18n'
-import { fmtNum, fmtSigned, LOCALE, racketLabel } from '../lib/format'
-import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select, TextField } from '../ui/basics'
+import { fmtNum, fmtSigned, racketLabel } from '../lib/format'
+import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select } from '../ui/basics'
 import { LEAD_MAX, RacketDiagram } from '../ui/lead'
 import { RacketPicker } from '../ui/RacketPicker'
-import { usePaywall } from './Pro'
+import { ProList } from '../ui/ProPicker'
+import { useTryFirst } from './tryFirst'
 import { InfoTip } from '../ui/disclosure'
 
 type Mode = 'smart' | 'batch'
-
-/** Pro tools work a few times before buying, so people can try first. */
-function useTryFirst() {
-  const pro = useStore(isPro)
-  const used = useStore((s) => s.freeRunsUsed)
-  const spend = useStore((s) => s.spendFreeRun)
-  const paywall = usePaywall()
-  return () => {
-    if (pro) return true
-    if (used >= FREE_PRO_RUNS) {
-      paywall('solver')
-      return false
-    }
-    spend()
-    return true
-  }
-}
 
 export function Match() {
   const t = useT()
@@ -89,94 +73,6 @@ const toBase = (r: Racket, v: Vals): Base | null =>
         twistweight: v.twistweight,
       }
 
-/** Players with measured specs, each with its source. */
-/** "junho de 2023" from "2023-06". */
-const monthYear = (ym: string, lang: string) =>
-  new Date(`${ym}-15T12:00:00Z`).toLocaleDateString(LOCALE[lang] ?? 'en-GB', { month: 'long', year: 'numeric' })
-
-const fold = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-
-/**
- * Pro targets: searchable, ATP and WTA apart. Each says whether it was
- * measured or reported, by whom and when, with the link.
- */
-function ProList({ selected, fromStrung, onPick, onStock }: { selected: string; fromStrung: boolean; onPick: (p: ProTarget) => void; onStock: (p: ProTarget) => void }) {
-  const t = useT()
-  const lang = useStore((s) => s.lang)
-  const [q, setQ] = useState('')
-  const picked = PRO_TARGETS.find((p) => p.id === selected)
-  const shown = PRO_TARGETS.filter((p) => fold(`${p.player} ${p.racket}`).includes(fold(q.trim())))
-  const notes = t.match.pros as Record<string, string>
-  return (
-    <div className="space-y-3">
-      <TextField label={t.match.proSearch} value={q} onChange={setQ} />
-      {shown.length === 0 && <p className="text-sm text-muted">{t.match.noPros}</p>}
-      {(['ATP', 'WTA'] as const).map((tour) => {
-        const list = shown.filter((p) => p.tour === tour)
-        if (!list.length) return null
-        return (
-          <div key={tour}>
-            <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-muted">{tour}</h3>
-            <div role="radiogroup" aria-label={`${t.match.kindPro} ${tour}`} className="divide-y divide-border rounded-md border border-border">
-              {list.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected === p.id}
-                  onClick={() => onPick(p)}
-                  className={cx('flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors', selected === p.id ? 'bg-surface-2' : 'hover:bg-surface-2/60')}
-                >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate font-medium">{p.player}</span>
-                      <Badge tone={p.evidence === 'measured' ? 'accent' : 'neutral'}>{t.match.evidence[p.evidence]}</Badge>
-                    </span>
-                    <span className="block truncate text-muted">{p.racket}</span>
-                  </span>
-                  <span className="num shrink-0 text-right text-xs text-muted">
-                    {fmtNum(p.weightG, 0, lang)} g · SW {fmtNum(p.swingweight, 0, lang)}
-                    <span className="block">{p.strung ? t.match.strungShort : t.match.unstrungShort}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )
-      })}
-      {picked && (
-        <div className="space-y-1.5 rounded-md bg-surface-2 px-3 py-2.5 text-sm">
-          {notes[picked.id] && <p>{notes[picked.id]}</p>}
-          <p className="text-muted">
-            <span className="font-medium text-text">{t.match.evidence[picked.evidence]}:</span> {t.match.evidenceHint[picked.evidence]}
-          </p>
-          <p>
-            <a href={picked.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2">
-              {fmt(t.match.proSource, { source: picked.source, date: monthYear(picked.date, lang) })} <ExternalLink className="size-3.5" aria-hidden />
-            </a>
-          </p>
-          {picked.strings && <p className="num">{fmt(t.match.proStrings, { s: [picked.strings.name, picked.strings.tension].filter(Boolean).join(' · ') })}</p>}
-          {picked.strung !== fromStrung && (
-            <p className="font-medium">
-              {fmt(t.match.converted, { from: picked.strung ? t.match.strungShort : t.match.unstrungShort, to: fromStrung ? t.match.strungShort : t.match.unstrungShort })}
-            </p>
-          )}
-          {picked.baseRacketId && (
-            <Button size="sm" icon={Play} onClick={() => onStock(picked)}>
-              {t.match.fromStock}
-            </Button>
-          )}
-        </div>
-      )}
-      <p className="text-xs text-muted">{t.match.proDisclaimer}</p>
-    </div>
-  )
-}
-
 function SpecFields({ v, onChange, required }: { v: Vals; onChange: (v: Vals) => void; required?: boolean }) {
   const t = useT()
   return (
@@ -191,6 +87,14 @@ function SpecFields({ v, onChange, required }: { v: Vals; onChange: (v: Vals) =>
 
 /** Where the starting point comes from. */
 type Source = 'calc' | 'library' | `owned:${string}` | `setup:${string}`
+
+/** What another screen hands Igualar: a start, a pro as the target, and
+ *  whether to solve right away (the free use already counted). */
+export interface MatchHandoff {
+  from?: Source
+  pro?: string
+  run?: boolean
+}
 
 /** The starting point: the frame, its numbers, with or without strings, and
  *  the setup behind it when there is one (to open it with the lead added). */
@@ -277,9 +181,15 @@ function Smart() {
   const masses = useStore((s) => s.masses)
   const customRackets = useCustomRackets()
 
+  // From "How to get there" (comparing a setup with a pro): the setup as
+  // the start, the pro as the target, solved once (the use was counted).
+  const loc = useLocation()
+  const handoff = loc.state as MatchHandoff | null
+  const handoffPro = PRO_TARGETS.find((p) => p.id === handoff?.pro)
+
   const [libraryId, setLibraryId] = useState(config.racketId)
   const starts = useStarts(libraryId)
-  const [picked, setPicked] = useState<Source>()
+  const [picked, setPicked] = useState<Source | undefined>(handoff?.from)
   const source = picked ?? starts.fallback
   const start = source ? starts.start(source) : null
   // The player's own numbers, when they change the starting point's.
@@ -289,11 +199,11 @@ function Smart() {
   const fromStrung = start?.strung ?? false
   const racket = useRacket(start?.racketId)
 
-  const [kind, setKind] = useState<'racket' | 'pro'>('racket')
+  const [kind, setKind] = useState<'racket' | 'pro'>(handoffPro ? 'pro' : 'racket')
   const [targetRacketId, setTargetRacketId] = useState<string>()
   const targetRacket = useRacket(targetRacketId)
-  const [proId, setProId] = useState('')
-  const [targetSrc, setTargetSrc] = useState<TargetSrc | null>(null)
+  const [proId, setProId] = useState(handoffPro?.id ?? '')
+  const [targetSrc, setTargetSrc] = useState<TargetSrc | null>(handoffPro ? { frame: handoffPro, specs: handoffPro, strung: handoffPro.strung } : null)
   const [typed, setTyped] = useState<Vals | null>(null)
   // A target from a racket, a setup or a pro follows the starting point into
   // its state (with or without strings); numbers typed in stay as typed.
@@ -317,7 +227,9 @@ function Smart() {
   }
 
   const run = () => {
-    if (!canRun()) return
+    if (canRun()) solve()
+  }
+  const solve = () => {
     setErr(undefined)
     const base = racket && toBase(racket, from)
     if (!base) return setErr(t.racketForm.invalid)
@@ -330,6 +242,17 @@ function Smart() {
     if (Object.values(target).every((x) => x === undefined)) return setErr(t.match.needSpecs)
     setRes(solveTarget(base, target, { allowed, maxPerPositionG: maxPer ?? LEAD_MAX }))
   }
+
+  const [autoRun, setAutoRun] = useState(!!handoff?.run)
+  useEffect(() => {
+    if (!autoRun || !start || !racket) return
+    setAutoRun(false)
+    solve()
+    // Once: a reload does not solve (or count) again.
+    nav(loc.pathname, { replace: true, state: null })
+    // `solve` reads this render's values, which are the ones wanted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun, start, racket])
 
   const openInCalc = () => {
     if (!res || !racket) return
