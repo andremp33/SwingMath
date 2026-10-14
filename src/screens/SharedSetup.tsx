@@ -13,6 +13,7 @@ import { Button, Card, CardTitle, EmptyState, PageTitle } from '../ui/basics'
 import { useToast } from '../ui/overlay'
 import { FeelRings, SpecTable, useSpecRows } from '../ui/specs'
 import { racketFeel } from '../data/racketFeel'
+import { bedLabel } from '../lib/bedLabel'
 
 export function SharedSetup() {
   const { data = '' } = useParams()
@@ -57,6 +58,11 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
           <p className="mt-3 text-sm">
             {leadParts(payload.setup, t, lang).join(' · ') || t.setups.noLead}
           </p>
+          {payload.setup.strings && (
+            <p className="num mt-1 text-sm">
+              {t.strings.title}: {bedLabel(payload.setup.strings, t, lang)}
+            </p>
+          )}
         </Card>
         <Card>
           <CardTitle>{t.calc.feel}</CardTitle>

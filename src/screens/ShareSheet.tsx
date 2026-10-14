@@ -11,6 +11,7 @@ import { Button } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { PublishSetup } from './Community'
 import { racketFeel } from '../data/racketFeel'
+import { bedLabel } from '../lib/bedLabel'
 
 export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: () => void }) {
   const t = useT()
@@ -42,12 +43,17 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
         lead:
           `${t.calc.lead}: ` +
           (leadParts(setup, t, lang).join(' · ') || t.setups.noLead),
-        accessories:
+        // With strings on the setup, they lead this line, by name.
+        accessories: [
+          setup.strings && `${t.strings.title}: ${bedLabel(setup.strings, t, lang)}`,
           `${t.acc.title}: ` +
-          ((['strings', 'overgrip', 'leatherGrip', 'dampener'] as const)
-            .filter((k) => setup.accessories[k])
-            .map((k) => t.acc[k])
-            .join(' · ') || '—'),
+            ((['strings', 'overgrip', 'leatherGrip', 'dampener'] as const)
+              .filter((k) => setup.accessories[k])
+              .map((k) => t.acc[k])
+              .join(' · ') || '—'),
+        ]
+          .filter(Boolean)
+          .join(' · '),
         scan: t.share.scan,
         appName: t.appName,
         domain: location.host,

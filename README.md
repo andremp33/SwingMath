@@ -57,6 +57,12 @@ Screen. No plugins there: no purchases (the paywall says so), reminders or
 share sheet; the export downloads the file. Its own code lives in
 `src/preview/` and behind `IS_PREVIEW`, so the store builds do not carry it.
 
+## Ideas for v1.1
+
+- The string's gauge in the stringbed model: today it is only shown (the
+  stiffness uses the material's typical value); a thinner string at the same
+  tension makes a slightly softer bed.
+
 ## Going live
 
 **The website.** Set `VITE_APP_STORE_URL` and `VITE_PLAY_STORE_URL` as

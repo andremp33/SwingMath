@@ -15,8 +15,9 @@ export type StringMaterial = (typeof MATERIALS)[number]
 export interface StringSpec {
   material: StringMaterial
   tensionKg: number
-  /** Brand and model, free text. */
+  /** Brand and model, free text (the catalogue's in data/stringCatalog.ts). */
   name?: string
+  /** Shown only; not in the stiffness model yet (an idea for v1.1). */
   gaugeMm?: number
 }
 

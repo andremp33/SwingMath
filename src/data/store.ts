@@ -100,6 +100,8 @@ interface State {
   onboarded: boolean
   /** Community authors the player chose not to see (their user ids). */
   hiddenAuthors: string[]
+  /** String names the player used last, newest first (the name field's suggestions). */
+  recentStrings: string[]
   account: Account | null
   accountPro: AccountPro | null
   sync: SyncState
@@ -124,6 +126,7 @@ interface State {
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
   hideAuthor: (userId: string) => void
+  noteString: (name: string) => void
   showAuthor: (userId: string) => void
   showAllAuthors: () => void
   setAccount: (a: Account | null) => void
@@ -152,6 +155,7 @@ export const useStore = create<State>()(
       profile: {},
       onboarded: false,
       hiddenAuthors: [],
+      recentStrings: [],
       account: null,
       accountPro: null,
       sync: { userId: null, cursor: null },
@@ -183,6 +187,11 @@ export const useStore = create<State>()(
       setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p } })),
       setOnboarded: (onboarded) => set({ onboarded }),
       hideAuthor: (id) => set((s) => ({ hiddenAuthors: [...new Set([...s.hiddenAuthors, id])] })),
+      noteString: (name) =>
+        set((s) => {
+          const n = name.trim()
+          return n ? { recentStrings: [n, ...s.recentStrings.filter((x) => x.toLowerCase() !== n.toLowerCase())].slice(0, 8) } : {}
+        }),
       showAuthor: (id) => set((s) => ({ hiddenAuthors: s.hiddenAuthors.filter((x) => x !== id) })),
       showAllAuthors: () => set({ hiddenAuthors: [] }),
       markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),

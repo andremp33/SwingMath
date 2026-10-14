@@ -14,6 +14,7 @@ import { SUPPORT_EMAIL } from '../lib/owner'
 import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { LegalBody } from './Legal'
+import { bedLabel } from '../lib/bedLabel'
 
 /**
  * The website: the store apps' shop window. What the app does, screenshots,
@@ -351,6 +352,11 @@ export function SharePreview() {
           </p>
           <p className="num text-muted">{fmt(t.shareSpecs, { w: fmtNum(result.weightG, 0, lang), b: fmtNum(result.balanceCm * 10, 0, lang), sw: fmtNum(result.swingweight, 0, lang) })}</p>
           <p className="num text-muted">{leadParts(shared.setup, ta, lang).join(' · ') || ta.setups.noLead}</p>
+          {shared.setup.strings && (
+            <p className="num text-muted">
+              {ta.strings.title}: {bedLabel(shared.setup.strings, ta, lang)}
+            </p>
+          )}
         </div>
       )}
       <AppOrStores open={open} />

@@ -36,6 +36,7 @@ import { fmtNum, leadParts } from '../lib/format'
 import { Badge, Button, Card, CardTitle, ChoiceChips, IconButton, MultiChoiceChips, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { CollapsibleCard, InfoTip, openCollapsible } from '../ui/disclosure'
 import { useToast } from '../ui/overlay'
+import { bedLabel } from '../lib/bedLabel'
 
 /** Visible community setups per frame, for links into the calculator. */
 export function useSetupCounts() {
@@ -239,6 +240,11 @@ export function CommunityCard({ racket }: { racket: Racket }) {
                     <p className="num text-muted">
                       {leadParts(p.config, t, lang).join(' · ') || t.setups.noLead} · {p.copies === 1 ? t.community.copyOne : fmt(t.community.copies, { n: p.copies })}
                     </p>
+                    {p.config.strings && (
+                      <p className="num text-muted">
+                        {t.strings.title}: {bedLabel(p.config.strings, t, lang)}
+                      </p>
+                    )}
                     {p.results && (
                       <p className="num">
                         {resultsLine(p.results, t, lang, { outOf: true })} <span className="text-xs text-muted">({t.community.fromJournal})</span>

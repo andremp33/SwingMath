@@ -43,6 +43,10 @@ test.describe('A01 first launch', () => {
     await page.getByRole('button', { name: 'Continuar' }).click()
 
     // The strings.
+    // By name, from the catalogue: the material comes with it.
+    await page.getByRole('combobox', { name: 'Corda' }).fill('rpm bl')
+    await page.getByRole('option', { name: 'Babolat RPM Blast', exact: true }).click()
+    await page.getByLabel('Calibre').selectOption('1.25')
     await page.getByLabel('Tensão').fill('24')
     await page.getByRole('radio', { name: 'Há 1 semana' }).click()
     await page.getByRole('radio', { name: '3–4 h' }).click()
@@ -63,7 +67,7 @@ test.describe('A01 first launch', () => {
     // The end: the racket, its strings, when to restring; no prices.
     await expect(page.getByRole('heading', { name: 'Está tudo pronto' })).toBeVisible()
     await expect(page.getByText('Pure Aero 98 #1')).toBeVisible()
-    await expect(page.getByText(/Poli 24 kg · encordar daqui a ~\d+ dias/)).toBeVisible()
+    await expect(page.getByText(/RPM Blast 1,25 · 24 kg · encordar daqui a ~\d+ dias/)).toBeVisible()
     await expect(page.getByText(/€/)).toHaveCount(0)
     await a11y(page)
     await page.getByRole('button', { name: 'Abrir na calculadora' }).click()
@@ -75,6 +79,6 @@ test.describe('A01 first launch', () => {
     const rackets = page.getByRole('region', { name: 'As tuas raquetes' })
     await expect(rackets).toContainText('Pure Aero 98 #1')
     await expect(rackets).toContainText('Pure Aero 98 #2')
-    await expect(rackets).toContainText('Poli 24 kg')
+    await expect(rackets).toContainText('RPM Blast 1,25 · 24 kg')
   })
 })

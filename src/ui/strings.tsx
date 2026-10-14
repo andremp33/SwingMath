@@ -1,3 +1,5 @@
+import { ExternalLink, History } from 'lucide-react'
+import { useId, useState } from 'react'
 import {
   BED_BANDS,
   BED_SCALE,
@@ -12,54 +14,205 @@ import {
   type StringMaterial,
   type StringSpec,
 } from '../domain/strings'
+import { findString, gaugeLabel, pickString, suggestStrings, type CatalogString } from '../data/stringCatalog'
 import { useStore } from '../data/store'
-import { fmt, useT, type Dict } from '../i18n'
+import { fmt, useT } from '../i18n'
 import { fmtNum, kgToLb } from '../lib/format'
-import { cx, NumberField, Select, Toggle } from './basics'
+import { cx, Label, NumberField, Select, Toggle } from './basics'
 
-/** "Poli 23 kg", or "Poli 24 / Multi 22 kg" for a hybrid. */
-export function bedLabel(bed: Stringbed, t: Dict, lang: string) {
-  const one = (s: StringSpec) => `${t.strings.short[s.material]} ${fmtNum(s.tensionKg, s.tensionKg % 1 ? 1 : 0, lang)}`
-  return bed.crosses ? `${one(bed.mains)} / ${one(bed.crosses)} kg` : `${one(bed.mains)} kg`
-}
+export { bedLabel } from '../lib/bedLabel'
 
-function SpecFields({ value, onChange, title }: { value: StringSpec; onChange: (s: StringSpec) => void; title?: string }) {
+/**
+ * The string's name, with suggestions from the catalogue (by brand or model)
+ * and the player's last strings first. Any name may be typed.
+ */
+function StringName({ label, value, onType, onPick }: { label: string; value: string; onType: (name: string) => void; onPick: (name: string, s?: CatalogString) => void }) {
   const t = useT()
-  const lang = useStore((s) => s.lang)
+  const id = useId()
+  const recent = useStore((s) => s.recentStrings)
+  const noteString = useStore((s) => s.noteString)
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const list = open ? suggestStrings(value, recent) : []
+  const shown = list.length > 0
+  const choose = (i: number) => {
+    const o = list[i]
+    if (!o) return
+    onPick(o.name, o.string)
+    noteString(o.name)
+    setOpen(false)
+  }
+  const option = (i: number) => {
+    const o = list[i]
+    return (
+      <li
+        key={o.name}
+        id={`${id}-o${i}`}
+        role="option"
+        aria-selected={i === active}
+        // Keeps the focus in the field.
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => choose(i)}
+        onMouseEnter={() => setActive(i)}
+        className={cx('flex cursor-pointer items-baseline justify-between gap-3 px-3 py-2 text-sm', i === active && 'bg-surface-2')}
+      >
+        <span className="min-w-0 truncate">
+          {o.string ? (
+            <>
+              <span className="text-muted">{o.string.brand}</span> <span className="font-medium">{o.string.model}</span>
+            </>
+          ) : (
+            <span className="font-medium">{o.name}</span>
+          )}
+        </span>
+        {/* A hint for the eye; the option's name is the string's. */}
+        {o.string && (
+          <span aria-hidden className="shrink-0 text-xs text-muted">
+            {t.strings.short[o.string.material]}
+          </span>
+        )}
+      </li>
+    )
+  }
+  const recentRows = list.map((o, i) => [o, i] as const).filter(([o]) => o.recent)
+  const otherRows = list.map((o, i) => [o, i] as const).filter(([o]) => !o.recent)
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
-      <Select<StringMaterial>
-        label={title ? `${t.strings.material} (${title.toLowerCase()})` : t.strings.material}
-        value={value.material}
-        onChange={(material) => onChange({ ...value, material })}
-        options={MATERIALS.map((m) => ({ value: m, label: t.strings.materials[m] }))}
+    <div className="relative">
+      <Label htmlFor={id}>{label}</Label>
+      <input
+        id={id}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={shown}
+        aria-controls={`${id}-list`}
+        aria-activedescendant={shown ? `${id}-o${active}` : undefined}
+        autoComplete="off"
+        maxLength={60}
+        placeholder={t.strings.namePlaceholder}
+        className="h-11 w-full rounded-md border border-border-input bg-surface px-3 text-base text-text placeholder:text-muted/60 focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-text"
+        value={value}
+        onChange={(e) => {
+          onType(e.target.value)
+          setOpen(true)
+          setActive(0)
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          setOpen(false)
+          if (value.trim()) noteString(value)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault()
+            setOpen(true)
+            if (list.length) setActive((a) => (a + (e.key === 'ArrowDown' ? 1 : list.length - 1)) % list.length)
+          } else if (e.key === 'Enter' && shown) {
+            e.preventDefault()
+            choose(active)
+          } else if (e.key === 'Escape' && shown) {
+            // Closes the list, not the sheet around it.
+            e.preventDefault()
+            e.stopPropagation()
+            setOpen(false)
+          }
+        }}
       />
-      <NumberField
-        label={title ? `${t.strings.tension} (${title.toLowerCase()})` : t.strings.tension}
-        unit="kg"
-        min={10}
-        max={40}
-        hint={fmt(t.strings.lb, { n: fmtNum(kgToLb(value.tensionKg), 0, lang) })}
-        value={value.tensionKg}
-        onChange={(v) => v !== undefined && onChange({ ...value, tensionKg: v })}
-      />
+      <ul id={`${id}-list`} role="listbox" aria-label={label} hidden={!shown} className="absolute inset-x-0 top-full z-40 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-surface py-1 shadow-lg">
+        {recentRows.length > 0 && (
+          <li role="presentation" className="flex items-center gap-1.5 px-3 pb-1 pt-1.5 text-xs text-muted">
+            <History className="size-3.5" aria-hidden /> {t.strings.recent}
+          </li>
+        )}
+        {recentRows.map(([, i]) => option(i))}
+        {recentRows.length > 0 && otherRows.length > 0 && (
+          <li role="presentation" className="px-3 pb-1 pt-2 text-xs text-muted">
+            {t.strings.catalogue}
+          </li>
+        )}
+        {otherRows.map(([, i]) => option(i))}
+      </ul>
     </div>
   )
 }
 
-/** Material and tension, with an optional hybrid. */
+/** One side of the bed: the string's name, then its gauge (a catalogue
+ *  string) or its material (any other), and the tension. */
+export function StringSpecFields({ value, onChange, title }: { value: StringSpec; onChange: (s: StringSpec) => void; title?: string }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const known = findString(value.name)
+  const of = (l: string) => (title ? `${l} (${title.toLowerCase()})` : l)
+  return (
+    <div className="space-y-3">
+      <div>
+        <StringName
+          label={of(t.strings.name)}
+          value={value.name ?? ''}
+          onType={(name) => {
+            const s = findString(name)
+            onChange(s ? pickString({ ...value, name }, s) : { ...value, name: name.trim() ? name : undefined, gaugeMm: undefined })
+          }}
+          onPick={(name, s) => onChange(s ? pickString(value, s) : { ...value, name })}
+        />
+        {known && (
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+            {t.strings.materials[known.material]} ·{' '}
+            <a href={known.source} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-text">
+              {t.strings.source} <ExternalLink className="size-3" aria-hidden />
+            </a>
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+        {known ? (
+          <Select<string>
+            label={of(t.strings.gauge)}
+            value={value.gaugeMm !== undefined ? String(value.gaugeMm) : ''}
+            onChange={(g) => onChange({ ...value, gaugeMm: g ? Number(g) : undefined })}
+            options={[
+              { value: '', label: t.strings.gaugeUnknown },
+              ...known.gaugesMm.map((mm) => {
+                const us = gaugeLabel(known, mm)
+                return { value: String(mm), label: us ? `${us} (${fmtNum(mm, 2, lang)} mm)` : `${fmtNum(mm, 2, lang)} mm` }
+              }),
+            ]}
+          />
+        ) : (
+          <Select<StringMaterial>
+            label={of(t.strings.material)}
+            value={value.material}
+            onChange={(material) => onChange({ ...value, material })}
+            options={MATERIALS.map((m) => ({ value: m, label: t.strings.materials[m] }))}
+          />
+        )}
+        <NumberField
+          label={of(t.strings.tension)}
+          unit="kg"
+          min={10}
+          max={40}
+          hint={fmt(t.strings.lb, { n: fmtNum(kgToLb(value.tensionKg), 0, lang) })}
+          value={value.tensionKg}
+          onChange={(v) => v !== undefined && onChange({ ...value, tensionKg: v })}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** The strings, with an optional hybrid: mains and crosses each get their own. */
 export function StringbedEditor({ value, onChange }: { value: Stringbed; onChange: (b: Stringbed) => void }) {
   const t = useT()
   const hybrid = value.crosses !== undefined
   return (
     <div className="space-y-3">
-      <SpecFields value={value.mains} onChange={(mains) => onChange({ ...value, mains })} title={hybrid ? t.strings.mains : undefined} />
+      <StringSpecFields value={value.mains} onChange={(mains) => onChange({ ...value, mains })} title={hybrid ? t.strings.mains : undefined} />
       <Toggle
         label={t.strings.hybrid}
         checked={hybrid}
-        onChange={(on) => onChange(on ? { ...value, crosses: { ...value.mains, material: value.mains.material === 'poly' ? 'multi' : 'poly' } } : { mains: value.mains })}
+        // The crosses start as another material at the same tension, unnamed.
+        onChange={(on) => onChange(on ? { ...value, crosses: { tensionKg: value.mains.tensionKg, material: value.mains.material === 'poly' ? 'multi' : 'poly' } } : { mains: value.mains })}
       />
-      {value.crosses && <SpecFields value={value.crosses} onChange={(crosses) => onChange({ ...value, crosses })} title={t.strings.crosses} />}
+      {value.crosses && <StringSpecFields value={value.crosses} onChange={(crosses) => onChange({ ...value, crosses })} title={t.strings.crosses} />}
     </div>
   )
 }

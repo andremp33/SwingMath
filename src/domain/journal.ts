@@ -1,4 +1,4 @@
-import { lifeLimits, stringLife, type Stringbed, type StringLife } from './strings'
+import { lifeLimits, stringLife, type Stringbed, type StringLife, type StringSpec } from './strings'
 
 /**
  * The player's journal: their own rackets (the physical frames they play
@@ -141,7 +141,11 @@ export function dueForRestring(all: Stringing[], sessions: Session[], now = Date
 }
 
 export interface StringingInsight extends SessionSummary {
+  /** The latest of `stringings`. */
   stringing: Stringing
+  /** The same named strings at the same tension count as one; otherwise
+   *  one stringing. */
+  stringings: Stringing[]
 }
 
 /** What a set of sessions adds up to. Only rated sessions count towards
@@ -167,11 +171,25 @@ export function summariseSessions(list: Session[]): SessionSummary {
   }
 }
 
-/** Averages per stringing, best overall first. Only rated sessions count
- *  towards each average. */
+/** Which stringings are the same strings: named strings at the same
+ *  tension, whatever the racket. Strings without a name stay on their own. */
+export function bedKey(st: Stringing): string {
+  const one = (s: StringSpec) => (s.name?.trim() ? `${s.name.trim().toLowerCase().replace(/\s+/g, ' ')}@${s.tensionKg}` : `${s.material}@${s.tensionKg}`)
+  const { mains, crosses } = st.bed
+  return mains.name?.trim() || crosses?.name?.trim() ? `${one(mains)}|${crosses ? one(crosses) : ''}` : `id:${st.id}`
+}
+
+/** Averages per string (see bedKey), best overall first. Only rated
+ *  sessions count towards each average. */
 export function insights(all: Stringing[], sessions: Session[]): StringingInsight[] {
-  return all
-    .map((st) => ({ stringing: st, ...summariseSessions(sessions.filter((s) => s.stringingId === st.id)) }))
+  const groups = new Map<string, Stringing[]>()
+  for (const st of all) groups.set(bedKey(st), [...(groups.get(bedKey(st)) ?? []), st])
+  return [...groups.values()]
+    .map((list) => {
+      const ids = new Set(list.map((st) => st.id))
+      const latest = list.reduce((a, b) => (b.date > a.date ? b : a))
+      return { stringing: latest, stringings: list, ...summariseSessions(sessions.filter((s) => s.stringingId && ids.has(s.stringingId))) }
+    })
     .filter((i) => i.sessions > 0)
     .sort((a, b) => (b.avg.overall ?? 0) - (a.avg.overall ?? 0) || b.sessions - a.sessions)
 }

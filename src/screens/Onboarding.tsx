@@ -4,17 +4,17 @@ import { saveOwned, saveStringing, uid } from '../data/db'
 import { STOCK_RACKETS } from '../data/rackets'
 import { useStore } from '../data/store'
 import { restringDue, type OwnedRacket, type Stringing } from '../domain/journal'
-import { DEFAULT_STRINGBED, MATERIALS, type Stringbed, type StringMaterial } from '../domain/strings'
+import { DEFAULT_STRINGBED, type Stringbed, type StringSpec } from '../domain/strings'
 import type { Racket } from '../domain/types'
 import { fmt, useT } from '../i18n'
 import { GOALS, LEVELS, STYLES } from '../lib/community'
 import { IS_APP, IS_NATIVE } from '../lib/platform'
-import { Button, ChoiceChips, cx, MultiChoiceChips, NumberField, Segmented, Select, TextField } from '../ui/basics'
+import { Button, ChoiceChips, cx, MultiChoiceChips, Segmented, TextField } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { useOpenOwned } from '../ui/MyRackets'
 import { useToast } from '../ui/overlay'
 import { matchesQuery } from '../ui/RacketPicker'
-import { bedLabel } from '../ui/strings'
+import { bedLabel, StringSpecFields } from '../ui/strings'
 import { usePaywall } from './Pro'
 import { useReminders } from './reminders'
 
@@ -64,8 +64,7 @@ export function Onboarding() {
   const [name, setName] = useState('')
   const [count, setCount] = useState<'1' | '2' | '3' | '4'>('1')
   const [owned, setOwned] = useState<OwnedRacket[]>([])
-  const [material, setMaterial] = useState<StringMaterial>(DEFAULT_STRINGBED.mains.material)
-  const [tension, setTension] = useState<number | undefined>(DEFAULT_STRINGBED.mains.tensionKg)
+  const [spec, setSpec] = useState<StringSpec>(DEFAULT_STRINGBED.mains)
   const [when, setWhen] = useState<keyof typeof WHEN>('today')
   const [hours, setHours] = useState<keyof typeof HOURS>()
   const [stringing, setStringing] = useState<Stringing>()
@@ -101,7 +100,7 @@ export function Onboarding() {
     setStep('strings')
   }
   const saveStrings = async () => {
-    const bed: Stringbed = { mains: { material, tensionKg: tension ?? DEFAULT_STRINGBED.mains.tensionKg } }
+    const bed: Stringbed = { mains: spec }
     const at = Date.now()
     const date = at - WHEN[when] * DAY
     let first: Stringing | undefined
@@ -219,10 +218,7 @@ export function Onboarding() {
             </Button>
           }
         >
-          <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
-            <Select label={t.strings.material} value={material} onChange={setMaterial} options={MATERIALS.map((m) => ({ value: m, label: t.strings.materials[m] }))} />
-            <NumberField label={t.strings.tension} unit="kg" min={10} max={40} value={tension} onChange={setTension} />
-          </div>
+          <StringSpecFields value={spec} onChange={setSpec} />
           <ChoiceChips label={t.onboarding.strungWhen} value={when} onChange={setWhen} options={(Object.keys(WHEN) as (keyof typeof WHEN)[]).map((k) => ({ value: k, label: t.onboarding.when[k] }))} />
           <ChoiceChips label={t.onboarding.hours} value={hours} onChange={setHours} options={(Object.keys(HOURS) as (keyof typeof HOURS)[]).map((k) => ({ value: k, label: t.onboarding.hourOptions[k] }))} />
         </Page>

@@ -59,6 +59,26 @@ describe('journal', () => {
     expect(r.find((i) => i.stringing.id === 'b1')?.avg.overall).toBeUndefined()
   })
 
+  it('groups named strings at the same tension, whatever the racket', () => {
+    const named = (id: string, name: string | undefined, kg: number, daysAgo: number): Stringing => ({
+      ...stringing(id, id, daysAgo),
+      bed: { mains: { material: 'poly', tensionKg: kg, name } },
+    })
+    const list = [named('x1', 'Babolat RPM Blast', 23, 40), named('x2', 'babolat  rpm blast', 23, 10), named('x3', 'Babolat RPM Blast', 24, 5), named('y1', undefined, 23, 8), named('y2', undefined, 23, 2)]
+    const play = [session('x1', 60, 30, 4), session('x2', 60, 5, 2), session('x3', 60, 4, 5), session('y1', 60, 3, 3), session('y2', 60, 1, 3)]
+    const r = insights(list, play)
+    // RPM Blast at 23 kg twice, as one: (4 + 2) / 2; at 24 kg on its own.
+    const at23 = r.find((i) => i.stringings.length === 2)!
+    expect(at23.stringings.map((s) => s.id).sort()).toEqual(['x1', 'x2'])
+    expect(at23.stringing.id).toBe('x2')
+    expect(at23.avg.overall).toBe(3)
+    expect(at23.sessions).toBe(2)
+    expect(r.find((i) => i.stringing.id === 'x3')?.stringings).toHaveLength(1)
+    // Without a name, each stringing stays on its own.
+    expect(r.filter((i) => i.stringing.id.startsWith('y'))).toHaveLength(2)
+    expect(r[0].stringing.id).toBe('x3')
+  })
+
   it('buckets hours by week, oldest first', () => {
     const w = weeklyHours(sessions, 4, NOW)
     expect(w).toEqual([0, 1.5, 0, 4])

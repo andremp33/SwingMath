@@ -265,7 +265,7 @@ function Summary({ sessions, stringings, owned, now }: { sessions: Session[]; st
   const month = sessions.filter((s) => s.date >= now - 30 * DAY)
   const rated = month.map((s) => s.ratings.overall).filter((v): v is number => v !== undefined)
   const best = insights(stringings, sessions).find((i) => i.avg.overall !== undefined)
-  const bestName = best && (owned.find((o) => o.id === best.stringing.ownedId)?.name ?? best.stringing.label)
+  const bestName = best && (best.stringings.length > 1 ? bedLabel(best.stringing.bed, t, lang) : (owned.find((o) => o.id === best.stringing.ownedId)?.name ?? best.stringing.label))
   const weeks = weeklyHours(sessions, 8, now)
   const max = Math.max(1, ...weeks)
   return (
@@ -353,12 +353,20 @@ function Insights({ stringings, sessions, owned }: { stringings: Stringing[]; se
   return (
     <ol className="space-y-3">
       {rows.map((r) => {
+        // The same strings on several stringings: one row, under their name.
+        const many = r.stringings.length > 1
         const name = owned.find((o) => o.id === r.stringing.ownedId)?.name ?? r.stringing.label
         return (
           <li key={r.stringing.id} className="text-sm">
             <div className="flex items-baseline justify-between gap-3">
               <span className="min-w-0 truncate">
-                <span className="font-semibold">{name}</span> · <span className="num">{bedLabel(r.stringing.bed, t, lang)}</span>
+                {many ? (
+                  <span className="num font-semibold">{bedLabel(r.stringing.bed, t, lang)}</span>
+                ) : (
+                  <>
+                    <span className="font-semibold">{name}</span> · <span className="num">{bedLabel(r.stringing.bed, t, lang)}</span>
+                  </>
+                )}
               </span>
               <span className="readout shrink-0 text-lg">{fmtNum(r.avg.overall, 1, lang)}</span>
             </div>
@@ -366,7 +374,7 @@ function Insights({ stringings, sessions, owned }: { stringings: Stringing[]; se
               <div className="h-full rounded-full bg-accent" style={{ width: `${((r.avg.overall ?? 0) / 5) * 100}%` }} />
             </div>
             <p className="num mt-1 text-xs text-muted">
-              {fmtDate(r.stringing.date, lang)} · {r.sessions === 1 ? t.journal.sessionOne : fmt(t.journal.sessions, { n: r.sessions })}
+              {many ? fmt(t.journal.stringingsN, { n: r.stringings.length }) : fmtDate(r.stringing.date, lang)} · {r.sessions === 1 ? t.journal.sessionOne : fmt(t.journal.sessions, { n: r.sessions })}
               {r.armPainShare > 0 && <> · {fmt(t.journal.pain, { n: Math.round(r.armPainShare * 100) })}</>}
             </p>
           </li>

@@ -8,6 +8,7 @@ import { extraLabel, fmtNum, racketLabel, tapeCm } from '../lib/format'
 import { Button, EmptyState } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { SearchX } from 'lucide-react'
+import { bedLabel } from '../lib/bedLabel'
 
 /** A one-page sheet a stringer can follow, made for paper (always light). */
 export function SetupSheet() {
@@ -102,6 +103,12 @@ export function SetupSheet() {
           <p className="mt-2 text-sm">
             {t.acc.title}: {acc.length ? acc.map((k) => t.acc[k]).join(' · ') : '—'}
           </p>
+          {/* What the stringer needs: the strings by name, gauge and tension. */}
+          {setup.strings && (
+            <p className="mt-1 text-sm">
+              {t.strings.title}: <span className="num font-bold">{bedLabel(setup.strings, t, lang)}</span>
+            </p>
+          )}
         </section>
 
         <section className="mt-6">
