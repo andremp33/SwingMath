@@ -94,9 +94,37 @@ test.describe('Pro targets', () => {
     // Library values are unstrung, so Nadal's strung 337 g loses the 17 g of strings.
     await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('320')
     await expect(to).toContainText('Medida com cordas; convertemos para sem cordas')
-    // Sources are described, never named or linked.
-    await expect(to).toContainText('Medida com cordas por uma fonte independente de confiança')
-    await expect(to.getByRole('link')).toHaveCount(0)
+    // Measured or reported, by whom and when, with the link.
+    await expect(to.getByRole('radio', { name: /Rafael Nadal/ })).toContainText('Medido')
+    await expect(to).toContainText('Medido: Medido por um laboratório, encordoador, loja ou autor identificados.')
+    await expect(to.getByRole('link', { name: /Fonte: Tennis Warehouse \(lab\), junho de 2023/ })).toHaveAttribute('href', /tennis-warehouse\.com/)
+    await expect(to).toContainText('Specs publicados; o SwingMath não tem relação com os jogadores nem com as marcas.')
+    await a11y(page)
+  })
+
+  test('F06-H7 search, ATP and WTA apart, and the stock racquet to start from', async ({ page }) => {
+    await start(page, { path: '/match' })
+    const to = page.getByRole('region', { name: 'Alvo', exact: true })
+    await to.getByRole('radio', { name: 'Profissional' }).click()
+    await expect(to.getByRole('radiogroup', { name: 'Profissional ATP' })).toBeVisible()
+    const wta = to.getByRole('radiogroup', { name: 'Profissional WTA' })
+    await expect(wta.getByRole('radio', { name: /Iga Świątek/ })).toContainText('Reportado')
+    // Searching ignores accents and case.
+    await to.getByLabel('Procurar jogador').fill('swiatek')
+    await expect(to.getByRole('radiogroup', { name: 'Profissional ATP' })).toHaveCount(0)
+    await expect(wta.getByRole('radio')).toHaveCount(1)
+    await to.getByLabel('Procurar jogador').fill('zzz')
+    await expect(to).toContainText('Nenhum jogador com esse nome.')
+    // Sinner: his strings, and his stock racquet as the starting point.
+    await to.getByLabel('Procurar jogador').fill('sinner')
+    await to.getByRole('radio', { name: /Jannik Sinner/ }).click()
+    await expect(to).toContainText('Cordas: Head Hawk Touch 1.30 · 28 kg')
+    await expect(to.getByRole('link', { name: /Fonte: Tennisnerd/ })).toBeVisible()
+    await to.getByRole('button', { name: 'Partir da raquete de série' }).click()
+    const from = page.getByRole('region', { name: 'Ponto de partida', exact: true })
+    await expect(from.getByRole('button', { name: /Head Speed MP \(2026\)/ })).toBeVisible()
+    // Both unstrung: Sinner's numbers as measured.
+    await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('302')
     await a11y(page)
   })
 

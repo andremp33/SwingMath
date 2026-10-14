@@ -1,12 +1,38 @@
 import { describe, expect, it } from 'vitest'
 import { PRO_TARGETS, withStrings } from './pros'
+import { STOCK_RACKETS } from './rackets'
 
 describe('pro targets', () => {
-  it('every target names a source with a link', () => {
+  it('every target has its source, link, date and kind of evidence', () => {
     for (const p of PRO_TARGETS) {
-      expect(p.source.length).toBeGreaterThan(3)
-      expect(p.url).toMatch(/^https:\/\//)
+      expect(p.source.length, p.id).toBeGreaterThan(3)
+      expect(p.url, p.id).toMatch(/^https:\/\/[\w.-]+\.\w+\//)
+      expect(p.date, p.id).toMatch(/^(19|20)\d\d-(0[1-9]|1[0-2])$/)
+      expect(p.date <= new Date().toISOString().slice(0, 7), p.id).toBe(true)
+      expect(['measured', 'reported'], p.id).toContain(p.evidence)
+      expect(['ATP', 'WTA'], p.id).toContain(p.tour)
     }
+  })
+
+  it('ids are unique', () => {
+    expect(new Set(PRO_TARGETS.map((p) => p.id)).size).toBe(PRO_TARGETS.length)
+  })
+
+  it('the numbers are in plausible ranges for a tour racket', () => {
+    for (const p of PRO_TARGETS) {
+      const lo = p.strung ? 300 : 280
+      expect(p.weightG >= lo && p.weightG <= 400, `${p.id} weight ${p.weightG}`).toBe(true)
+      expect(p.balanceCm >= 30 && p.balanceCm <= 35, `${p.id} balance ${p.balanceCm}`).toBe(true)
+      expect(p.swingweight >= (p.strung ? 300 : 270) && p.swingweight <= 390, `${p.id} SW ${p.swingweight}`).toBe(true)
+      expect(p.headSizeSqIn >= 85 && p.headSizeSqIn <= 110, p.id).toBe(true)
+      expect(p.lengthCm >= 68 && p.lengthCm <= 70, p.id).toBe(true)
+    }
+  })
+
+  it('the stock racket to start from is in the library', () => {
+    const linked = PRO_TARGETS.filter((p) => p.baseRacketId)
+    expect(linked.length).toBeGreaterThan(0)
+    for (const p of linked) expect(STOCK_RACKETS.some((r) => r.id === p.baseRacketId), `${p.id} → ${p.baseRacketId}`).toBe(true)
   })
 
   it('removing the strings and putting them back lands where it started', () => {
