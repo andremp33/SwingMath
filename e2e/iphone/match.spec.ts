@@ -3,14 +3,17 @@ import type { Page } from '@playwright/test'
 
 // Igualar on an iPhone (WebKit, 390 px).
 
-/** A racket of the player's, strung at 23 kg, in the journal. */
+/** A racket of the player's, strung at 23 kg, made in the journal; then
+ *  Igualar, once the journal has finished loading (leaving a page while
+ *  its chunks load makes WebKit report the cut-short imports). */
 async function myRacket(page: Page, name: string) {
-  await page.goto('/diario')
   await page.getByRole('button', { name: 'Nova raquete' }).first().click()
   const d = page.getByRole('dialog', { name: 'Nova raquete' })
   await d.getByLabel('Nome', { exact: true }).fill(name)
   await d.getByRole('button', { name: 'Guardar' }).click()
   await expect(d).toBeHidden()
+  await page.waitForLoadState('networkidle')
+  await page.goto('/match')
 }
 
 const step = (page: Page, name: string) => page.getByRole('region', { name })
@@ -18,7 +21,6 @@ const step = (page: Page, name: string) => page.getByRole('region', { name })
 test('M01 by default it starts from the player’s racket, as played, with strings', async ({ page }) => {
   await start(page, { path: '/diario' })
   await myRacket(page, 'A de torneio')
-  await page.goto('/match')
   const from = step(page, 'De onde partes')
   await expect(from.getByLabel('Ponto de partida')).toHaveValue(/^owned:/)
   await expect(from.getByLabel('Ponto de partida').locator('option:checked')).toHaveText('A de torneio')
@@ -34,7 +36,6 @@ test('M01 by default it starts from the player’s racket, as played, with strin
 test('M02 the library is the alternative; a target of the other kind is converted, and says so', async ({ page }) => {
   await start(page, { path: '/diario' })
   await myRacket(page, 'A de torneio')
-  await page.goto('/match')
   const from = step(page, 'De onde partes')
   const to = step(page, 'Onde queres chegar')
   // A library frame (unstrung) as the target of a strung starting point.

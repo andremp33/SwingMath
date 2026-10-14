@@ -28,6 +28,9 @@ export default defineConfig(({ mode }) => {
   const base = app ? '/' : preview ? `${site}preview/` : site
   return {
     base,
+    // Builds written while the dev server runs (the e2e preview build in
+    // dist-e2e/) must not reload the pages under test.
+    server: { watch: { ignored: ['**/dist/**', '**/dist-e2e/**', '**/test-results/**'] } },
     // The commit goes next to the version, so support can tell which build a
     // player is on.
     define: {

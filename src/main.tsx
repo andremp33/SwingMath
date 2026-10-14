@@ -10,7 +10,10 @@ import { ensureOwned } from './data/db'
 // itself), and the app checks for one whenever it comes back to the front.
 if (IS_NATIVE) {
   // Status bar, back button, sign-in links: only in the store apps.
-  void import('./lib/native').then((m) => m.initNative())
+  // A load cut short (the page left at once) is not an error.
+  void import('./lib/native')
+    .then((m) => m.initNative())
+    .catch(() => {})
   // The app's preview in a phone's browser has neither (see src/preview/).
 } else if (!IS_APP) registerSW({
   immediate: true,

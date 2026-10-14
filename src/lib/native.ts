@@ -19,7 +19,9 @@ export async function initNative() {
   paintStatusBar()
   new MutationObserver(paintStatusBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
   SplashScreen.hide().catch(() => {})
-  void import('./purchases').then((m) => m.initPurchases())
+  void import('./purchases')
+    .then((m) => m.initPurchases())
+    .catch(() => {})
 
   // iOS: a tap on the status bar scrolls to the top, as in other apps.
   window.addEventListener('statusTap', () => document.getElementById('app-scroll')?.scrollTo({ top: 0, behavior: 'smooth' }))

@@ -127,7 +127,10 @@ const soon = () => {
 
 /** Store apps: the RevenueCat user follows the account. */
 const identifyStore = (userId: string | null) => {
-  if (IS_NATIVE) void import('../lib/purchases').then((m) => m.identify(userId))
+  if (IS_NATIVE)
+    void import('../lib/purchases')
+      .then((m) => m.identify(userId))
+      .catch(() => {})
 }
 
 async function onSession(session: Session | null) {
