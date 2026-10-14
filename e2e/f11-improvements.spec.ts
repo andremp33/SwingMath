@@ -68,12 +68,16 @@ test.describe('F12 practical helpers', () => {
     await saveSetup(page, 'Antiga')
     await page.goto('/match')
     await page.getByLabel('Igualar a um setup guardado').selectOption({ label: 'Antiga' })
-    const target = page.getByRole('region', { name: 'Alvo', exact: true })
-    // The setup weighs 331 g strung; the starting point is the library's
-    // unstrung frame, so the target drops the 17 g of strings.
+    const target = page.getByRole('region', { name: 'Onde queres chegar' })
+    // The setup weighs 331 g strung, and so does the starting point (the
+    // racket it was saved on, as played): no conversion.
+    await expect(target.getByLabel('Peso', { exact: true })).toHaveValue('331')
+    // From the library's unstrung frame, the target drops the 17 g of strings.
+    await page.getByLabel('Ponto de partida').selectOption({ label: 'Outra raquete da biblioteca' })
     await expect(target.getByLabel('Peso', { exact: true })).toHaveValue('314')
+    await expect(target).toContainText('Medida com cordas; convertemos para sem cordas')
     await page.getByRole('button', { name: 'Calcular', exact: true }).click()
-    await expect(page.getByRole('region', { name: 'Onde pôr o chumbo' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toBeVisible()
   })
 
   test('F12-H3 printable sheet for the stringer', async ({ page }) => {

@@ -279,9 +279,21 @@ export function Select<T extends string>({
   label: string
   value: T
   onChange: (v: T) => void
-  options: { value: T; label: string }[]
+  /** Options with a `group` are shown under it (consecutive ones together). */
+  options: { value: T; label: string; group?: string }[]
 }) {
   const id = useId()
+  const groups: { group?: string; items: { value: T; label: string }[] }[] = []
+  for (const o of options) {
+    const last = groups[groups.length - 1]
+    if (last && last.group === o.group) last.items.push(o)
+    else groups.push({ group: o.group, items: [o] })
+  }
+  const opt = (o: { value: T; label: string }) => (
+    <option key={o.value} value={o.value}>
+      {o.label}
+    </option>
+  )
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
@@ -295,11 +307,15 @@ export function Select<T extends string>({
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
+        {groups.map((g, i) =>
+          g.group ? (
+            <optgroup key={`${g.group}-${i}`} label={g.group}>
+              {g.items.map(opt)}
+            </optgroup>
+          ) : (
+            g.items.map(opt)
+          ),
+        )}
       </select>
     </div>
   )

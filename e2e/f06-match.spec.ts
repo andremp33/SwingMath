@@ -3,11 +3,11 @@ import { a11y, expect, start, test } from './fixtures'
 test.describe('F06 hit a target', () => {
   test('F06-H1 finds lead to reach a target', async ({ page }) => {
     await start(page, { pro: true, path: '/match' })
-    const target = page.getByRole('region', { name: 'Alvo', exact: true })
+    const target = page.getByRole('region', { name: 'Onde queres chegar' })
     await target.getByLabel('Peso', { exact: true }).fill('320')
     await target.getByLabel('Swingweight').fill('300')
     await page.getByRole('button', { name: 'Calcular', exact: true }).click()
-    const plan = page.getByRole('region', { name: 'Onde pôr o chumbo' })
+    const plan = page.getByRole('region', { name: 'Plano de chumbo' })
     await expect(plan).toContainText('Chumbo total')
     await expect(plan).toContainText(/9\d(,\d)?% de correspondência|100% de correspondência/)
     await a11y(page)
@@ -15,7 +15,7 @@ test.describe('F06 hit a target', () => {
 
   test('F06-E1 target lighter than the frame is flagged', async ({ page }) => {
     await start(page, { pro: true, path: '/match' })
-    await page.getByRole('region', { name: 'Alvo', exact: true }).getByLabel('Peso', { exact: true }).fill('290')
+    await page.getByRole('region', { name: 'Onde queres chegar' }).getByLabel('Peso', { exact: true }).fill('290')
     await page.getByRole('button', { name: 'Calcular', exact: true }).click()
     await expect(page.getByText(/Não dá para chegar a este alvo/)).toBeVisible()
   })
@@ -31,11 +31,11 @@ test.describe('F06 hit a target', () => {
     // One count for both modes, not one per tab.
     await expect(page.getByText('3 usos grátis')).toHaveCount(1)
     await expect(page.getByRole('radio', { name: /Atingir um alvo/ })).not.toContainText('grátis')
-    await page.getByRole('region', { name: 'Alvo', exact: true }).getByLabel('Peso', { exact: true }).fill('320')
+    await page.getByRole('region', { name: 'Onde queres chegar' }).getByLabel('Peso', { exact: true }).fill('320')
     const run = page.getByRole('button', { name: 'Calcular', exact: true })
     for (let i = 0; i < 3; i++) {
       await run.click()
-      await expect(page.getByRole('region', { name: 'Onde pôr o chumbo' })).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toBeVisible()
     }
     await expect(page.getByText('Pro', { exact: true })).toBeVisible()
     await run.click()
@@ -53,7 +53,7 @@ test.describe('F06 hit a target', () => {
 
   test('F06-E2 open the plan in the calculator', async ({ page }) => {
     await start(page, { pro: true, path: '/match' })
-    await page.getByRole('region', { name: 'Alvo', exact: true }).getByLabel('Peso', { exact: true }).fill('315')
+    await page.getByRole('region', { name: 'Onde queres chegar' }).getByLabel('Peso', { exact: true }).fill('315')
     await page.getByRole('button', { name: 'Calcular', exact: true }).click()
     await page.getByRole('button', { name: 'Abrir na calculadora' }).click()
     await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
@@ -88,7 +88,7 @@ test.describe('F07 match rackets', () => {
 test.describe('Pro targets', () => {
   test('F06-H5 a pro target, converted to the state of the starting point, with its source', async ({ page }) => {
     await start(page, { path: '/match' })
-    const to = page.getByRole('region', { name: 'Alvo', exact: true })
+    const to = page.getByRole('region', { name: 'Onde queres chegar' })
     await to.getByRole('radio', { name: 'Profissional' }).click()
     await to.getByRole('radio', { name: /Rafael Nadal/ }).click()
     // Library values are unstrung, so Nadal's strung 337 g loses the 17 g of strings.
@@ -104,7 +104,7 @@ test.describe('Pro targets', () => {
 
   test('F06-H7 search, ATP and WTA apart, and the stock racquet to start from', async ({ page }) => {
     await start(page, { path: '/match' })
-    const to = page.getByRole('region', { name: 'Alvo', exact: true })
+    const to = page.getByRole('region', { name: 'Onde queres chegar' })
     await to.getByRole('radio', { name: 'Profissional' }).click()
     await expect(to.getByRole('radiogroup', { name: 'Profissional ATP' })).toBeVisible()
     const wta = to.getByRole('radiogroup', { name: 'Profissional WTA' })
@@ -121,7 +121,7 @@ test.describe('Pro targets', () => {
     await expect(to).toContainText('Cordas: Head Hawk Touch 1.30 · 28 kg')
     await expect(to.getByRole('link', { name: /Fonte: Tennisnerd/ })).toBeVisible()
     await to.getByRole('button', { name: 'Partir da raquete de série' }).click()
-    const from = page.getByRole('region', { name: 'Ponto de partida', exact: true })
+    const from = page.getByRole('region', { name: 'De onde partes' })
     await expect(from.getByRole('button', { name: /Head Speed MP \(2026\)/ })).toBeVisible()
     // Both unstrung: Sinner's numbers as measured.
     await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('302')
@@ -130,8 +130,8 @@ test.describe('Pro targets', () => {
 
   test('F06-H6 from the calculator with strings on, the target stays strung', async ({ page }) => {
     await start(page, { path: '/match' })
-    await page.getByRole('button', { name: 'Da calculadora' }).click()
-    const to = page.getByRole('region', { name: 'Alvo', exact: true })
+    await page.getByLabel('Ponto de partida').selectOption({ label: 'Da calculadora' })
+    const to = page.getByRole('region', { name: 'Onde queres chegar' })
     await to.getByRole('radio', { name: 'Profissional' }).click()
     await to.getByRole('radio', { name: /Roger Federer/ }).click()
     await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('357')
