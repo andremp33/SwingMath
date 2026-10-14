@@ -1,4 +1,4 @@
-import { a11y, expect, resultCard, saveSetup, start, test } from './fixtures'
+import { a11y, expect, resultCard, saveSetup, setupAction, start, test } from './fixtures'
 
 async function addPosition(page: import('@playwright/test').Page, opts: { hour?: string; one?: boolean; shaftCm?: string }) {
   await page.getByRole('button', { name: 'Adicionar posição' }).click()
@@ -50,7 +50,7 @@ test.describe('F13 custom lead positions', () => {
     await saveSetup(page, 'Com 1h30')
     await page.goto('/setups')
     await expect(page.getByRole('article')).toContainText('10h30 e 1h30 1,0 g')
-    await page.getByRole('button', { name: 'Ficha para o encordoador' }).click()
+    await setupAction(page, 'Com 1h30', 'Ficha para o encordoador')
     await expect(page.getByRole('table').first()).toContainText('10h30 e 1h30')
   })
 

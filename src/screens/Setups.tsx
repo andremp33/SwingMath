@@ -1,4 +1,4 @@
-import { Calculator, ClipboardList, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2 } from 'lucide-react'
+import { Calculator, ClipboardList, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { OwnedRacket } from '../domain/journal'
@@ -7,8 +7,11 @@ import { db, saveSetup, uid } from '../data/db'
 import { useAllRackets, useOwned, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
-import { fmtDate, leadParts, racketLabel } from '../lib/format'
-import { Button, cx, EmptyState, IconButton, PageTitle, Select } from '../ui/basics'
+import { fmtDate, fmtNum, leadParts, racketLabel } from '../lib/format'
+import { compute } from '../domain/physics'
+import { bedLabel } from '../lib/bedLabel'
+import { Button, cx, EmptyState, PageTitle, Select } from '../ui/basics'
+import { MoreMenu } from '../ui/menu'
 import { useToast } from '../ui/overlay'
 import { OwnedSheet } from './JournalSheets'
 import { SetupEditSheet } from './SetupEdit'
@@ -21,9 +24,12 @@ export function Setups() {
   const rackets = useAllRackets()
   const compare = useStore((s) => s.compare)
   const clearCompare = useStore((s) => s.clearCompare)
+  const toggleCompare = useStore((s) => s.toggleCompare)
   const [racketFilter, setRacketFilter] = useState('all')
   const [editing, setEditing] = useState<Setup | null>(null)
   const [sharing, setSharing] = useState<Setup | null>(null)
+  // Picking two setups to compare, with a box on each card.
+  const [selecting, setSelecting] = useState(false)
 
   const usedRackets = useMemo(() => {
     const ids = new Set(setups?.map((s) => s.racketId))
@@ -37,8 +43,20 @@ export function Setups() {
         .sort((a, b) => Number(b.favourite) - Number(a.favourite) || b.updatedAt - a.updatedAt),
     [setups, racketFilter],
   )
+  // Only setups that still exist count as picked.
+  const picked = compare.filter((id) => setups?.some((s) => s.id === id))
 
   if (setups === undefined) return null
+
+  const startCompare = (id?: string) => {
+    clearCompare()
+    if (id) toggleCompare(id)
+    setSelecting(true)
+  }
+  const stopCompare = () => {
+    clearCompare()
+    setSelecting(false)
+  }
 
   return (
     <>
@@ -55,26 +73,48 @@ export function Setups() {
               onChange={setRacketFilter}
               options={[{ value: 'all', label: t.setups.all }, ...usedRackets.map((r) => ({ value: r.id, label: racketLabel(r) }))]}
             />
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted">{fmt(t.setups.comparePick, { n: compare.length })}</span>
-              <Button variant="primary" icon={GitCompareArrows} disabled={compare.length !== 2} onClick={() => nav('/setups/compare')}>
-                {t.setups.compare}
+            {setups.length > 1 && (
+              <Button icon={selecting ? X : GitCompareArrows} aria-pressed={selecting} onClick={() => (selecting ? stopCompare() : startCompare())}>
+                {selecting ? t.common.cancel : t.setups.compare}
               </Button>
-              {compare.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearCompare}>
-                  {t.common.reset}
-                </Button>
-              )}
-            </div>
+            )}
           </div>
-          <ul className="grid grid-cols-1 border-b border-border md:grid-cols-2 md:gap-x-8">
+          {selecting && <p className="mb-2 text-sm text-muted">{t.setups.selectHint}</p>}
+          <ul className={cx('grid grid-cols-1 border-b border-border md:grid-cols-2 md:gap-x-8', selecting && 'mb-20')}>
             {list.map((s) => (
-              <li key={s.id}>
-                <SetupCard setup={s} onEdit={() => setEditing(s)} onShare={() => setSharing(s)} />
+              <li key={s.id} className="min-w-0">
+                <SetupCard
+                  setup={s}
+                  selecting={selecting}
+                  picked={picked.includes(s.id)}
+                  // Two at most: the others wait until one is unticked.
+                  full={picked.length >= 2}
+                  onPick={() => toggleCompare(s.id)}
+                  onCompare={() => startCompare(s.id)}
+                  onEdit={() => setEditing(s)}
+                  onShare={() => setSharing(s)}
+                />
               </li>
             ))}
           </ul>
         </>
+      )}
+
+      {selecting && (
+        <div
+          role="region"
+          aria-label={t.setups.compare}
+          className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:left-56"
+        >
+          <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-3">
+            <span className="text-sm font-medium" aria-live="polite">
+              {picked.length === 1 ? t.setups.selectedOne : fmt(t.setups.selected, { n: picked.length })}
+            </span>
+            <Button variant="primary" icon={GitCompareArrows} disabled={picked.length !== 2} onClick={() => nav('/setups/compare')}>
+              {t.setups.compare}
+            </Button>
+          </div>
+        </div>
       )}
 
       <SetupEditSheet setup={editing} onClose={() => setEditing(null)} />
@@ -83,10 +123,29 @@ export function Setups() {
   )
 }
 
-function SetupCard({ setup: s, onEdit, onShare }: { setup: Setup; onEdit: () => void; onShare: () => void }) {
+function SetupCard({
+  setup: s,
+  selecting,
+  picked,
+  full,
+  onPick,
+  onCompare,
+  onEdit,
+  onShare,
+}: {
+  setup: Setup
+  selecting: boolean
+  picked: boolean
+  full: boolean
+  onPick: () => void
+  onCompare: () => void
+  onEdit: () => void
+  onShare: () => void
+}) {
   const t = useT()
   const nav = useNavigate()
   const lang = useStore((x) => x.lang)
+  const masses = useStore((x) => x.masses)
   const loadConfig = useStore((x) => x.loadConfig)
   const compare = useStore((x) => x.compare)
   const toggleCompare = useStore((x) => x.toggleCompare)
@@ -96,16 +155,31 @@ function SetupCard({ setup: s, onEdit, onShare }: { setup: Setup; onEdit: () => 
   const racket = rackets.find((r) => r.id === s.racketId)
   const on = (owned ?? []).filter((o) => o.setupId === s.id && !o.retired).map((o) => o.name)
   const [mounting, setMounting] = useState<OwnedRacket | null>(null)
-  const picked = compare.includes(s.id)
+  // As it plays: strings and accessories on, as the calculator shows it.
+  const result = useMemo(() => (racket ? compute({ spec: racket, ...s, masses }).result : undefined), [racket, s, masses])
 
   const acc = (['strings', 'overgrip', 'leatherGrip', 'dampener'] as const).filter((k) => s.accessories[k]).map((k) => t.acc[k])
   const lead = leadParts(s, t, lang)
+  const open = () => {
+    loadConfig(s, s.id)
+    nav('/')
+  }
 
   return (
-    <article className={cx('relative border-t border-border py-4 pl-4 transition-colors', picked && 'bg-surface-2/50')}>
+    <article aria-label={s.name} className={cx('relative border-t border-border py-4 pl-4 transition-colors', picked && 'bg-surface-2/50')}>
       <span aria-hidden className={cx('absolute inset-y-4 left-0 w-0.5 rounded-full', picked ? 'bg-accent' : 'bg-transparent')} />
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        {selecting && (
+          <input
+            type="checkbox"
+            checked={picked}
+            disabled={!picked && full}
+            onChange={onPick}
+            aria-label={fmt(t.setups.pickOne, { name: s.name })}
+            className="mt-1 size-5 shrink-0 accent-[var(--c-accent)]"
+          />
+        )}
+        <div className="min-w-0 flex-1">
           <h3 className="truncate font-medium">{s.name}</h3>
           <p className="truncate text-sm text-muted">{racket ? racketLabel(racket) : t.errors.notFound}</p>
         </div>
@@ -119,6 +193,16 @@ function SetupCard({ setup: s, onEdit, onShare }: { setup: Setup; onEdit: () => 
           <Star className={cx('size-[18px]', s.favourite ? 'fill-accent text-accent' : 'text-muted')} strokeWidth={1.75} aria-hidden />
         </button>
       </div>
+      {result && (
+        <p className="num mt-2 text-sm font-medium">
+          {fmtNum(result.weightG, 0, lang)} g · {fmtNum(result.balanceCm * 10, 0, lang)} mm · SW {fmtNum(result.swingweight, 0, lang)}
+        </p>
+      )}
+      {s.strings && (
+        <p className="num mt-0.5 text-sm text-muted [overflow-wrap:anywhere]">
+          {t.strings.title}: {bedLabel(s.strings, t, lang)}
+        </p>
+      )}
       {on.length > 0 ? (
         <p className="mt-1 text-sm font-medium text-accent-text">{fmt(t.setups.mountedOn, { names: on.join(', ') })}</p>
       ) : (
@@ -151,28 +235,29 @@ function SetupCard({ setup: s, onEdit, onShare }: { setup: Setup; onEdit: () => 
           ))}
         </dl>
       )}
-      <div className="mt-2 flex items-center gap-1">
-        <span className="mr-auto text-xs text-muted">{fmt(t.setups.edited, { date: fmtDate(s.updatedAt, lang) })}</span>
-        <IconButton
-          icon={Calculator}
-          label={t.common.open}
-          onClick={() => {
-            loadConfig(s, s.id)
-            nav('/')
-          }}
-        />
-        <IconButton icon={GitCompareArrows} label={t.setups.pickCompare} active={picked} aria-pressed={picked} onClick={() => toggleCompare(s.id)} />
-        <IconButton icon={Pencil} label={t.common.edit} onClick={onEdit} />
-        <IconButton icon={Share2} label={t.setups.share} onClick={onShare} />
-        <IconButton icon={Printer} label={t.setups.sheet} onClick={() => nav(`/ficha/${s.id}`)} />
-        <IconButton
-          icon={Trash2}
-          label={t.common.delete}
-          onClick={async () => {
-            await db.setups.delete(s.id)
-            if (picked) toggleCompare(s.id)
-            toast(t.common.deleted, { label: t.common.undo, run: () => saveSetup(s) })
-          }}
+      <div className="mt-3 flex items-center gap-2">
+        <span className="mr-auto min-w-0 truncate whitespace-nowrap text-xs text-muted">{fmt(t.setups.edited, { date: fmtDate(s.updatedAt, lang) })}</span>
+        <Button size="sm" icon={Calculator} onClick={open} aria-label={`${t.common.open}: ${s.name}`}>
+          {t.common.open}
+        </Button>
+        <MoreMenu
+          label={fmt(t.setups.more, { name: s.name })}
+          items={[
+            { label: t.setups.compare, icon: GitCompareArrows, onSelect: onCompare },
+            { label: t.common.edit, icon: Pencil, onSelect: onEdit },
+            { label: t.setups.share, icon: Share2, onSelect: onShare },
+            { label: t.setups.sheet, icon: Printer, onSelect: () => nav(`/ficha/${s.id}`) },
+            {
+              label: t.common.delete,
+              icon: Trash2,
+              danger: true,
+              onSelect: async () => {
+                await db.setups.delete(s.id)
+                if (compare.includes(s.id)) toggleCompare(s.id)
+                toast(t.common.deleted, { label: t.common.undo, run: () => saveSetup(s) })
+              },
+            },
+          ]}
         />
       </div>
     </article>

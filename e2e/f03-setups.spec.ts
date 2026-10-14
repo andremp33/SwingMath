@@ -1,4 +1,4 @@
-import { a11y, expect, saveSetup, start, test } from './fixtures'
+import { a11y, expect, saveSetup, setupAction, start, test } from './fixtures'
 
 test.describe('F03 save, name and rate a setup', () => {
   test('F03-H1 save, rate and favourite', async ({ page }) => {
@@ -10,7 +10,7 @@ test.describe('F03 save, name and rate a setup', () => {
     await page.getByRole('link', { name: 'Setups' }).first().click()
     const card = page.getByRole('article').filter({ hasText: 'Torneio de sábado' })
     await expect(card).toContainText('12h 0,5 g')
-    await card.getByRole('button', { name: 'Editar' }).click()
+    await setupAction(page, 'Torneio de sábado', 'Editar')
     const dialog = page.getByRole('dialog')
     await dialog.getByRole('radiogroup', { name: 'Serviço' }).getByRole('radio', { name: '4/5' }).click()
     await dialog.getByRole('switch', { name: 'Favorito' }).click()
@@ -61,7 +61,7 @@ test.describe('F03 save, name and rate a setup', () => {
     await start(page)
     await saveSetup(page, 'Apagar-me')
     await page.goto('/setups')
-    await page.getByRole('button', { name: 'Apagar' }).click()
+    await setupAction(page, 'Apagar-me', 'Apagar')
     await expect(page.getByRole('article')).toHaveCount(0)
     await page.getByRole('button', { name: 'Anular' }).click()
     await expect(page.getByRole('article')).toHaveCount(1)
@@ -83,8 +83,11 @@ test.describe('F04 compare two setups', () => {
     await saveSetup(page, 'Pesada')
     await page.goto('/setups')
     await expect(page.getByRole('article')).toHaveCount(2)
-    for (const b of await page.getByRole('button', { name: 'Escolher para comparar' }).all()) await b.click()
+    // Compare mode: a box on each card, then the bar at the bottom.
     await page.getByRole('button', { name: 'Comparar', exact: true }).click()
+    await page.getByRole('checkbox', { name: 'Selecionar Pesada' }).check()
+    await page.getByRole('checkbox', { name: 'Selecionar Leve' }).check()
+    await page.getByRole('region', { name: 'Comparar' }).getByRole('button', { name: 'Comparar' }).click()
     await expect(page.getByRole('heading', { name: 'Comparar setups' })).toBeVisible()
     await expect(page.getByRole('table')).toContainText('Leve')
     await expect(page.getByRole('table')).toContainText('Pesada')

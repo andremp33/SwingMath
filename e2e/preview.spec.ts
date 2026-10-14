@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { a11y, expect, saveSetup, test } from './fixtures'
+import { a11y, expect, saveSetup, setupAction, test } from './fixtures'
 import type { Page } from '@playwright/test'
 
 // The store app's private preview (`npm run build:preview`, at /preview/),
@@ -107,7 +107,7 @@ test.describe('P03 nothing native, nothing breaks', () => {
     await open(page)
     await saveSetup(page, 'Pré teste')
     await page.goto('/preview/#/setups')
-    await page.getByRole('button', { name: 'Partilhar' }).first().click()
+    await setupAction(page, 'Pré teste', 'Partilhar')
     await page.getByRole('dialog').getByRole('button', { name: 'Copiar ligação' }).click()
     const link = await page.evaluate(() => (window as unknown as { copied: string }).copied)
     expect(link).toMatch(/^http:\/\/localhost:\d+\/s\/[\w-]+$/)

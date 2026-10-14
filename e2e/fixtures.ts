@@ -62,3 +62,9 @@ export async function expand(page: Page, name: string) {
   const closed = page.getByRole('region', { name }).locator('button[aria-expanded="false"]')
   if (await closed.count()) await closed.first().click()
 }
+
+/** One of a saved setup's actions, from its card's "⋯" menu. */
+export async function setupAction(page: Page, setupName: string, action: string) {
+  await page.getByRole('button', { name: `Mais ações: ${setupName}` }).click()
+  await page.getByRole('menu').getByRole('menuitem', { name: action, exact: true }).click()
+}

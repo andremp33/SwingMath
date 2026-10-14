@@ -23,6 +23,7 @@ import { InfoTip } from '../ui/disclosure'
 import { RacketSources } from './RacketSources'
 import { racketFeel, reviewOf } from '../data/racketFeel'
 import { FEEL_KEYS, type Feel } from '../domain/feel'
+import { suggestSetupName } from '../lib/setupName'
 
 export function Calculator() {
   const t = useT()
@@ -550,8 +551,12 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
   // Your racket of this frame if there is one; a new racket if you have none.
   const suggested = active.find((o) => o.racketId === config.racketId)?.id ?? (active.length ? 'none' : 'new')
   const [on, setOn] = useState<string>(suggested)
+  const lang = useStore((s) => s.lang)
   useEffect(() => {
-    if (open) setOn(suggested)
+    if (!open) return
+    setOn(suggested)
+    // A name to start from: the frame and what changed most. Editable.
+    setName(suggestSetupName(config, racket, t, lang))
     // Only when the sheet opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])

@@ -1,5 +1,5 @@
 import { periodFromSwingweight } from '../src/domain/measure'
-import { a11y, expect, resultCard, saveSetup, start, test } from './fixtures'
+import { a11y, expect, resultCard, saveSetup, setupAction, start, test } from './fixtures'
 
 test.describe('F11 measuring and tuning in steps', () => {
   test('F11-H1 measure at home: pendulum swingweight goes to the calculator', async ({ page }) => {
@@ -81,7 +81,7 @@ test.describe('F12 practical helpers', () => {
     await page.getByRole('button', { name: '+ 0,5 g Garganta' }).click()
     await saveSetup(page, 'Para o Rui')
     await page.goto('/setups')
-    await page.getByRole('button', { name: 'Ficha para o encordoador' }).click()
+    await setupAction(page, 'Para o Rui', 'Ficha para o encordoador')
     await expect(page.getByRole('heading', { name: 'Para o Rui' })).toBeVisible()
     await expect(page.getByRole('table').first()).toContainText('Garganta')
     await expect(page.getByRole('button', { name: 'Imprimir' })).toBeVisible()

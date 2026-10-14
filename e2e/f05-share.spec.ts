@@ -1,4 +1,4 @@
-import { a11y, expect, saveSetup, start, test } from './fixtures'
+import { a11y, expect, saveSetup, setupAction, start, test } from './fixtures'
 
 test.describe('F05 share a setup', () => {
   test('F05-H1 link opens the setup and saves it', async ({ page, context, browserName }) => {
@@ -8,7 +8,7 @@ test.describe('F05 share a setup', () => {
     await page.getByRole('button', { name: '+ 0,5 g 3h e 9h' }).click()
     await saveSetup(page, 'Partilhado')
     await page.goto('/setups')
-    await page.getByRole('button', { name: 'Partilhar' }).click()
+    await setupAction(page, 'Partilhado', 'Partilhar')
     const dialog = page.getByRole('dialog', { name: 'Partilhar setup' })
     await expect(dialog.getByRole('img', { name: 'Partilhado' })).toBeVisible()
     await dialog.getByRole('button', { name: 'Copiar ligação' }).click()
