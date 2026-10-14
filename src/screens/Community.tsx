@@ -416,7 +416,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
           </p>
         )}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select<Level | ''> label={t.community.level} value={level} onChange={setLevel} options={[{ value: '', label: t.community.notSaid }, ...LEVELS.map((l) => ({ value: l, label: t.community.levels[l] }))]} />
         <Select<Style | ''> label={t.community.style} value={style} onChange={setStyle} options={[{ value: '', label: t.community.notSaid }, ...STYLES.map((x) => ({ value: x, label: t.community.styles[x] }))]} />
       </div>

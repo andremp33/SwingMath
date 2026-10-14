@@ -138,6 +138,9 @@ body {
   /* Nothing may make a phone scroll sideways. clip (not hidden) keeps
      position: sticky working. */
   overflow-x: clip;
+  /* iOS may enlarge text it thinks too small, which widens lines. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {

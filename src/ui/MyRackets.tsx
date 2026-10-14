@@ -86,21 +86,22 @@ export function MyRacketsSection() {
       {owned.length === 0 ? (
         <p className="text-sm text-muted">{t.library.mineEmpty}</p>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        // grid-cols-1 is minmax(0, 1fr): a long line cannot widen the page
+        // (Safari sizes a plain 1fr column to its widest unbreakable line).
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {owned.map((o) => {
             const r = rackets.find((x) => x.id === o.racketId)
             const st = latestOf(o.id, stringings ?? [])
             return (
-              <li key={o.id} className={cx('flex items-center gap-2 rounded-lg border border-border bg-surface p-3', o.retired && 'opacity-60')}>
+              <li key={o.id} className={cx('flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface p-3', o.retired && 'opacity-60')}>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 truncate font-semibold">
                     {o.name}
                     {o.retired && <Badge>{t.journal.retiredBadge}</Badge>}
                   </p>
-                  <p className="num truncate text-sm text-muted">
-                    {r ? `${r.brand} ${r.model}` : ''}
-                    {st && ` · ${bedLabel(st.bed, t, lang)}`}
-                  </p>
+                  {r && <p className="truncate text-sm text-muted">{`${r.brand} ${r.model}`}</p>}
+                  {/* The strings may be long (a hybrid with names): they wrap. */}
+                  {st && <p className="num text-sm text-muted [overflow-wrap:anywhere]">{bedLabel(st.bed, t, lang)}</p>}
                 </div>
                 <IconButton
                   icon={Calculator}

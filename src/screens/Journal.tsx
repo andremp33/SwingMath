@@ -140,7 +140,7 @@ export function Journal() {
           {/* Swipe through them on a phone; a grid on wider screens. */}
           <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-3">
             {active.map((o) => (
-              <li key={o.id} className="w-[82%] shrink-0 snap-start md:w-auto">
+              <li key={o.id} className="w-[82%] min-w-0 shrink-0 snap-start md:w-auto">
                 <RacketCard owned={o} stringings={stringings} sessions={sessions} now={now} onOpen={() => setViewing(o)} onRestring={() => setStringing(restring(o))} />
               </li>
             ))}
@@ -240,7 +240,7 @@ function RacketCard({
       {life && st ? (
         <>
           <LifeBar life={life} compact />
-          <p className="num text-sm text-muted">
+          <p className="num text-sm text-muted [overflow-wrap:anywhere]">
             {bedLabel(st.bed, t, lang)} · {days === 0 ? t.journal.strungToday : fmt(t.journal.strungAgo, { n: days })} · {fmt(t.journal.hours, { h: fmtNum(life.hours, 1, lang) })}
           </p>
         </>

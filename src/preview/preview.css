@@ -1,8 +1,11 @@
-/* The preview's strip sits under the iPhone's status bar, whose text is
-   always white here (black-translucent, see vite.config.ts): dark in both
-   themes, so the clock stays readable. The app moves down by its height. */
+/* The preview's strip takes the top of the screen: the status bar (whose
+   text is always white here, black-translucent, see vite.config.ts) and,
+   below it, the strip's own line. Dark in both themes, so the clock stays
+   readable. The app starts below it: nothing overlaps the strip, so nothing
+   blurs it (the header's backdrop blur stays inside the app). */
 :root {
-  --preview-h: 20px;
+  --preview-h: 22px;
+  --preview-top: calc(var(--preview-h) + env(safe-area-inset-top));
 }
 
 .preview-strip {
@@ -12,34 +15,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(var(--preview-h) + env(safe-area-inset-top));
+  height: var(--preview-top);
   padding-top: env(safe-area-inset-top);
   background: #1c1a17;
   color: #f5f3ee;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
   line-height: 1;
   pointer-events: none;
 }
 
-/* The app's header: its status-bar padding goes under the strip. */
-#app-scroll > header {
-  top: var(--preview-h);
-  margin-top: var(--preview-h);
+/* The app's scroller starts below the strip; its header no longer needs
+   room for the status bar, which is the strip's. */
+html.in-app #app-scroll {
+  margin-top: var(--preview-top);
+  height: calc(100dvh - var(--preview-top));
+}
+html.in-app #app-scroll > header {
+  padding-top: 0;
+  height: 3.5rem;
 }
 
-/* Full-screen pages (the first launch, the stringer's sheet). */
+/* Full-screen pages (the first launch, the stringer's sheet): below the
+   strip, without their own status-bar padding. */
 html:not(.in-app) body {
-  padding-top: var(--preview-h);
+  padding-top: var(--preview-top);
+}
+html:not(.in-app) #root > div:first-child {
+  padding-top: 12px;
 }
 
-/* Wide screens: no header, a sidebar. */
+/* Wide screens: the sidebar starts below the strip too. */
 @media (min-width: 1024px) {
-  #app-scroll {
-    padding-top: var(--preview-h);
-  }
   nav[aria-label='Main'] {
-    top: var(--preview-h);
+    top: var(--preview-top);
   }
 }

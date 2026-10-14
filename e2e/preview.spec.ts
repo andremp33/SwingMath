@@ -42,6 +42,10 @@ test.describe('P01 the preview opens like an app', () => {
     const logo = (await page.getByRole('banner').getByRole('link', { name: 'SwingMath' }).boundingBox())!
     expect(s.y).toBe(0)
     expect(logo.y).toBeGreaterThanOrEqual(s.y + s.height)
+    // Nothing overlaps it, so nothing blurs it: the header starts below it.
+    const header = (await page.getByRole('banner').boundingBox())!
+    expect(header.y).toBeGreaterThanOrEqual(s.y + s.height - 0.5)
+    expect(await strip.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(28, 26, 23)')
     // It stays put when the page scrolls.
     await page.locator('#app-scroll').evaluate((el) => el.scrollTo(0, 600))
     expect((await strip.boundingBox())!.y).toBe(0)

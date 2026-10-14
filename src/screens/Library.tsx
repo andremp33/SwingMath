@@ -148,9 +148,9 @@ export function Library() {
                   <span className="num text-sm font-normal text-muted">{grp.items.length}</span>
                 </h2>
               )}
-              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {grp.items.map((r) => (
-                  <li key={r.id} className="flex">
+                  <li key={r.id} className="flex min-w-0">
                     <RacketCard racket={r} showBrand={!grp.name} community={counts.get(r.id)} />
                   </li>
                 ))}

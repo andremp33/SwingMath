@@ -15,7 +15,12 @@ const permissionNow = (): NotificationPermission => (IS_NATIVE ? 'default' : sup
 export function useReminders() {
   const [permission, setPermission] = useState<NotificationPermission>(permissionNow)
   useEffect(() => {
-    if (IS_NATIVE) void import('../lib/native').then((n) => n.nativeNotifyPermission(false)).then(setPermission)
+    // Without the plugin (a browser) the permission stays unknown.
+    if (IS_NATIVE)
+      void import('../lib/native')
+        .then((n) => n.nativeNotifyPermission(false))
+        .then(setPermission)
+        .catch(() => {})
   }, [])
   return {
     supported: supported(),

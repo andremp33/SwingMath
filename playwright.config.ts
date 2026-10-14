@@ -8,10 +8,12 @@ export default defineConfig({
   // The app's flows run against the app build's mode (the store apps).
   use: { baseURL: 'http://localhost:5175', locale: 'pt-PT', trace: 'off' },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }, testIgnore: /site|preview/ },
-    { name: 'mobile', use: { ...devices['Pixel 7'], viewport: { width: 390, height: 844 } }, testIgnore: /site|preview/ },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }, testIgnore: /site|preview|iphone/ },
+    { name: 'mobile', use: { ...devices['Pixel 7'], viewport: { width: 390, height: 844 } }, testIgnore: /site|preview|iphone/ },
     // The website: the apps' shop window and the pages the stores ask for.
     { name: 'site', use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5173' }, testMatch: /site/ },
+    // The app on an iPhone at 390 px (WebKit): layout and phone flows.
+    { name: 'iphone', use: { ...devices['iPhone 13'] }, testMatch: /[\\/]iphone[\\/]/ },
     // The app's private preview, built, on an iPhone (WebKit).
     { name: 'preview', use: { ...devices['iPhone 13'], baseURL: 'http://localhost:5179' }, testMatch: /preview/ },
   ],
