@@ -1,79 +1,133 @@
-import { ArrowLeft, Play, Plus, Square, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { mean, swingweightFromPeriod, swingweightUncertainty } from '../domain/measure'
-import { useRacket } from '../data/hooks'
-import { useStore } from '../data/store'
-import { fmt, useT } from '../i18n'
-import { fmtNum } from '../lib/format'
-import { Button, Card, CardTitle, NumberField, PageTitle } from '../ui/basics'
-import { useToast } from '../ui/overlay'
-import { ShareMeasurement } from './Community'
+import { ArrowLeft, Play, Plus, Square, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  mean,
+  oddTrials,
+  swingweightError,
+  swingweightFromPeriod,
+} from "../domain/measure";
+import { useRacket } from "../data/hooks";
+import { useStore } from "../data/store";
+import { fmt, useT } from "../i18n";
+import { fmtNum } from "../lib/format";
+import {
+  Button,
+  Card,
+  CardTitle,
+  cx,
+  NumberField,
+  PageTitle,
+} from "../ui/basics";
+import { useToast } from "../ui/overlay";
+import { ShareMeasurement } from "./Community";
 
 interface Trial {
-  totalS: number
-  swings: number
+  totalS: number;
+  swings: number;
+  /** Left out of the mean by the player (a miscount, say). */
+  out?: boolean;
 }
 
 /** Weight, balance and a pendulum swingweight, with a tap timer. */
 export function Measure() {
-  const t = useT()
-  const nav = useNavigate()
-  const toast = useToast()
-  const lang = useStore((s) => s.lang)
-  const config = useStore((s) => s.config)
-  const setConfig = useStore((s) => s.setConfig)
-  const racket = useRacket(config.racketId)
+  const t = useT();
+  const nav = useNavigate();
+  const toast = useToast();
+  const lang = useStore((s) => s.lang);
+  const config = useStore((s) => s.config);
+  const setConfig = useStore((s) => s.setConfig);
+  const racket = useRacket(config.racketId);
 
-  const [weightG, setWeight] = useState<number>()
-  const [balanceMm, setBalance] = useState<number>()
-  const [pivotCm, setPivot] = useState<number | undefined>(10)
-  const [swings, setSwings] = useState<number | undefined>(20)
-  const [trials, setTrials] = useState<Trial[]>([])
-  const [typed, setTyped] = useState<number>()
+  const [weightG, setWeight] = useState<number>();
+  const [balanceMm, setBalance] = useState<number>();
+  const [pivotCm, setPivot] = useState<number | undefined>(10);
+  const [swings, setSwings] = useState<number | undefined>(20);
+  const [trials, setTrials] = useState<Trial[]>([]);
+  const [typed, setTyped] = useState<number>();
 
   // Tap timer.
-  const [startedAt, setStartedAt] = useState<number | null>(null)
-  const [now, setNow] = useState(0)
-  const raf = useRef<number>(0)
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(0);
+  const raf = useRef<number>(0);
   useEffect(() => {
-    if (startedAt === null) return
+    if (startedAt === null) return;
     const tick = () => {
-      setNow(performance.now())
-      raf.current = requestAnimationFrame(tick)
-    }
-    raf.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf.current)
-  }, [startedAt])
+      setNow(performance.now());
+      raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
+  }, [startedAt]);
 
-  const n = swings ?? 20
+  const n = swings ?? 20;
   const addTrial = (totalS: number) => {
-    if (totalS > 0) setTrials((x) => [...x, { totalS, swings: n }])
-  }
+    if (totalS > 0) setTrials((x) => [...x, { totalS, swings: n }]);
+  };
 
-  const ready = weightG !== undefined && balanceMm !== undefined && pivotCm !== undefined
-  const periods = trials.map((x) => x.totalS / x.swings)
-  const period = periods.length ? mean(periods) : undefined
-  const sw = ready && period ? swingweightFromPeriod(weightG!, balanceMm! / 10, period, pivotCm) : undefined
-  const uncertainty = sw && period ? swingweightUncertainty(sw, period, mean(trials.map((x) => x.swings)), trials.length) : undefined
+  const ready =
+    weightG !== undefined && balanceMm !== undefined && pivotCm !== undefined;
+  const periodOf = (x: Trial) => x.totalS / x.swings;
+  // A trial far from the others is probably a swing too many or too few.
+  const odd = new Set(oddTrials(trials.map(periodOf)));
+  const counted = trials.filter((x) => !x.out);
+  const period = counted.length ? mean(counted.map(periodOf)) : undefined;
+  // Whole points: a pendulum at home is not finer than that.
+  const raw =
+    ready && period
+      ? swingweightFromPeriod(weightG!, balanceMm! / 10, period, pivotCm)
+      : undefined;
+  const sw = raw === undefined ? undefined : Math.round(raw);
+  const error =
+    ready && period
+      ? swingweightError({
+          weightG: weightG!,
+          balanceCm: balanceMm! / 10,
+          pivotCm: pivotCm!,
+          periodS: period,
+          swings: mean(counted.map((x) => x.swings)),
+          trials: counted.length,
+        })
+      : undefined;
 
   const use = () => {
     setConfig({
-      baseMode: 'measured',
-      measured: { weightG, balanceCm: balanceMm === undefined ? undefined : balanceMm / 10, swingweight: sw === undefined ? undefined : Math.round(sw * 10) / 10 },
-      accessories: { strings: false, leatherGrip: false, overgrip: false, dampener: false },
-      leadG: { ...config.leadG, tip: 0, tenTwo: 0, threeNine: 0, throat: 0, handle: 0 },
+      baseMode: "measured",
+      measured: {
+        weightG,
+        balanceCm: balanceMm === undefined ? undefined : balanceMm / 10,
+        swingweight: sw,
+      },
+      accessories: {
+        strings: false,
+        leatherGrip: false,
+        overgrip: false,
+        dampener: false,
+      },
+      leadG: {
+        ...config.leadG,
+        tip: 0,
+        tenTwo: 0,
+        threeNine: 0,
+        throat: 0,
+        handle: 0,
+      },
       extra: [],
-    })
-    toast(t.measure.used)
-    nav('/')
-  }
+    });
+    toast(t.measure.used);
+    nav("/");
+  };
 
   return (
     <>
       <PageTitle subtitle={t.measure.intro}>
         <span className="flex items-center gap-2">
-          <button type="button" onClick={() => nav(-1)} aria-label={t.common.back} className="rounded-full p-1.5 text-muted hover:bg-surface-2">
+          <button
+            type="button"
+            onClick={() => nav(-1)}
+            aria-label={t.common.back}
+            className="rounded-full p-1.5 text-muted hover:bg-surface-2"
+          >
             <ArrowLeft className="size-5" aria-hidden />
           </button>
           {t.measure.title}
@@ -86,7 +140,14 @@ export function Measure() {
             <CardTitle>{t.measure.step1}</CardTitle>
             <p className="mb-3 text-sm text-muted">{t.measure.step1Hint}</p>
             <div className="max-w-[220px]">
-              <NumberField label={t.spec.weight} unit="g" min={150} max={500} value={weightG} onChange={setWeight} />
+              <NumberField
+                label={t.spec.weight}
+                unit="g"
+                min={150}
+                max={500}
+                value={weightG}
+                onChange={setWeight}
+              />
             </div>
           </Card>
 
@@ -94,22 +155,55 @@ export function Measure() {
             <CardTitle>{t.measure.step2}</CardTitle>
             <p className="mb-3 text-sm text-muted">{t.measure.step2Hint}</p>
             <div className="max-w-[220px]">
-              <NumberField label={t.spec.balance} unit="mm" min={250} max={400} value={balanceMm} onChange={setBalance} />
+              <NumberField
+                label={t.spec.balance}
+                unit="mm"
+                min={250}
+                max={400}
+                value={balanceMm}
+                onChange={setBalance}
+              />
             </div>
           </Card>
 
           <Card label={t.measure.step3}>
             <CardTitle>{t.measure.step3}</CardTitle>
             <p className="mb-3 text-sm text-muted">{t.measure.step3Hint}</p>
+            <ul className="mb-4 list-disc space-y-1 pl-5 text-sm">
+              {t.measure.how.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
             <div className="grid max-w-[460px] grid-cols-2 gap-3">
-              <NumberField label={t.measure.pivot} unit="cm" min={2} max={20} value={pivotCm} onChange={setPivot} />
-              <NumberField label={t.measure.swings} min={3} max={100} value={swings} onChange={(v) => setSwings(v === undefined ? undefined : Math.round(v))} />
+              <NumberField
+                label={t.measure.pivot}
+                unit="cm"
+                min={2}
+                max={20}
+                value={pivotCm}
+                onChange={setPivot}
+              />
+              <NumberField
+                label={t.measure.swings}
+                min={3}
+                max={100}
+                value={swings}
+                onChange={(v) =>
+                  setSwings(v === undefined ? undefined : Math.round(v))
+                }
+              />
             </div>
 
             <p className="mt-4 text-sm text-muted">{t.measure.tapHint}</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               {startedAt === null ? (
-                <Button variant="primary" size="lg" icon={Play} onClick={() => setStartedAt(performance.now())} disabled={!swings}>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  icon={Play}
+                  onClick={() => setStartedAt(performance.now())}
+                  disabled={!swings}
+                >
                   {t.measure.start}
                 </Button>
               ) : (
@@ -118,28 +212,38 @@ export function Measure() {
                   size="lg"
                   icon={Square}
                   onClick={() => {
-                    addTrial((performance.now() - startedAt) / 1000)
-                    setStartedAt(null)
+                    addTrial((performance.now() - startedAt) / 1000);
+                    setStartedAt(null);
                   }}
                 >
                   {t.measure.stop}
                 </Button>
               )}
               <span className="num text-lg font-semibold" aria-live="off">
-                {startedAt !== null && fmt(t.measure.running, { s: fmtNum((now - startedAt) / 1000, 1, lang) })}
+                {startedAt !== null &&
+                  fmt(t.measure.running, {
+                    s: fmtNum((now - startedAt) / 1000, 1, lang),
+                  })}
               </span>
             </div>
 
             <div className="mt-4 flex max-w-[460px] items-end gap-3">
               <div className="flex-1">
-                <NumberField label={`${t.measure.orType} (${n})`} unit="s" min={1} max={300} value={typed} onChange={setTyped} />
+                <NumberField
+                  label={`${t.measure.orType} (${n})`}
+                  unit="s"
+                  min={1}
+                  max={300}
+                  value={typed}
+                  onChange={setTyped}
+                />
               </div>
               <Button
                 icon={Plus}
                 disabled={typed === undefined}
                 onClick={() => {
-                  if (typed !== undefined) addTrial(typed)
-                  setTyped(undefined)
+                  if (typed !== undefined) addTrial(typed);
+                  setTyped(undefined);
                 }}
               >
                 {t.measure.addTrial}
@@ -151,16 +255,56 @@ export function Measure() {
                 <h3 className="mb-2 text-sm text-muted">{t.measure.trials}</h3>
                 <ul className="space-y-1">
                   {trials.map((x, i) => (
-                    <li key={i} className="num flex items-center justify-between gap-2 rounded-md bg-surface-2/60 px-3 py-1.5 text-sm">
-                      {fmt(t.measure.trial, { n: i + 1, t: fmtNum(x.totalS, 2, lang), p: fmtNum(x.totalS / x.swings, 3, lang) })}
-                      <button
-                        type="button"
-                        aria-label={fmt(t.measure.removeTrial, { n: i + 1 })}
-                        onClick={() => setTrials(trials.filter((_, j) => j !== i))}
-                        className="rounded-full p-1 text-muted hover:text-text"
-                      >
-                        <X className="size-4" aria-hidden />
-                      </button>
+                    <li
+                      key={i}
+                      className={cx(
+                        "num rounded-md bg-surface-2/60 px-3 py-1.5 text-sm",
+                        x.out && "text-muted"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={cx(x.out && "line-through")}>
+                          {fmt(t.measure.trial, {
+                            n: i + 1,
+                            t: fmtNum(x.totalS, 2, lang),
+                            p: fmtNum(x.totalS / x.swings, 3, lang),
+                          })}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={fmt(t.measure.removeTrial, { n: i + 1 })}
+                          onClick={() =>
+                            setTrials(trials.filter((_, j) => j !== i))
+                          }
+                          className="rounded-full p-1 text-muted hover:text-text"
+                        >
+                          <X className="size-4" aria-hidden />
+                        </button>
+                      </div>
+                      {(odd.has(i) || x.out) && (
+                        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 font-sans">
+                          {odd.has(i) && (
+                            <span className="text-warning">
+                              {t.measure.oddTrial}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setTrials(
+                                trials.map((y, j) =>
+                                  j === i ? { ...y, out: !y.out } : y
+                                )
+                              )
+                            }
+                            className="text-xs font-medium text-accent-text underline-offset-2 hover:underline"
+                          >
+                            {x.out
+                              ? fmt(t.measure.countAgain, { n: i + 1 })
+                              : fmt(t.measure.leaveOut, { n: i + 1 })}
+                          </button>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -178,20 +322,56 @@ export function Measure() {
               <p className="text-sm text-muted">{t.measure.tapHint}</p>
             ) : (
               <>
-                <p className="num text-display font-extrabold" data-testid="measured-sw">
-                  {fmtNum(sw, 1, lang)}
+                <p
+                  className="num text-display font-extrabold"
+                  data-testid="measured-sw"
+                >
+                  {fmtNum(sw, 0, lang)}
                 </p>
-                <p className="num text-sm text-muted">{fmt(t.measure.plusMinus, { u: fmtNum(uncertainty, 1, lang) })}</p>
-                {trials.length < 3 && <p className="mt-2 text-sm">{t.measure.moreTrials}</p>}
+                {error && (
+                  <>
+                    <p className="num text-sm font-semibold">
+                      {fmt(t.measure.plusMinus, {
+                        u: fmtNum(error.total, 0, lang),
+                      })}
+                    </p>
+                    <p className="num text-xs text-muted">
+                      {fmt(t.measure.errorParts, {
+                        t: fmtNum(error.timing, 0, lang),
+                        b: fmtNum(error.balance, 0, lang),
+                        w: fmtNum(error.weight, 0, lang),
+                      })}
+                    </p>
+                    {error.balance >= error.timing &&
+                      error.balance >= error.weight && (
+                        <p className="mt-1 text-xs text-muted">
+                          {t.measure.balanceWeighs}
+                        </p>
+                      )}
+                  </>
+                )}
+                {trials.length < 3 && (
+                  <p className="mt-2 text-sm">{t.measure.moreTrials}</p>
+                )}
               </>
             )}
-            <Button variant="primary" className="mt-4 w-full" disabled={!ready} onClick={use}>
+            <Button
+              variant="primary"
+              className="mt-4 w-full"
+              disabled={!ready}
+              onClick={use}
+            >
               {t.measure.use}
             </Button>
           </Card>
-          <ShareMeasurement racket={racket} weightG={weightG} balanceCm={balanceMm === undefined ? undefined : balanceMm / 10} swingweight={sw} />
+          <ShareMeasurement
+            racket={racket}
+            weightG={weightG}
+            balanceCm={balanceMm === undefined ? undefined : balanceMm / 10}
+            swingweight={sw}
+          />
         </div>
       </div>
     </>
-  )
+  );
 }

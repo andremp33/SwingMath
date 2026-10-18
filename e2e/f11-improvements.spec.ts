@@ -10,7 +10,10 @@ test.describe('F11 measuring and tuning in steps', () => {
     const total = (periodFromSwingweight(330, 32.5, 320) * 20).toFixed(3).replace('.', ',')
     await page.getByLabel(/Ou escreve o tempo total/).fill(total)
     await page.getByRole('button', { name: 'Juntar tentativa' }).click()
-    await expect(page.getByTestId('measured-sw')).toHaveText('320,0')
+    // Whole points, and a ± that counts timing, balance and weight.
+    await expect(page.getByTestId('measured-sw')).toHaveText('320')
+    await expect(page.getByText(/^± \d+$/)).toBeVisible()
+    await expect(page.getByText(/^Tempo ±\d+ · equilíbrio ±\d+ · peso ±\d+$/)).toBeVisible()
     await expect(page.getByText('Faz 3 tentativas')).toBeVisible()
     await a11y(page)
     await page.getByRole('button', { name: 'Usar na calculadora' }).click()
@@ -28,6 +31,27 @@ test.describe('F11 measuring and tuning in steps', () => {
     await expect(page.getByText(/^Tentativa 1:/)).toBeVisible()
     await page.getByRole('button', { name: 'Remover tentativa 1' }).click()
     await expect(page.getByText(/^Tentativa 1:/)).toHaveCount(0)
+  })
+
+  test('F11-E2 a trial counted one swing off is flagged and can be left out', async ({ page }) => {
+    await start(page, { path: '/medir' })
+    await page.getByLabel('Peso', { exact: true }).fill('320')
+    await page.getByLabel('Equilíbrio', { exact: true }).fill('320')
+    // The instructions are on screen.
+    await expect(page.getByText('nunca de lado (de lado mede-se SW + TW)', { exact: false })).toBeVisible()
+    await expect(page.getByText('20 oscilações completas (ida e volta), 3 vezes.')).toBeVisible()
+    const T = periodFromSwingweight(320, 32, 320)
+    // The third: 21 swings counted as 20.
+    for (const total of [T * 19.98, T * 20.02, T * 21]) {
+      await page.getByLabel(/Ou escreve o tempo total/).fill(total.toFixed(3).replace('.', ','))
+      await page.getByRole('button', { name: 'Juntar tentativa' }).click()
+    }
+    await expect(page.getByText('Talvez tenhas contado uma oscilação a mais ou a menos.')).toHaveCount(1)
+    await expect(page.getByTestId('measured-sw')).not.toHaveText('320')
+    await page.getByRole('button', { name: 'Não contar a tentativa 3' }).click()
+    await expect(page.getByTestId('measured-sw')).toHaveText('320')
+    await expect(page.getByRole('button', { name: 'Voltar a contar a tentativa 3' })).toBeVisible()
+    await a11y(page)
   })
 
   test('F11-N1 measuring needs weight and balance first', async ({ page }) => {
