@@ -6,7 +6,7 @@ import { DEFAULT_STRINGBED } from '../domain/strings'
 import { emptyLead, POSITIONS, type Position, type Racket, type Setup, type Specs } from '../domain/types'
 import { saveOwned, saveSetup, saveStringing, uid } from '../data/db'
 import { useComputed, useOwned, useRacket, useSetups } from '../data/hooks'
-import { FREE_SETUP_LIMIT, isPro, useStore } from '../data/store'
+import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum, fmtSigned, LOCALE } from '../lib/format'
 import { Badge, Button, Card, CardTitle, ChoiceChips, cx, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
@@ -18,7 +18,6 @@ import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
 import { ComfortCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
 import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
-import { usePaywall } from './Pro'
 import { InfoTip } from '../ui/disclosure'
 import { RacketSources } from './RacketSources'
 import { racketFeel, reviewOf } from '../data/racketFeel'
@@ -541,8 +540,6 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
   const toast = useToast()
   const config = useStore((s) => s.config)
   const loadConfig = useStore((s) => s.loadConfig)
-  const pro = useStore(isPro)
-  const paywall = usePaywall()
   const owned = useOwned()
   const racket = useRacket(config.racketId)
   const [name, setName] = useState('')
@@ -567,11 +564,6 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
   const fallback = fmt(t.setups.defaultName, { n: count + 1 })
 
   const save = async () => {
-    if (!pro && count >= FREE_SETUP_LIMIT) {
-      onClose()
-      paywall('setups')
-      return
-    }
     const now = Date.now()
     const s: Setup = {
       ...structuredClone(config),

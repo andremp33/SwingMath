@@ -85,10 +85,11 @@ test('wrong code is refused; during the beta every account has Pro', async ({ br
   // The server sends one code per address per second (max_frequency).
   await page.waitForTimeout(1100)
   await signIn(page, email)
+  // Any account syncs (its backup); Pro is separate.
+  await expect(card.getByRole('button', { name: 'Sincronizar agora' })).toBeVisible()
   // Run with VITE_PRO_BETA=false, an account without a subscription has no Pro.
   if (BETA_OFF) return expect(card).toContainText('Esta conta não tem subscrição')
   await expect(card).toContainText('Pro grátis durante a beta')
-  await expect(card.getByRole('button', { name: 'Sincronizar agora' })).toBeVisible()
 })
 
 test('Pro through the account syncs setups to a second device', async ({ browser }) => {

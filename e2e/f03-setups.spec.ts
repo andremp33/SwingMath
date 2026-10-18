@@ -46,15 +46,12 @@ test.describe('F03 save, name and rate a setup', () => {
     await expect(page.getByRole('article')).toContainText('Cabo 0,5 g')
   })
 
-  test('F03-N1 free limit opens the Pro sheet', async ({ page }) => {
+  test('F03-N1 setups have no limit', async ({ page }) => {
     await start(page)
-    for (let i = 1; i <= 3; i++) await saveSetup(page, `S${i}`)
-    await page.getByRole('button', { name: 'Guardar como novo' }).click()
-    await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
-    await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toBeVisible()
-    // The sheet says why it opened.
-    await expect(page.getByRole('dialog')).toContainText('Guarda todos os teus setups')
-    await expect(page.getByRole('dialog')).toContainText('O plano grátis guarda 3 setups.')
+    for (let i = 1; i <= 4; i++) await saveSetup(page, `S${i}`)
+    await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toHaveCount(0)
+    await page.goto('/setups')
+    await expect(page.getByRole('article')).toHaveCount(4)
   })
 
   test('F03-N2 delete with undo', async ({ page }) => {

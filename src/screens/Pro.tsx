@@ -1,6 +1,6 @@
 import { Check, Lock, Sparkles } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { FREE_SETUP_LIMIT, isPro, useStore } from '../data/store'
+import { isPro, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import type { Plan } from '../lib/entitlement'
 import { offerCopy, savingPct, type PaywallReason } from '../lib/paywall'
@@ -66,7 +66,7 @@ const storeName = () => (/iPhone|iPad|Mac/.test(navigator.userAgent) ? 'App Stor
 function ReasonHeader({ reason }: { reason: PaywallReason }) {
   const t = useT()
   if (reason === 'profile') return null
-  const sub = fmt(t.paywall.subs[reason], { n: FREE_SETUP_LIMIT })
+  const sub = t.paywall.subs[reason]
   return (
     <div>
       <h3 className="text-lg font-semibold tracking-tight">{t.paywall.titles[reason]}</h3>

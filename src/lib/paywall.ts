@@ -8,7 +8,7 @@ import type { Plan } from './entitlement'
  */
 
 /** What opened the paywall; its title follows. */
-export type PaywallReason = 'solver' | 'setups' | 'journal' | 'sync' | 'profile'
+export type PaywallReason = 'solver' | 'journal' | 'profile'
 
 /** Annual first (and chosen), then lifetime, then monthly. */
 export const PLAN_ORDER: Plan[] = ['annual', 'lifetime', 'monthly']

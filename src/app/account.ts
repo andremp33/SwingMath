@@ -1,8 +1,8 @@
 import { FunctionsHttpError, type Session } from '@supabase/supabase-js'
 import { useEffect } from 'react'
 import { db, ensureOwned } from '../data/db'
-import { accountProActive, useStore, type AccountPro } from '../data/store'
-import { enqueueAll, supabaseRemote, syncOnce, SyncError, trackChanges } from '../data/sync'
+import { useStore, type AccountPro } from '../data/store'
+import { enqueueAll, supabaseRemote, syncOnce, trackChanges } from '../data/sync'
 import { cloudConfigured, getCloud } from '../lib/cloud'
 import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
 
@@ -95,8 +95,8 @@ let running: Promise<void> | null = null
 /** One sync, if signed in with Pro. Concurrent calls share the same run. */
 export function syncNow(): Promise<void> {
   running ??= (async () => {
-    const { account, accountPro, sync, setSync } = store()
-    if (!account || !accountProActive(accountPro)) return
+    const { account, sync, setSync } = store()
+    if (!account) return
     const c = await client()
     // First sync for this account: send everything already on the device.
     let cursor = sync.cursor
@@ -110,8 +110,8 @@ export function syncNow(): Promise<void> {
       // Another device on an older version may have sent unlinked stringings.
       if (r.pulled) await ensureOwned()
       setSync({ cursor: r.cursor, lastAt: Date.now(), error: undefined })
-    } catch (e) {
-      setSync({ error: e instanceof SyncError && e.code === '42501' ? 'nopro' : navigator.onLine ? 'other' : 'offline' })
+    } catch {
+      setSync({ error: navigator.onLine ? 'other' : 'offline' })
     }
   })().finally(() => {
     running = null

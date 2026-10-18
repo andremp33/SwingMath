@@ -9,7 +9,6 @@ import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
-import { usePaywall } from './Pro'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -152,7 +151,6 @@ function SignedIn() {
   const account = useStore((s) => s.account)!
   const accountPro = useStore((s) => s.accountPro)
   const sync = useStore((s) => s.sync)
-  const paywall = usePaywall()
   const [busy, setBusy] = useState(false)
   // During the beta every account has Pro, sync included.
   const pro = PRO_BETA || accountProActive(accountPro)
@@ -171,41 +169,32 @@ function SignedIn() {
             : t.account.noPro
         }
       />
+      {/* Any account: it is the player's backup. */}
       <SettingsRow
         label={t.account.sync}
         hint={
-          !pro
-            ? t.account.syncPro
-            : sync.error === 'nopro'
-              ? t.account.syncNoPro
-              : sync.error === 'offline'
-                ? t.account.syncOffline
-                : sync.error
-                  ? t.account.syncOther
-                  : sync.lastAt
-                    ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
-                    : t.account.never
+          sync.error === 'offline'
+            ? t.account.syncOffline
+            : sync.error
+              ? t.account.syncOther
+              : sync.lastAt
+                ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
+                : t.account.never
         }
       >
-        {pro ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={RefreshCw}
-            loading={busy}
-            onClick={async () => {
-              setBusy(true)
-              await syncNow()
-              setBusy(false)
-            }}
-          >
-            {t.account.syncNow}
-          </Button>
-        ) : (
-          <Button variant="secondary" size="sm" onClick={() => paywall('sync', { asked: true })}>
-            {t.settings.seePlans}
-          </Button>
-        )}
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={busy}
+          onClick={async () => {
+            setBusy(true)
+            await syncNow()
+            setBusy(false)
+          }}
+        >
+          {t.account.syncNow}
+        </Button>
       </SettingsRow>
     </>
   )

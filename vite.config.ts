@@ -31,6 +31,10 @@ export default defineConfig(({ mode }) => {
     // Builds written while the dev server runs (the e2e preview build in
     // dist-e2e/) must not reload the pages under test.
     server: { watch: { ignored: ['**/dist/**', '**/dist-e2e/**', '**/test-results/**'] } },
+    // Every screen's dependencies are found when the dev server starts, not
+    // when a lazy screen first loads (which re-optimizes and reloads every
+    // open page, under test too).
+    optimizeDeps: { entries: ['index.html', 'src/**/*.{ts,tsx}', '!src/**/*.test.ts'] },
     // The commit goes next to the version, so support can tell which build a
     // player is on.
     define: {

@@ -52,7 +52,7 @@ export interface SyncState {
   userId: string | null
   cursor: string | null
   lastAt?: number
-  error?: 'nopro' | 'offline' | 'other'
+  error?: 'offline' | 'other'
 }
 
 export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
@@ -240,5 +240,4 @@ export const isPro = (s: { license: License | null; accountPro?: AccountPro | nu
   (s.license !== null && (s.license.status ?? 'active') === 'active') || accountProActive(s.accountPro ?? null)
 /** Rackets on the map at once; more and the labels crowd. */
 export const MAP_MAX = 8
-export const FREE_SETUP_LIMIT = 3
 /** Sessions the free journal shows. */

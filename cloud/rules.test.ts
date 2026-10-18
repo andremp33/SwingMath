@@ -43,41 +43,47 @@ afterAll(async () => {
   await admin.from('subscriptions').delete().like('email', `%-${stamp}@example.test`)
 })
 
-describe('sync needs Pro', () => {
-  it('a free account cannot sync', async () => {
-    const { error } = await free.db.from('items').upsert(item('s1', 1))
+const hasPro = async (u: { id: string; db: SupabaseClient }) => (await u.db.rpc('has_pro', { uid: u.id })).data as boolean
+
+describe('sync is free with any account', () => {
+  it('a free account syncs, and reads only its own items', async () => {
+    expect((await free.db.from('items').upsert(item('s1', 10))).error).toBeNull()
+    expect((await free.db.from('items').select('id')).data).toEqual([{ id: 's1' }])
+    expect((await pro.db.from('items').select('id')).data).toEqual([])
+    expect((await anon.from('items').select('id')).data).toEqual([])
+  })
+
+  it('nobody writes items as someone else', async () => {
+    const { error } = await free.db.from('items').upsert({ ...item('theirs', 1), user_id: pro.id })
     expect(error?.code).toBe('42501')
   })
 
-  it('a Pro account syncs, and reads only its own items', async () => {
-    expect((await pro.db.from('items').upsert(item('s1', 10))).error).toBeNull()
-    const own = await pro.db.from('items').select('id')
-    expect(own.data).toEqual([{ id: 's1' }])
-    const other = await free.db.from('items').select('id')
-    expect(other.data).toEqual([])
-    const nobody = await anon.from('items').select('id')
-    expect(nobody.data).toEqual([])
-  })
-
   it('an older copy never overwrites a newer one', async () => {
-    await pro.db.from('items').upsert(item('s2', 100, { v: 'new' }))
-    await pro.db.from('items').upsert(item('s2', 50, { v: 'old' }))
-    const { data } = await pro.db.from('items').select('data').eq('id', 's2').single()
+    await free.db.from('items').upsert(item('s2', 100, { v: 'new' }))
+    await free.db.from('items').upsert(item('s2', 50, { v: 'old' }))
+    const { data } = await free.db.from('items').select('data').eq('id', 's2').single()
     expect(data?.data).toEqual({ v: 'new' })
+  })
+})
+
+describe('Pro through the account', () => {
+  it('a subscription gives Pro; an account without one has none', async () => {
+    expect(await hasPro(pro)).toBe(true)
+    expect(await hasPro(free)).toBe(false)
   })
 
   it('a cancelled subscription keeps Pro until the paid period ends', async () => {
     const c = await user('cancelled')
     await admin.from('subscriptions').insert({ email: c.email, status: 'cancelled', ends_at: new Date(Date.now() + 86_400_000).toISOString() })
-    expect((await c.db.from('items').upsert(item('x', 1))).error).toBeNull()
+    expect(await hasPro(c)).toBe(true)
     await admin.from('subscriptions').update({ ends_at: new Date(Date.now() - 1000).toISOString() }).eq('email', c.email)
-    expect((await c.db.from('items').upsert(item('y', 1))).error?.code).toBe('42501')
+    expect(await hasPro(c)).toBe(false)
   })
 
   it('a subscription linked by user id works with any email', async () => {
     const u = await user('linked')
     await admin.from('subscriptions').insert({ email: `paid-elsewhere-${stamp}@example.test`, user_id: u.id, status: 'on_trial' })
-    expect((await u.db.from('items').upsert(item('z', 1))).error).toBeNull()
+    expect(await hasPro(u)).toBe(true)
     const sub = await u.db.from('subscriptions').select('status').single()
     expect(sub.data?.status).toBe('on_trial')
   })
@@ -89,10 +95,10 @@ describe('sync needs Pro', () => {
 })
 
 describe('Pro beta', () => {
-  it('with the beta switch on, a free account syncs too', async () => {
+  it('with the beta switch on, a free account has Pro', async () => {
     await admin.from('app_flags').update({ enabled: true }).eq('name', 'pro_beta')
     try {
-      expect((await free.db.from('items').upsert(item('beta', 1))).error).toBeNull()
+      expect(await hasPro(free)).toBe(true)
     } finally {
       await admin.from('app_flags').update({ enabled: false }).eq('name', 'pro_beta')
     }
