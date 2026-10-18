@@ -69,9 +69,8 @@ test('PC03 in compare mode, the second place can be a pro', async ({ page }) => 
   await expect(page.getByText('Para comparar com Clube.')).toBeVisible()
 })
 
-test('PC04 “How to get there” opens Igualar with both sides filled in, and counts as a use', async ({ page }) => {
+test('PC04 “How to get there” opens Igualar with both sides filled in; Igualar counts the plan', async ({ page }) => {
   await setupAndPro(page, /Novak Djokovic/)
-  await expect(page.getByText('3 usos grátis')).toHaveCount(0)
   await page.getByRole('button', { name: 'Como chegar lá' }).click()
   await expect(page.getByRole('heading', { name: 'Igualar' })).toBeVisible()
   const from = page.getByRole('region', { name: 'De onde partes' })
@@ -79,11 +78,11 @@ test('PC04 “How to get there” opens Igualar with both sides filled in, and c
   const to = page.getByRole('region', { name: 'Onde queres chegar' })
   await expect(to.getByRole('radio', { name: /Novak Djokovic/ })).toHaveAttribute('aria-checked', 'true')
   await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('353')
-  // Solved straight away; one of the three free uses spent.
+  // Solved straight away; a new plan, so one of the three free ones.
   await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toBeVisible()
-  await expect(page.getByText('2 usos grátis')).toBeVisible()
+  await expect(page.getByText('2 planos grátis')).toBeVisible()
   // A reload does not solve (or count) again.
   await page.reload()
-  await expect(page.getByText('2 usos grátis')).toBeVisible()
+  await expect(page.getByText('2 planos grátis')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toHaveCount(0)
 })

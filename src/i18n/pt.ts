@@ -260,6 +260,11 @@ export const pt = {
   },
   match: {
     title: 'Igualar',
+    planPro: 'O plano por posição é Pro',
+    missing: 'Falta',
+    lands: 'Fica com',
+    reachable: 'Dá para lá chegar com chumbo, dentro do máximo por posição.',
+    notReachable: 'Com chumbo, dentro do máximo por posição, não chega lá.',
     step1: 'De onde partes',
     step2: 'Onde queres chegar',
     step3: 'Onde pôr o chumbo',
@@ -724,7 +729,7 @@ export const pt = {
       profile: 'SwingMath Pro',
     },
     subs: {
-      solver: 'Usaste os 3 cálculos grátis do Igualar.',
+      solver: 'Usaste os 3 planos grátis do Igualar.',
       setups: 'O plano grátis guarda {n} setups.',
       journal: 'O teu diário já tem as respostas.',
       sync: 'A sincronização é do Pro.',
@@ -755,8 +760,8 @@ export const pt = {
   pro: {
     title: 'SwingMath Pro',
     lifetime: 'Pro vitalício',
-    freeUses: '{n} usos grátis',
-    freeUseOne: '1 uso grátis',
+    freePlans: '{n} planos grátis',
+    freePlanOne: '1 plano grátis',
     active: 'Pro ativo',
     activeSince: 'Ativo desde {date}',
     renews: 'Período atual até {date}',

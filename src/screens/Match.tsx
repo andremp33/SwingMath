@@ -8,7 +8,8 @@ import { POSITIONS, type Position, type Racket, type SetupConfig } from '../doma
 import { findRacket } from '../data/db'
 import { useAllRackets, useCustomRackets, useOwned, useRacket, useSetups, useStringings } from '../data/hooks'
 import { compute } from '../domain/physics'
-import { defaultConfig, FREE_PRO_RUNS, isPro, useStore } from '../data/store'
+import { defaultConfig, isPro, useStore } from '../data/store'
+import { diagnose, freePlansLeft, matchPlanKey, targetPlanKey, type Diagnosis } from '../domain/freePlans'
 import { PRO_TARGETS, withStrings, type PlainSpecs } from '../data/pros'
 import { fmt, useT } from '../i18n'
 import { fmtNum, fmtSigned, racketLabel } from '../lib/format'
@@ -16,7 +17,8 @@ import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, 
 import { LEAD_MAX, RacketDiagram } from '../ui/lead'
 import { RacketPicker } from '../ui/RacketPicker'
 import { ProList } from '../ui/ProPicker'
-import { useTryFirst } from './tryFirst'
+import { useFreePlans } from './freePlans'
+import { ProGate } from './Pro'
 import { InfoTip } from '../ui/disclosure'
 
 type Mode = 'smart' | 'batch'
@@ -24,9 +26,9 @@ type Mode = 'smart' | 'batch'
 export function Match() {
   const t = useT()
   const pro = useStore(isPro)
-  const left = FREE_PRO_RUNS - useStore((s) => s.freeRunsUsed)
-  // The free uses are shared by both modes, so the count shows once.
-  const badge = !pro && <Badge tone="pro">{left <= 0 ? 'Pro' : left === 1 ? t.pro.freeUseOne : fmt(t.pro.freeUses, { n: left })}</Badge>
+  const left = freePlansLeft(useStore((s) => s.freePlans))
+  // The free plans are shared by both modes, so the count shows once.
+  const badge = !pro && <Badge tone="pro">{left <= 0 ? 'Pro' : left === 1 ? t.pro.freePlanOne : fmt(t.pro.freePlans, { n: left })}</Badge>
   const [mode, setMode] = useState<Mode>('smart')
   return (
     <>
@@ -111,6 +113,15 @@ interface TargetSrc {
   frame: { headSizeSqIn: number; lengthCm: number }
   specs: PlainSpecs
   strung: boolean
+  /** Which target it is, for the free plans: "pro:sinner", "racket:…", "setup:…". */
+  origin: string
+}
+
+/** A plan as shown: whole, or (past the free plans) only its diagnosis. */
+interface Shown {
+  plan: MatchResult
+  full: boolean
+  diag: Diagnosis
 }
 
 /** Numbers as the fields show them: weight and balance whole, SW whole. */
@@ -171,7 +182,7 @@ function useStarts(libraryId: string) {
 }
 
 function Smart() {
-  const canRun = useTryFirst()
+  const plans = useFreePlans()
   const t = useT()
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
@@ -203,7 +214,9 @@ function Smart() {
   const [targetRacketId, setTargetRacketId] = useState<string>()
   const targetRacket = useRacket(targetRacketId)
   const [proId, setProId] = useState(handoffPro?.id ?? '')
-  const [targetSrc, setTargetSrc] = useState<TargetSrc | null>(handoffPro ? { frame: handoffPro, specs: handoffPro, strung: handoffPro.strung } : null)
+  const [targetSrc, setTargetSrc] = useState<TargetSrc | null>(
+    handoffPro ? { frame: handoffPro, specs: handoffPro, strung: handoffPro.strung, origin: `pro:${handoffPro.id}` } : null,
+  )
   const [typed, setTyped] = useState<Vals | null>(null)
   // A target from a racket, a setup or a pro follows the starting point into
   // its state (with or without strings); numbers typed in stay as typed.
@@ -211,7 +224,7 @@ function Smart() {
 
   const [allowed, setAllowed] = useState<Position[]>([...POSITIONS])
   const [maxPer, setMaxPer] = useState<number | undefined>(LEAD_MAX)
-  const [res, setRes] = useState<MatchResult | null>(null)
+  const [res, setRes] = useState<Shown | null>(null)
   const [err, setErr] = useState<string>()
 
   const pickSource = (src: Source) => {
@@ -226,9 +239,9 @@ function Smart() {
     setRes(null)
   }
 
-  const run = () => {
-    if (canRun()) solve()
-  }
+  // A plan is its start and where its target comes from; numbers typed in
+  // are one target however they are fine-tuned.
+  const planKey = () => targetPlanKey(source === 'library' ? `library:${libraryId}` : (source ?? ''), typed ? 'typed' : (targetSrc?.origin ?? 'typed'))
   const solve = () => {
     setErr(undefined)
     const base = racket && toBase(racket, from)
@@ -240,7 +253,12 @@ function Smart() {
       twistweight: base.twistweight === undefined ? undefined : to.twistweight,
     }
     if (Object.values(target).every((x) => x === undefined)) return setErr(t.match.needSpecs)
-    setRes(solveTarget(base, target, { allowed, maxPerPositionG: maxPer ?? LEAD_MAX }))
+    const plan = solveTarget(base, target, { allowed, maxPerPositionG: maxPer ?? LEAD_MAX })
+    // Counted only now, with a result, and only if it is a new plan.
+    const key = planKey()
+    const access = plans.access(key)
+    plans.record(key, access)
+    setRes({ plan, full: access.full, diag: diagnose(base, target, plan) })
   }
 
   const [autoRun, setAutoRun] = useState(!!handoff?.run)
@@ -248,19 +266,20 @@ function Smart() {
     if (!autoRun || !start || !racket) return
     setAutoRun(false)
     solve()
-    // Once: a reload does not solve (or count) again.
+    // Once: a reload does not solve again.
     nav(loc.pathname, { replace: true, state: null })
     // `solve` reads this render's values, which are the ones wanted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRun, start, racket])
 
   const openInCalc = () => {
-    if (!res || !racket) return
+    // Only a whole plan opens (the diagnosis has no lead to give).
+    if (!res?.full || !racket) return
     if (start?.config && !edited) {
       // The setup as it was, with the lead added.
       const cfg = start.config
       const lead = { ...cfg.leadG }
-      for (const p of POSITIONS) lead[p] = Math.min(LEAD_MAX, lead[p] + res.lead[p])
+      for (const p of POSITIONS) lead[p] = Math.min(LEAD_MAX, lead[p] + res.plan.lead[p])
       loadConfig({ ...cfg, leadG: lead }, null)
     } else {
       loadConfig(
@@ -274,7 +293,7 @@ function Smart() {
             twistweight: from.twistweight,
           },
           accessories: { strings: fromStrung, leatherGrip: false, overgrip: false, dampener: false },
-          leadG: res.lead,
+          leadG: res.plan.lead,
         },
         null,
       )
@@ -356,7 +375,7 @@ function Smart() {
                 value={targetRacket}
                 onChange={(r) => {
                   setTargetRacketId(r.id)
-                  pickTarget({ frame: r, specs: r, strung: false })
+                  pickTarget({ frame: r, specs: r, strung: false, origin: `racket:${r.id}` })
                 }}
               />
               {starts.setups.length > 0 && (
@@ -368,7 +387,7 @@ function Smart() {
                     const r = s && findRacket(s.racketId, customRackets)
                     if (!s || !r) return
                     const { result } = compute({ spec: r, ...s, masses })
-                    pickTarget({ frame: r, specs: result, strung: s.accessories.strings })
+                    pickTarget({ frame: r, specs: result, strung: s.accessories.strings, origin: `setup:${s.id}` })
                   }}
                   options={[{ value: '', label: t.match.pickSetup }, ...starts.setups.map((s) => ({ value: s.id, label: s.name }))]}
                 />
@@ -380,7 +399,7 @@ function Smart() {
               fromStrung={fromStrung}
               onPick={(p) => {
                 setProId(p.id)
-                pickTarget({ frame: p, specs: p, strung: p.strung })
+                pickTarget({ frame: p, specs: p, strung: p.strung, origin: `pro:${p.id}` })
               }}
               // The starting point becomes the stock frame (unstrung, as in the
               // library), and the target follows it into that state.
@@ -424,18 +443,24 @@ function Smart() {
               {err}
             </p>
           )}
-          <Button variant="primary" size="lg" icon={pro ? TargetIcon : Sparkles} className="mt-4 w-full" onClick={run} disabled={allowed.length === 0}>
+          <Button variant="primary" size="lg" icon={pro ? TargetIcon : Sparkles} className="mt-4 w-full" onClick={solve} disabled={allowed.length === 0}>
             {t.match.run}
           </Button>
         </Card>
       </div>
 
-      <div className="xl:sticky xl:top-8">{res ? <PlanCard res={res} onOpen={openInCalc} /> : null}</div>
+      <div className="xl:sticky xl:top-8">{res ? <PlanCard res={res.plan} full={res.full} diag={res.diag} onOpen={openInCalc} /> : null}</div>
     </div>
   )
 }
 
-function PlanCard({ res, onOpen, title }: { res: MatchResult; onOpen?: () => void; title?: string }) {
+/**
+ * A plan. Whole: the lead per position, what is left off, and the way to
+ * the calculator. Past the free plans: the diagnosis (what is missing,
+ * whether lead gets there, where it lands), and the plan per position
+ * behind the Pro gate.
+ */
+function PlanCard({ res, full, diag, onOpen, title }: { res: MatchResult; full: boolean; diag: Diagnosis; onOpen?: () => void; title?: string }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const [sel, setSel] = useState<Position>('tip')
@@ -445,16 +470,50 @@ function PlanCard({ res, onOpen, title }: { res: MatchResult; onOpen?: () => voi
     swingweight: [t.spec.swingweight, 0, ''],
     twistweight: [t.spec.twistweight, 2, ''],
   }
+  const unreachable =
+    res.unreachable.length > 0 ? (
+      <p className="mb-3 rounded-md bg-warning/15 px-3 py-2 text-sm text-warning">
+        {fmt(t.match.unreachable, { what: res.unreachable.map((k) => label[k][0]).join(', ') })}
+      </p>
+    ) : null
+  if (!full) {
+    const m = diag.missing
+    const parts = [
+      m.weightG !== undefined && `${t.spec.weight} ${fmtSigned(m.weightG, 0, lang)} g`,
+      m.balanceMm !== undefined && `${t.spec.balance} ${fmtSigned(m.balanceMm, 0, lang)} mm`,
+      m.swingweight !== undefined && `SW ${fmtSigned(m.swingweight, 0, lang)}`,
+    ].filter(Boolean)
+    return (
+      <Card label={title ?? t.match.result}>
+        <CardTitle>{title ?? t.match.result}</CardTitle>
+        {unreachable}
+        <dl className="num space-y-2 text-sm">
+          <div>
+            <dt className="text-muted">{t.match.missing}</dt>
+            <dd className="font-semibold">{parts.join(' · ')}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">{t.match.lands}</dt>
+            <dd className="font-semibold">
+              {fmtNum(diag.final.weightG, 0, lang)} g · {fmtNum(diag.final.balanceCm * 10, 0, lang)} mm · SW {fmtNum(diag.final.swingweight, 0, lang)}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-sm">{diag.reachable ? t.match.reachable : t.match.notReachable}</p>
+        <div className="mt-4">
+          <ProGate title={t.match.planPro} reason="solver" bare>
+            {null}
+          </ProGate>
+        </div>
+      </Card>
+    )
+  }
   return (
     <Card label={title ?? t.match.result}>
       <CardTitle action={<Badge plain tone={res.matchPct >= 95 ? 'accent' : 'neutral'}>{fmt(t.match.match, { pct: fmtNum(res.matchPct, res.matchPct === 100 ? 0 : 1, lang) })}</Badge>}>
         {title ?? t.match.result}
       </CardTitle>
-      {res.unreachable.length > 0 && (
-        <p className="mb-3 rounded-md bg-warning/15 px-3 py-2 text-sm text-warning">
-          {fmt(t.match.unreachable, { what: res.unreachable.map((k) => label[k][0]).join(', ') })}
-        </p>
-      )}
+      {unreachable}
       <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-4">
         <RacketDiagram lead={res.lead} selected={sel} onSelect={setSel} />
         <dl className="num space-y-1.5 text-sm">
@@ -502,7 +561,7 @@ interface Slot {
 }
 
 function Batch() {
-  const canRun = useTryFirst()
+  const plans = useFreePlans()
   const t = useT()
   const pro = useStore(isPro)
   const lang = useStore((s) => s.lang)
@@ -510,7 +569,7 @@ function Batch() {
     { key: 'a', vals: {} },
     { key: 'b', vals: {} },
   ])
-  const [res, setRes] = useState<BatchResult | null>(null)
+  const [res, setRes] = useState<{ batch: BatchResult; full: boolean; diags: Diagnosis[] } | null>(null)
   const [err, setErr] = useState<string>()
 
   const update = (i: number, s: Partial<Slot>) => {
@@ -545,11 +604,15 @@ function Batch() {
           variant="primary"
           icon={pro ? TargetIcon : Sparkles}
           onClick={() => {
-            if (!canRun()) return
             setErr(undefined)
             const bases = slots.map((s) => s.racketId && s.base)
             if (bases.some((b) => !b)) return setErr(t.racketForm.invalid)
-            setRes(matchRackets(bases as Base[], { maxPerPositionG: LEAD_MAX }))
+            const batch = matchRackets(bases as Base[], { maxPerPositionG: LEAD_MAX })
+            // The same racquets again (in any order) are the same plan.
+            const key = matchPlanKey(slots.map((s) => s.racketId!))
+            const access = plans.access(key)
+            plans.record(key, access)
+            setRes({ batch, full: access.full, diags: batch.plans.map((p, i) => diagnose(bases[i] as Base, batch.target, p)) })
           }}
         >
           {t.match.run}
@@ -563,17 +626,17 @@ function Batch() {
       {res && (
         <>
           <Card label={t.match.commonTarget}>
-            <CardTitle action={<Badge plain tone="accent">{fmt(t.match.match, { pct: fmtNum(res.matchPct, 1, lang) })}</Badge>}>{t.match.commonTarget}</CardTitle>
+            <CardTitle action={<Badge plain tone="accent">{fmt(t.match.match, { pct: fmtNum(res.batch.matchPct, 1, lang) })}</Badge>}>{t.match.commonTarget}</CardTitle>
             <dl className="num grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-              <Stat label={t.spec.weight} value={`${fmtNum(res.target.weightG, 0, lang)} g`} />
-              <Stat label={t.spec.balance} value={`${fmtNum((res.target.balanceCm ?? 0) * 10, 0, lang)} mm`} />
-              <Stat label={t.spec.swingweight} value={fmtNum(res.target.swingweight, 0, lang)} />
-              {res.target.twistweight !== undefined && <Stat label={t.spec.twistweight} value={fmtNum(res.target.twistweight, 2, lang)} />}
+              <Stat label={t.spec.weight} value={`${fmtNum(res.batch.target.weightG, 0, lang)} g`} />
+              <Stat label={t.spec.balance} value={`${fmtNum((res.batch.target.balanceCm ?? 0) * 10, 0, lang)} mm`} />
+              <Stat label={t.spec.swingweight} value={fmtNum(res.batch.target.swingweight, 0, lang)} />
+              {res.batch.target.twistweight !== undefined && <Stat label={t.spec.twistweight} value={fmtNum(res.batch.target.twistweight, 2, lang)} />}
             </dl>
           </Card>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {res.plans.map((p, i) => (
-              <PlanCard key={slots[i].key} res={p} title={fmt(t.match.racketN, { n: i + 1 })} />
+            {res.batch.plans.map((p, i) => (
+              <PlanCard key={slots[i].key} res={p} full={res.full} diag={res.diags[i]} title={fmt(t.match.racketN, { n: i + 1 })} />
             ))}
           </div>
         </>

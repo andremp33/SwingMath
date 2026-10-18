@@ -26,29 +26,69 @@ test.describe('F06 hit a target', () => {
     await expect(page.getByRole('alert')).toHaveText('Preenche pelo menos um valor do alvo.')
   })
 
-  test('FIX-5 free users get 3 runs, then the Pro sheet', async ({ page }) => {
+  test('FIX-5 a wrong input spends nothing', async ({ page }) => {
     await start(page, { path: '/match' })
     // One count for both modes, not one per tab.
-    await expect(page.getByText('3 usos grátis')).toHaveCount(1)
+    await expect(page.getByText('3 planos grátis')).toHaveCount(1)
     await expect(page.getByRole('radio', { name: /Atingir um alvo/ })).not.toContainText('grátis')
-    await page.getByRole('region', { name: 'Onde queres chegar' }).getByLabel('Peso', { exact: true }).fill('320')
+    // No target: an error, not a plan.
+    await page.getByRole('button', { name: 'Calcular', exact: true }).click()
+    await expect(page.getByRole('alert')).toHaveText('Preenche pelo menos um valor do alvo.')
+    await expect(page.getByText('3 planos grátis')).toBeVisible()
+    // Matching racquets with only one of them: an error too.
+    await page.getByRole('radio', { name: /Igualar raquetes/ }).click()
+    await page.getByRole('button', { name: 'Calcular', exact: true }).click()
+    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(page.getByText('3 planos grátis')).toBeVisible()
+  })
+
+  test('FIX-6 the same plan again spends nothing: other positions, another limit, the typed target fine-tuned', async ({ page }) => {
+    await start(page, { path: '/match' })
+    const target = page.getByRole('region', { name: 'Onde queres chegar' })
     const run = page.getByRole('button', { name: 'Calcular', exact: true })
-    for (let i = 0; i < 3; i++) {
+    await target.getByLabel('Peso', { exact: true }).fill('320')
+    await run.click()
+    await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toContainText('Chumbo total')
+    await expect(page.getByText('2 planos grátis')).toBeVisible()
+    await page.getByRole('button', { name: '12h (ponta)', exact: true }).click()
+    await page.getByLabel('Máximo por posição').fill('6')
+    await run.click()
+    await target.getByLabel('Peso', { exact: true }).fill('322')
+    await run.click()
+    await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toContainText('Chumbo total')
+    await expect(page.getByText('2 planos grátis')).toBeVisible()
+  })
+
+  test('FIX-7 the fourth new plan shows its diagnosis; the plan per position is Pro', async ({ page }) => {
+    await start(page, { path: '/match' })
+    const target = page.getByRole('region', { name: 'Onde queres chegar' })
+    const plan = page.getByRole('region', { name: 'Plano de chumbo' })
+    const run = page.getByRole('button', { name: 'Calcular', exact: true })
+    await target.getByRole('radio', { name: 'Profissional' }).click()
+    for (const player of ['Novak Djokovic', 'Rafael Nadal', 'Roger Federer']) {
+      await target.getByRole('radio', { name: new RegExp(player) }).click()
       await run.click()
-      await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toBeVisible()
+      await expect(plan).toContainText('Chumbo total')
     }
     await expect(page.getByText('Pro', { exact: true })).toBeVisible()
+    // A fourth: what is missing, whether lead gets there, where it lands.
+    await target.getByRole('radio', { name: /Thiago Seyboth Wild/ }).click()
     await run.click()
-    const sheet = page.getByRole('dialog', { name: 'SwingMath Pro' })
-    await expect(sheet).toBeVisible()
-    await expect(sheet).toContainText('Usaste os 3 cálculos grátis do Igualar.')
-    // A paywall nobody asked for opens once per session; then a note with a way in.
-    await sheet.getByRole('button', { name: 'Fechar' }).click()
+    await expect(plan).toContainText('Falta')
+    await expect(plan).toContainText(/Peso \+\d+ g/)
+    await expect(plan).toContainText('Fica com')
+    await expect(plan).toContainText(/Dá para lá chegar|não chega lá/)
+    await expect(plan).not.toContainText('Chumbo total')
+    await expect(plan.getByRole('button', { name: 'Abrir na calculadora' })).toHaveCount(0)
+    await expect(plan).toContainText('O plano por posição é Pro')
+    await plan.getByRole('button', { name: 'Experimentar o Pro' }).click()
+    await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toContainText('Usaste os 3 planos grátis do Igualar.')
+    await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click()
+    // One of the three again: whole.
+    await target.getByRole('radio', { name: /Rafael Nadal/ }).click()
     await run.click()
-    await expect(sheet).toBeHidden()
-    await expect(page.getByText('Esta é uma função Pro.')).toBeVisible()
-    await page.getByRole('button', { name: 'Ver o Pro' }).click()
-    await expect(sheet).toBeVisible()
+    await expect(plan).toContainText('Chumbo total')
+    await a11y(page)
   })
 
   test('F06-E2 open the plan in the calculator', async ({ page }) => {

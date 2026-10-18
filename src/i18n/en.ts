@@ -262,6 +262,11 @@ export const en: Dict = {
   },
   match: {
     title: 'Match',
+    planPro: 'The plan per position is Pro',
+    missing: 'Missing',
+    lands: 'Ends at',
+    reachable: 'Lead can get there, within the limit per position.',
+    notReachable: 'Lead within the limit per position does not get there.',
     step1: 'Where you start',
     step2: 'Where you want to get',
     step3: 'Where to put the lead',
@@ -726,7 +731,7 @@ export const en: Dict = {
       profile: 'SwingMath Pro',
     },
     subs: {
-      solver: 'You have used Match’s 3 free runs.',
+      solver: 'You have used Match’s 3 free plans.',
       setups: 'The free plan keeps {n} setups.',
       journal: 'Your journal already has the answers.',
       sync: 'Sync is part of Pro.',
@@ -757,8 +762,8 @@ export const en: Dict = {
   pro: {
     title: 'SwingMath Pro',
     lifetime: 'Lifetime Pro',
-    freeUses: '{n} free uses',
-    freeUseOne: '1 free use',
+    freePlans: '{n} free plans',
+    freePlanOne: '1 free plan',
     active: 'Pro active',
     activeSince: 'Active since {date}',
     renews: 'Current period ends {date}',

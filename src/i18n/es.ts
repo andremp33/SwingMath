@@ -262,6 +262,11 @@ export const es: Dict = {
   },
   match: {
     title: 'Igualar',
+    planPro: 'El plan por posición es Pro',
+    missing: 'Falta',
+    lands: 'Queda en',
+    reachable: 'Con plomo se llega, dentro del máximo por posición.',
+    notReachable: 'Con plomo, dentro del máximo por posición, no se llega.',
     step1: 'De dónde partes',
     step2: 'Adónde quieres llegar',
     step3: 'Dónde poner el plomo',
@@ -726,7 +731,7 @@ export const es: Dict = {
       profile: 'SwingMath Pro',
     },
     subs: {
-      solver: 'Has usado los 3 cálculos gratis de Igualar.',
+      solver: 'Has usado los 3 planes gratis de Igualar.',
       setups: 'El plan gratis guarda {n} setups.',
       journal: 'Tu diario ya tiene las respuestas.',
       sync: 'La sincronización es del Pro.',
@@ -757,8 +762,8 @@ export const es: Dict = {
   pro: {
     title: 'SwingMath Pro',
     lifetime: 'Pro vitalicio',
-    freeUses: '{n} usos gratis',
-    freeUseOne: '1 uso gratis',
+    freePlans: '{n} planes gratis',
+    freePlanOne: '1 plan gratis',
     active: 'Pro activo',
     activeSince: 'Activo desde el {date}',
     renews: 'El periodo actual termina el {date}',

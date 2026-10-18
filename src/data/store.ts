@@ -13,6 +13,7 @@ import { DEFAULT_STRINGBED } from '../domain/strings'
 import { PRO_BETA } from '../lib/entitlement'
 import type { Lang } from '../i18n'
 import { RENAMED, STOCK_RACKETS } from './rackets'
+import { withPlan } from '../domain/freePlans'
 
 export type Theme = 'system' | 'dark' | 'light'
 
@@ -91,8 +92,8 @@ interface State {
   compare: string[]
   /** Rackets shown on the racket map. */
   mapIds: string[]
-  /** Pro tool runs used before buying (try before you pay). */
-  freeRunsUsed: number
+  /** The solver's free plans used, by their key (domain/freePlans.ts). */
+  freePlans: string[]
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
@@ -121,7 +122,7 @@ interface State {
   toggleCompare: (id: string) => void
   toggleMap: (id: string) => void
   clearCompare: () => void
-  spendFreeRun: () => void
+  addFreePlan: (key: string) => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
@@ -150,7 +151,7 @@ export const useStore = create<State>()(
       loadedSetupId: null,
       mapIds: [],
       compare: [],
-      freeRunsUsed: 0,
+      freePlans: [],
       reminded: [],
       profile: {},
       onboarded: false,
@@ -180,7 +181,7 @@ export const useStore = create<State>()(
           compare: s.compare.includes(id) ? s.compare.filter((x) => x !== id) : [...s.compare, id].slice(-2),
         })),
       clearCompare: () => set({ compare: [] }),
-      spendFreeRun: () => set((s) => ({ freeRunsUsed: s.freeRunsUsed + 1 })),
+      addFreePlan: (key) => set((s) => ({ freePlans: withPlan(s.freePlans, key) })),
       setAccount: (account) => set({ account }),
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
@@ -198,7 +199,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'swingmath',
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       // v2: the stock library was replaced by verified frames with new ids.
       migrate: (persisted, version) => {
@@ -213,6 +214,11 @@ export const useStore = create<State>()(
         if (version < 4 && s.config?.racketId && RENAMED[s.config.racketId]) s.config = { ...s.config, racketId: RENAMED[s.config.racketId] }
         // v3: a sleeve mass was added; keep the user's own masses.
         if (version < 3 && s.masses) s.masses = { ...DEFAULT_ACCESSORY_MASSES, ...s.masses }
+        // v5: free plans of the solver, counted by plan, not by run.
+        if (version < 5) {
+          delete (s as { freeRunsUsed?: number }).freeRunsUsed
+          s.freePlans = []
+        }
         return s as State
       },
     },
@@ -235,5 +241,4 @@ export const isPro = (s: { license: License | null; accountPro?: AccountPro | nu
 /** Rackets on the map at once; more and the labels crowd. */
 export const MAP_MAX = 8
 export const FREE_SETUP_LIMIT = 3
-export const FREE_PRO_RUNS = 3
 /** Sessions the free journal shows. */

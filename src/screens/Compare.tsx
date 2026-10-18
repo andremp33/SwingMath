@@ -17,7 +17,6 @@ import { extraLabel, fmtNum, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, EmptyState, PageTitle } from '../ui/basics'
 import { monthYear, ProList } from '../ui/ProPicker'
 import type { MatchHandoff } from './Match'
-import { useTryFirst } from './tryFirst'
 
 export function Compare() {
   const t = useT()
@@ -345,7 +344,6 @@ function SetupVsPro({ setup, pro, onOther }: { setup: Setup; pro: ProTarget; onO
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
   const masses = useStore((s) => s.masses)
-  const canRun = useTryFirst()
   const r = useRacket(setup.racketId)
   const stock = useRacket(pro.baseRacketId)
   // The same basis: the setup with its strings on.
@@ -376,8 +374,8 @@ function SetupVsPro({ setup, pro, onOther }: { setup: Setup; pro: ProTarget; onO
     feel: stock && proSpecs ? racketFeel(stock, proSpecs) : undefined,
     feelEstimated: !!stock,
   }
+  // Only goes there: Igualar counts the plan, by the same rule as any other.
   const howTo = () => {
-    if (!canRun()) return
     const handoff: MatchHandoff = { from: `setup:${setup.id}`, pro: pro.id, run: true }
     nav('/match', { state: handoff })
   }
