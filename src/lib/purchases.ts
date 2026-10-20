@@ -93,10 +93,15 @@ export async function storePlans(): Promise<StorePlan[]> {
 
 /** A switch in the current offering's metadata (RevenueCat dashboard), off
  *  unless set to true there: lets an offer be tried without a new build. */
-export async function offeringFlag(key: string): Promise<boolean> {
-  if (!(await initPurchases())) return false
+export const offeringFlag = (key: string) => offeringSwitch(key, false)
+
+/** A switch in the current offering's metadata, as set there; `fallback`
+ *  when it is not set, or the store cannot be reached. */
+export async function offeringSwitch(key: string, fallback: boolean): Promise<boolean> {
+  if (!(await initPurchases())) return fallback
   const { current } = await Purchases.getOfferings().catch(() => ({ current: null }))
-  return current?.metadata?.[key] === true
+  const v = current?.metadata?.[key]
+  return typeof v === 'boolean' ? v : fallback
 }
 
 /** 'cancelled' when the player closed the store's sheet. */

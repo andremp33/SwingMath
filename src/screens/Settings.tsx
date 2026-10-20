@@ -3,7 +3,8 @@ import { Capacitor } from '@capacitor/core'
 import { useRef, useState } from 'react'
 import { signOut } from '../app/account'
 import { deleteAll, exportAll, importAll } from '../data/db'
-import { isPro, useStore, type Theme } from '../data/store'
+import { accountProActive, isPro, useStore, type Theme } from '../data/store'
+import { freeProActive } from '../domain/trial'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, useT, type Lang } from '../i18n'
 import { PRO_BETA } from '../lib/entitlement'
@@ -101,6 +102,20 @@ export function PlanGroup() {
       <SettingsGroup title={t.profile.plan}>
         <SettingsRow label={t.profile.free} hint={t.paywall.free}>
           <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('profile', { asked: true })}>
+            {t.settings.seePlans}
+          </Button>
+        </SettingsRow>
+        {IS_NATIVE && <RestoreRow />}
+      </SettingsGroup>
+    )
+  }
+  // Pro only from the free days after the walkthrough: what it costs (nothing)
+  // and the plans, for after.
+  if (!keyActive && !accountProActive(s.accountPro) && freeProActive(s.freeProUntil)) {
+    return (
+      <SettingsGroup title={t.profile.plan} action={<Badge tone="pro">Pro</Badge>}>
+        <SettingsRow label={fmt(t.profile.freeProUntil, { date: fmtDate(s.freeProUntil!, s.lang) })} hint={t.profile.freeProHint}>
+          <Button variant="secondary" size="sm" icon={Sparkles} onClick={() => paywall('profile', { asked: true })}>
             {t.settings.seePlans}
           </Button>
         </SettingsRow>

@@ -14,6 +14,7 @@ import { PRO_BETA } from '../lib/entitlement'
 import type { Lang } from '../i18n'
 import { RENAMED, STOCK_RACKETS } from './rackets'
 import { withPlan } from '../domain/freePlans'
+import { freeProActive } from '../domain/trial'
 
 export type Theme = 'system' | 'dark' | 'light'
 
@@ -99,6 +100,11 @@ interface State {
   fleetRef: string | null
   /** The pro the player opened last (Compare, Igualar): the paywall's preview aims at them. */
   lastProId: string | null
+  /** Pro free until then (ms), given once when the walkthrough ends
+   *  (domain/trial.ts); null if never given. */
+  freeProUntil: number | null
+  /** The player was shown that the free Pro ended. */
+  freeProEndTold: boolean
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
@@ -130,6 +136,8 @@ interface State {
   addFreePlan: (key: string) => void
   setFleetRef: (id: string | null) => void
   setLastPro: (id: string) => void
+  setFreeProUntil: (until: number | null) => void
+  markFreeProEndTold: () => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
@@ -161,6 +169,8 @@ export const useStore = create<State>()(
       freePlans: [],
       fleetRef: null,
       lastProId: null,
+      freeProUntil: null,
+      freeProEndTold: false,
       reminded: [],
       profile: {},
       onboarded: false,
@@ -193,6 +203,8 @@ export const useStore = create<State>()(
       addFreePlan: (key) => set((s) => ({ freePlans: withPlan(s.freePlans, key) })),
       setFleetRef: (fleetRef) => set({ fleetRef }),
       setLastPro: (lastProId) => set({ lastProId }),
+      setFreeProUntil: (freeProUntil) => set({ freeProUntil }),
+      markFreeProEndTold: () => set({ freeProEndTold: true }),
       setAccount: (account) => set({ account }),
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
@@ -246,9 +258,11 @@ export function accountProActive(p: AccountPro | null, now = Date.now()) {
   return p.status === 'cancelled' && !!p.endsAt && Date.parse(p.endsAt) > now
 }
 
-export const isPro = (s: { license: License | null; accountPro?: AccountPro | null }) =>
+export const isPro = (s: { license: License | null; accountPro?: AccountPro | null; freeProUntil?: number | null }) =>
   PRO_BETA ||
-  (s.license !== null && (s.license.status ?? 'active') === 'active') || accountProActive(s.accountPro ?? null)
+  (s.license !== null && (s.license.status ?? 'active') === 'active') ||
+  accountProActive(s.accountPro ?? null) ||
+  freeProActive(s.freeProUntil)
 /** Rackets on the map at once; more and the labels crowd. */
 export const MAP_MAX = 8
 /** Sessions the free journal shows. */

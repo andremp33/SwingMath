@@ -49,8 +49,9 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
 /** Pro as the player has it, or the plans to get it (the stores' own). */
 export function ProPanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => void }) {
   const t = useT()
-  const pro = useStore(isPro)
-  if (pro) {
+  // The free days after the walkthrough are Pro, but the plans are still for sale.
+  const paid = useStore((s) => isPro({ ...s, freeProUntil: null }))
+  if (paid) {
     return (
       <div className="flex items-center gap-3">
         <Badge tone="pro">Pro</Badge>
@@ -73,6 +74,8 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
   const t = useT()
   const toast = useToast()
   const license = useStore((s) => s.license)
+  const freeProUntil = useStore((s) => s.freeProUntil)
+  const [now] = useState(() => Date.now())
   const [plans, setPlans] = useState<StorePlan[] | null>(null)
   const [plan, setPlan] = useState<Plan>('annual')
   const [busy, setBusy] = useState<'buy' | 'restore' | null>(null)
@@ -116,6 +119,7 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
   return (
     <div className="space-y-4">
       {license?.provider === 'store' && license.status === 'ended' && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.pro.ended}</p>}
+      {freeProUntil !== null && now >= freeProUntil && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.paywall.freeProEnded}</p>}
       <PaywallTop reason={reason} />
       <ul className="space-y-2">
         {t.paywall.benefits.map((f) => (

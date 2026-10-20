@@ -1,13 +1,15 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { saveOwned, saveStringing, uid } from '../data/db'
 import { STOCK_RACKETS } from '../data/rackets'
-import { useStore } from '../data/store'
+import { isPro, useStore } from '../data/store'
 import { restringDue, type OwnedRacket, type Stringing } from '../domain/journal'
 import { DEFAULT_STRINGBED, type Stringbed, type StringSpec } from '../domain/strings'
+import { freeProEnd } from '../domain/trial'
 import type { Racket } from '../domain/types'
 import { fmt, useT } from '../i18n'
 import { GOALS, LEVELS, STYLES } from '../lib/community'
+import { fmtDate } from '../lib/format'
 import { IS_APP, IS_NATIVE } from '../lib/platform'
 import { Button, ChoiceChips, cx, MultiChoiceChips, Segmented, TextField } from '../ui/basics'
 import { Logo } from '../ui/Logo'
@@ -54,6 +56,19 @@ export function Onboarding() {
   const profile = useStore((s) => s.profile)
   const setProfile = useStore((s) => s.setProfile)
   const setOnboarded = useStore((s) => s.setOnboarded)
+  const freeProUntil = useStore((s) => s.freeProUntil)
+  const setFreeProUntil = useStore((s) => s.setFreeProUntil)
+  const pro = useStore(isPro)
+  // Pro free until the next restring, once; a switch in the store's offering
+  // can turn it off without a new build (on when it says nothing).
+  const [trialOn, setTrialOn] = useState(true)
+  useEffect(() => {
+    if (!IS_NATIVE) return
+    void import('../lib/purchases')
+      .then((m) => m.offeringSwitch('reverse_trial', true))
+      .then(setTrialOn)
+      .catch(() => {})
+  }, [])
   const openOwned = useOpenOwned()
   const reminders = useReminders()
   const paywall = usePaywall()
@@ -74,11 +89,16 @@ export function Onboarding() {
 
   const found = useMemo(() => (q.trim() ? STOCK_RACKETS.filter((r) => matchesQuery(r, q)).slice(0, 8) : popular), [q])
 
+  const gives = trialOn && freeProUntil === null && !pro
+  // Until the strings' predicted restring (the hours a week as set now).
+  const trialEnd = () => freeProEnd(Date.now(), stringing ? restringDue(stringing, [], useStore.getState().profile.hoursPerWeek) : undefined)
   const finish = (to: string) => {
     setOnboarded(true)
+    if (gives) setFreeProUntil(trialEnd())
     nav(to, { replace: true })
-    // Off unless the offering's metadata says onboarding_paywall: true.
-    if (IS_NATIVE)
+    // Off unless the offering's metadata says onboarding_paywall: true; never
+    // over the free Pro just given.
+    if (IS_NATIVE && !gives)
       void import('../lib/purchases')
         .then((m) => m.offeringFlag('onboarding_paywall'))
         .then((on) => on && paywall('profile', { asked: true }))
@@ -296,7 +316,13 @@ export function Onboarding() {
               </p>
             </div>
           )}
-          <p className="text-sm text-muted">{t.onboarding.freePro}</p>
+          {gives ? (
+            <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm font-medium" data-testid="free-pro">
+              {fmt(t.onboarding.freeProUntil, { date: fmtDate(trialEnd(), lang) })}
+            </p>
+          ) : (
+            <p className="text-sm text-muted">{t.onboarding.freePro}</p>
+          )}
         </Page>
       )}
     </div>
