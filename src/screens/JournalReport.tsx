@@ -1,6 +1,6 @@
 import { useStore } from '../data/store'
 import { isFinished, nextStringing, REPORT_BLOCK_HOURS, SESSION_RATINGS, stringingReport, type NextStringing, type OwnedRacket, type Session, type Stringing, type StringingReport } from '../domain/journal'
-import { fmt, useT } from '../i18n'
+import { fmt, useT, type Dict } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
 import { Sheet } from '../ui/overlay'
 import { bedLabel } from '../ui/strings'
@@ -28,6 +28,33 @@ const SAMPLE_NEXT: NextStringing = {
   changeAtHours: 7,
 }
 
+/** The one real number, free: how long the strings lasted, or have so far. */
+const headlineOf = (st: Stringing, all: Stringing[], report: StringingReport, t: Dict, lang: string) =>
+  report.deathHours !== undefined
+    ? fmt(t.journal.lasted, { h: fmtNum(report.deathHours, 0, lang) })
+    : isFinished(st, all)
+      ? fmt(t.journal.replacedAfter, { h: fmtNum(report.hours, 1, lang) })
+      : fmt(t.journal.goingOn, { h: fmtNum(report.hours, 1, lang) })
+
+/**
+ * The paywall's journal: the real number from the player's strings, and
+ * what Pro adds to it, blurred (made-up numbers, as behind the lock).
+ */
+export function ReportTeaser({ value, stringings, sessions }: { value: Stringing; stringings: Stringing[]; sessions: Session[] }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  return (
+    <div className="space-y-3 rounded-lg bg-surface-2 p-4">
+      <p className="font-semibold" data-testid="teaser-number">
+        {headlineOf(value, stringings, stringingReport(value, sessions), t, lang)}
+      </p>
+      <div aria-hidden inert className="pointer-events-none max-h-36 overflow-hidden blur-sm select-none">
+        <ReportDetails report={SAMPLE} next={SAMPLE_NEXT} />
+      </div>
+    </div>
+  )
+}
+
 /**
  * How a stringing's life went. Free: its hours, sessions and how long it
  * lasted. Pro: the averages, the curve, where it went dead, arm pain, and
@@ -38,12 +65,7 @@ export function StringingReportSheet({ value, stringings, sessions, owned, onClo
   const lang = useStore((s) => s.lang)
   const report = stringingReport(value, sessions)
   const name = owned.find((o) => o.id === value.ownedId)?.name ?? value.label
-  const headline =
-    report.deathHours !== undefined
-      ? fmt(t.journal.lasted, { h: fmtNum(report.deathHours, 0, lang) })
-      : isFinished(value, stringings)
-      ? fmt(t.journal.replacedAfter, { h: fmtNum(report.hours, 1, lang) })
-      : fmt(t.journal.goingOn, { h: fmtNum(report.hours, 1, lang) })
+  const headline = headlineOf(value, stringings, report, t, lang)
   return (
     <Sheet open onClose={onClose} title={t.journal.report}>
       <div className="space-y-5">

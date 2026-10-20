@@ -308,6 +308,7 @@ function RatingsAndLead({ a, b }: { a: Setup; b: Setup }) {
 export function ProCompare() {
   const t = useT()
   const nav = useNavigate()
+  const setLastPro = useStore((s) => s.setLastPro)
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
   const setups = useSetups()
@@ -330,7 +331,7 @@ export function ProCompare() {
         <Card label={t.compare.pickPro}>
           <CardTitle>{t.compare.pickPro}</CardTitle>
           <p className="mb-3 text-sm text-muted">{fmt(t.compare.pickProFor, { name: setup.name })}</p>
-          <ProList selected="" fromStrung onPick={(p) => setParams({ pro: p.id })} />
+          <ProList selected="" fromStrung onPick={(p) => (setLastPro(p.id), setParams({ pro: p.id }))} />
         </Card>
       ) : (
         <SetupVsPro setup={setup} pro={pro} onOther={() => setParams({})} />

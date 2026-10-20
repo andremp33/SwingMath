@@ -202,6 +202,7 @@ function useStarts(libraryId: string) {
 function Smart() {
   const plans = useFreePlans()
   const t = useT()
+  const setLastPro = useStore((s) => s.setLastPro)
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
   const pro = useStore(isPro)
@@ -417,6 +418,7 @@ function Smart() {
               fromStrung={fromStrung}
               onPick={(p) => {
                 setProId(p.id)
+                setLastPro(p.id)
                 pickTarget({ frame: p, specs: p, strung: p.strung, origin: `pro:${p.id}` })
               }}
               // The starting point becomes the stock frame (unstrung, as in the

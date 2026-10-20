@@ -1,5 +1,6 @@
 import { Minus, Plus, X } from 'lucide-react'
 import { geometry as frameGeometry, leadPositions, type Geometry } from '../domain/physics'
+import type { Strip } from '../domain/preview'
 import { POSITIONS, type ExtraLead, type LeadMap, type Position } from '../domain/types'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
@@ -286,6 +287,31 @@ export function RacketDiagram({
           </button>
         ))
       })}
+    </div>
+  )
+}
+
+/**
+ * The paywall's racket: the frame and the strips of lead a plan puts on,
+ * the first `shown` of them. No grams and nothing to press: the strips only
+ * say how far the player's racket is from the target.
+ */
+export function StripDiagram({ geometry: g, pattern, strips, shown }: { geometry: Geometry; pattern?: string; strips: Strip[]; shown: number }) {
+  const f = frameShape(g)
+  const handle = f.y(leadPositions(g).handle.x)
+  return (
+    <div className="relative mx-auto w-full" style={{ aspectRatio: `${f.box.w} / ${f.box.h}` }}>
+      <svg viewBox={`${f.box.x} ${f.box.y} ${f.box.w} ${f.box.h}`} className="absolute inset-0 size-full overflow-visible" aria-hidden>
+        <RacketArt g={g} pattern={pattern} />
+        {strips.slice(0, shown).map((s, i) =>
+          s.position === 'handle' ? (
+            <line key={i} x1={-GRIP} x2={GRIP} y1={handle - s.layer * 0.6} y2={handle - s.layer * 0.6} stroke="var(--c-accent)" strokeWidth="0.4" strokeLinecap="round" />
+          ) : (
+            // Inside the hoop, each strip a little further in than the last.
+            <path key={i} d={hoopArc(f, g, HOUR[s.position][s.side], 3, -(0.55 + s.layer * 0.4))} fill="none" stroke="var(--c-accent)" strokeWidth="0.32" strokeLinecap="round" />
+          ),
+        )}
+      </svg>
     </div>
   )
 }

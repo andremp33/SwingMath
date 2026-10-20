@@ -9,6 +9,7 @@ import type { StorePlan } from '../lib/purchases'
 import { Badge, Button, Card, cx } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { AppOnly } from '../preview/text'
+import { PaywallTop } from './PaywallPreview'
 import { LegalSheet, type LegalKind } from './Legal'
 
 type OpenPaywall = (reason: PaywallReason, opts?: { asked?: boolean }) => void
@@ -62,21 +63,9 @@ export function ProPanel({ reason, onDone }: { reason: PaywallReason; onDone?: (
 
 const storeName = () => (/iPhone|iPad|Mac/.test(navigator.userAgent) ? 'App Store' : 'Google Play')
 
-/** What opened the paywall, as its title. */
-function ReasonHeader({ reason }: { reason: PaywallReason }) {
-  const t = useT()
-  if (reason === 'profile') return null
-  const sub = t.paywall.subs[reason]
-  return (
-    <div>
-      <h3 className="text-lg font-semibold tracking-tight">{t.paywall.titles[reason]}</h3>
-      {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
-    </div>
-  )
-}
-
 /**
- * The store apps' paywall: why it opened, three outcomes, what stays free,
+ * The store apps' paywall: the player's own racket, report or fleet (else
+ * why it opened), three outcomes, what stays free,
  * the plans with the store's own prices (annual chosen), and the renewal
  * terms both stores ask for next to the button. The X is there from the start.
  */
@@ -127,7 +116,7 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
   return (
     <div className="space-y-4">
       {license?.provider === 'store' && license.status === 'ended' && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.pro.ended}</p>}
-      <ReasonHeader reason={reason} />
+      <PaywallTop reason={reason} />
       <ul className="space-y-2">
         {t.paywall.benefits.map((f) => (
           <li key={f} className="flex gap-2 text-sm">
@@ -203,12 +192,11 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
   )
 }
 
-/** Shows children for Pro users; otherwise a card that opens the paywall.
- *  `bare` drops the card when it already sits inside one. */
 /**
- * Pro content, or for everyone else the lock. With `preview`, the lock sits
- * over that, blurred: made-up numbers showing what Pro adds, never the
- * player's own (those stay out of the page).
+ * Pro content, or for everyone else the lock (in a card, unless `bare`:
+ * already inside one). With `preview`, the lock sits over that, blurred:
+ * made-up numbers showing what Pro adds, never the player's own (those
+ * stay out of the page).
  */
 export function ProGate({ children, title, reason, bare, preview }: { children: ReactNode; title: string; reason: PaywallReason; bare?: boolean; preview?: ReactNode }) {
   const pro = useStore(isPro)

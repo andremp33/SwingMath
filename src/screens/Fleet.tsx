@@ -8,7 +8,7 @@ import type { TargetKey } from '../domain/match'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtSigned } from '../lib/format'
 import { specLine } from '../lib/specLine'
-import { Button, Select, SettingsGroup, SettingsRow } from '../ui/basics'
+import { Button, cx, Select, SettingsGroup, SettingsRow } from '../ui/basics'
 import { InfoTip } from '../ui/disclosure'
 import type { MatchHandoff } from './Match'
 import { ProGate } from './Pro'
@@ -108,8 +108,20 @@ function Compare({ fleet, measured, onReference, onMatch }: { fleet: Fleet; meas
   )
 }
 
+/** The paywall's fleet: the player's rackets by name, their lights blurred
+ *  (made-up, as behind the lock). */
+export function FleetTeaser({ names }: { names: string[] }) {
+  return (
+    <ul className="rounded-lg bg-surface-2 px-4 py-1.5">
+      {names.map((name) => (
+        <Row key={name} name={name} {...SAMPLE} blurred />
+      ))}
+    </ul>
+  )
+}
+
 /** One racket against #1: the difference in each spec, with its light. */
-function Row({ name, deviation, lights }: { name: string; deviation: Deviation; lights: Partial<Record<TargetKey, Light>> }) {
+function Row({ name, deviation, lights, blurred }: { name: string; deviation: Deviation; lights: Partial<Record<TargetKey, Light>>; blurred?: boolean }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const shown: [TargetKey, string, string][] = [
@@ -121,7 +133,7 @@ function Row({ name, deviation, lights }: { name: string; deviation: Deviation; 
   return (
     <li className="py-2.5 text-sm">
       <p className="font-medium">{name}</p>
-      <ul className="num mt-1 flex flex-wrap gap-x-4 gap-y-1">
+      <ul aria-hidden={blurred || undefined} inert={blurred} className={cx('num mt-1 flex flex-wrap gap-x-4 gap-y-1', blurred && 'pointer-events-none blur-sm select-none')}>
         {shown
           .filter(([k]) => deviation[k] !== undefined && lights[k])
           .map(([k, label, v]) => (

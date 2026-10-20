@@ -97,6 +97,8 @@ interface State {
   /** The fleet's reference racket (#1) the player picked; none: the
    *  highest swingweight (domain/fleet.ts). */
   fleetRef: string | null
+  /** The pro the player opened last (Compare, Igualar): the paywall's preview aims at them. */
+  lastProId: string | null
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
@@ -127,6 +129,7 @@ interface State {
   clearCompare: () => void
   addFreePlan: (key: string) => void
   setFleetRef: (id: string | null) => void
+  setLastPro: (id: string) => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
@@ -157,6 +160,7 @@ export const useStore = create<State>()(
       compare: [],
       freePlans: [],
       fleetRef: null,
+      lastProId: null,
       reminded: [],
       profile: {},
       onboarded: false,
@@ -188,6 +192,7 @@ export const useStore = create<State>()(
       clearCompare: () => set({ compare: [] }),
       addFreePlan: (key) => set((s) => ({ freePlans: withPlan(s.freePlans, key) })),
       setFleetRef: (fleetRef) => set({ fleetRef }),
+      setLastPro: (lastProId) => set({ lastProId }),
       setAccount: (account) => set({ account }),
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
