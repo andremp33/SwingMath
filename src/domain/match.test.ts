@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchRackets, scoreErrors, solveTarget } from './match'
+import { matchRackets, scoreErrors, solveTarget, toReference } from './match'
 import { applyMasses, geometry, leadElements, type Base } from './physics'
 import { emptyLead, POSITIONS } from './types'
 
@@ -76,5 +76,27 @@ describe('matchRackets', () => {
     const [a, c] = r.plans.map((p) => p.result)
     expect(Math.abs(a.weightG - c.weightG)).toBeLessThanOrEqual(2)
     expect(Math.abs(a.swingweight - c.swingweight)).toBeLessThanOrEqual(2)
+  })
+})
+
+describe('toReference', () => {
+  it('brings the others to the first one’s numbers; the first gets nothing', () => {
+    // The reference is the heaviest and swings the most: lead can get there.
+    const ref: Base = { ...base, weightG: 310, balanceCm: 31.8, swingweight: 292, twistweight: 13.4 }
+    const r = toReference([ref, base, { ...base, weightG: 307, swingweight: 289 }])
+    expect(r.target).toEqual({ weightG: 310, balanceCm: 31.8, swingweight: 292, twistweight: 13.4 })
+    expect(r.plans[0].totalG).toBe(0)
+    for (const p of r.plans.slice(1)) {
+      expect(Math.abs(p.result.weightG - 310)).toBeLessThanOrEqual(1)
+      expect(Math.abs(p.result.swingweight - 292)).toBeLessThanOrEqual(1.5)
+    }
+    expect(r.matchPct).toBeGreaterThan(90)
+  })
+
+  it('a frame heavier than the first is told it cannot get there', () => {
+    const r = toReference([base, { ...base, weightG: 312 }])
+    expect(r.plans[1].unreachable).toContain('weightG')
+    // Without a measured twistweight on every frame, none is aimed at.
+    expect(toReference([base, { ...base, twistweight: undefined }]).target).not.toHaveProperty('twistweight')
   })
 })

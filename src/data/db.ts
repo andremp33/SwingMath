@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { z } from 'zod'
-import { linkOwned, SESSION_KINDS, type OwnedRacket, type Session, type Stringing } from '../domain/journal'
+import { MAX_MEASUREMENTS } from '../domain/fleet'
+import { linkOwned, MEASURE_ORIGINS, SESSION_KINDS, type OwnedRacket, type Session, type Stringing } from '../domain/journal'
 import { MATERIALS } from '../domain/strings'
 import { POSITIONS, type Racket, type Setup } from '../domain/types'
 import { RENAMED, STOCK_RACKETS } from './rackets'
@@ -127,6 +128,17 @@ export const setupSchema = z.object({
 
 const rating5 = z.number().int().min(1).max(5).optional()
 
+export const measurementSchema = z.object({
+  id: z.string().min(1),
+  date: z.number(),
+  weightG: num(150, 500),
+  balanceCm: num(25, 40),
+  swingweight: num(150, 450),
+  twistweight: num(5, 25).optional(),
+  strung: z.boolean(),
+  origin: z.enum(MEASURE_ORIGINS),
+})
+
 export const ownedSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1).max(40),
@@ -134,6 +146,8 @@ export const ownedSchema = z.object({
   setupId: z.string().optional(),
   notes: z.string().max(500).optional(),
   retired: z.boolean().optional(),
+  measurements: z.array(measurementSchema).max(MAX_MEASUREMENTS).optional(),
+  lead: z.object({ leadG: leadSchema, extra: z.array(extraSchema).max(12).optional() }).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 })

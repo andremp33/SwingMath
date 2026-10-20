@@ -94,6 +94,9 @@ interface State {
   mapIds: string[]
   /** The solver's free plans used, by their key (domain/freePlans.ts). */
   freePlans: string[]
+  /** The fleet's reference racket (#1) the player picked; none: the
+   *  highest swingweight (domain/fleet.ts). */
+  fleetRef: string | null
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
@@ -123,6 +126,7 @@ interface State {
   toggleMap: (id: string) => void
   clearCompare: () => void
   addFreePlan: (key: string) => void
+  setFleetRef: (id: string | null) => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
@@ -152,6 +156,7 @@ export const useStore = create<State>()(
       mapIds: [],
       compare: [],
       freePlans: [],
+      fleetRef: null,
       reminded: [],
       profile: {},
       onboarded: false,
@@ -182,6 +187,7 @@ export const useStore = create<State>()(
         })),
       clearCompare: () => set({ compare: [] }),
       addFreePlan: (key) => set((s) => ({ freePlans: withPlan(s.freePlans, key) })),
+      setFleetRef: (fleetRef) => set({ fleetRef }),
       setAccount: (account) => set({ account }),
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),

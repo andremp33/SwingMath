@@ -13,6 +13,7 @@ import { InfoTip } from '../ui/disclosure'
 import { bedLabel } from '../ui/strings'
 import { LifeBar, OwnedSheet, RacketSheet, SessionList, SessionSheet, StringingSheet } from './JournalSheets'
 import { StringingReportSheet } from './JournalReport'
+import { MeasurementSheet } from './MeasurementSheet'
 import { ProGate } from './Pro'
 
 const DAY = 86_400_000
@@ -37,6 +38,7 @@ export function Journal() {
   const [stringing, setStringing] = useState<Stringing | null>(null)
   const [logging, setLogging] = useState<Session | null>(null)
   const [report, setReport] = useState<Stringing | null>(null)
+  const [measuring, setMeasuring] = useState<OwnedRacket | null>(null)
   // One clock per visit keeps the page steady while it re-renders.
   const [now] = useState(() => Date.now())
 
@@ -79,6 +81,7 @@ export function Journal() {
           onRestrung={(st) => setReport(previousOf(st, stringings ?? [], sessions ?? []) ?? null)}
         />
       )}
+      {measuring && <MeasurementSheet owned={[measuring]} ownedId={measuring.id} value={{}} onClose={() => setMeasuring(null)} />}
       {report && <StringingReportSheet value={report} stringings={stringings ?? []} sessions={sessions ?? []} owned={owned ?? []} onClose={() => setReport(null)} />}
       {logging && <SessionSheet value={logging} stringings={stringings ?? []} owned={owned ?? []} onClose={() => setLogging(null)} />}
       {viewing && (
@@ -92,6 +95,7 @@ export function Journal() {
           onEditStringing={(s) => (setViewing(null), setStringing(s))}
           onEditSession={(s) => (setViewing(null), setLogging(s))}
           onReport={(s) => (setViewing(null), setReport(s))}
+          onMeasure={(o) => (setViewing(null), setMeasuring(o))}
         />
       )}
     </>

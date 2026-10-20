@@ -14,6 +14,7 @@ import { Button, ChoiceChips, MultiChoiceChips, NumberField, PageTitle, Segmente
 import { useToast } from '../ui/overlay'
 import { bedLabel } from '../ui/strings'
 import { AccountEnd, AccountGroup } from './AccountCard'
+import { FleetGroup } from './Fleet'
 import { PlanGroup } from './Settings'
 
 /**
@@ -36,6 +37,7 @@ export function Profile() {
         <AccountGroup entry />
         <GameGroup />
         <RacketsGroup />
+        <FleetGroup />
         <PlanGroup />
         <SettingsGroup title={t.profile.settings}>
           <Link to="/perfil/definicoes" className="-mx-1 flex min-h-12 items-center justify-between gap-3 rounded-md px-1 py-3 hover:bg-surface-2">

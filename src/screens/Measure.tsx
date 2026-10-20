@@ -2,13 +2,14 @@ import { ArrowLeft, Play, Plus, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mean, oddTrials, swingweightError, swingweightFromPeriod } from '../domain/measure'
-import { useRacket } from '../data/hooks'
+import { useOwned, useRacket } from '../data/hooks'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
 import { Button, Card, CardTitle, cx, NumberField, PageTitle } from '../ui/basics'
 import { useToast } from '../ui/overlay'
 import { ShareMeasurement } from './Community'
+import { MeasurementSheet } from './MeasurementSheet'
 
 interface Trial {
   totalS: number
@@ -33,6 +34,8 @@ export function Measure() {
   const [swings, setSwings] = useState<number | undefined>(20)
   const [trials, setTrials] = useState<Trial[]>([])
   const [typed, setTyped] = useState<number>()
+  const [saving, setSaving] = useState(false)
+  const owned = useOwned()
 
   // Tap timer.
   const [startedAt, setStartedAt] = useState<number | null>(null)
@@ -225,10 +228,22 @@ export function Measure() {
             <Button variant="primary" className="mt-4 w-full" disabled={!ready} onClick={use}>
               {t.measure.use}
             </Button>
+            {/* Kept with the racket, for the fleet: free, like all the player's data. */}
+            <Button className="mt-2 w-full" disabled={sw === undefined} onClick={() => setSaving(true)}>
+              {t.measurements.saveToRacket}
+            </Button>
           </Card>
           <ShareMeasurement racket={racket} weightG={weightG} balanceCm={balanceMm === undefined ? undefined : balanceMm / 10} swingweight={sw} />
         </div>
       </div>
+      {saving && (
+        <MeasurementSheet
+          owned={(owned ?? []).filter((o) => !o.retired)}
+          value={{ weightG, balanceCm: balanceMm === undefined ? undefined : balanceMm / 10, swingweight: sw }}
+          fromPendulum
+          onClose={() => setSaving(false)}
+        />
+      )}
     </>
   )
 }

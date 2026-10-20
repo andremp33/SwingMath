@@ -1,4 +1,5 @@
 import { lifeLimits, stringLife, type Stringbed, type StringLife, type StringSpec } from './strings'
+import type { ExtraLead, LeadMap } from './types'
 
 /**
  * The player's journal: their own rackets (the physical frames they play
@@ -17,8 +18,29 @@ export interface OwnedRacket {
   notes?: string
   /** Put away: kept with its history, out of the way. */
   retired?: boolean
+  /** What it weighed and swung, newest first (at most MAX_MEASUREMENTS). */
+  measurements?: Measurement[]
+  /** The lead on it now, as the player saved it from a plan. */
+  lead?: { leadG: LeadMap; extra?: ExtraLead[] }
   createdAt: number
   updatedAt: number
+}
+
+export const MEASURE_ORIGINS = ['pendulum', 'shop', 'manual'] as const
+export type MeasureOrigin = (typeof MEASURE_ORIGINS)[number]
+
+/** One measurement of an owned racket, as it was that day. */
+export interface Measurement {
+  id: string
+  date: number
+  weightG: number
+  balanceCm: number
+  swingweight: number
+  twistweight?: number
+  /** With its strings on. */
+  strung: boolean
+  /** The app's pendulum, a shop's machine (RDC), or numbers typed in. */
+  origin: MeasureOrigin
 }
 
 export interface Stringing {

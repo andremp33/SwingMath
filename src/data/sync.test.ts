@@ -1,5 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { MAX_MEASUREMENTS } from '../domain/fleet'
+import type { OwnedRacket } from '../domain/journal'
 import type { Setup } from '../domain/types'
 import { ensureOwned, openDb, type SwingDb } from './db'
 import { applyRemote, enqueueAll, SyncError, syncOnce, trackChanges, type Remote, type RemoteRow } from './sync'
@@ -175,5 +177,48 @@ describe('journals from before owned rackets', () => {
     const s = await d.stringings.toArray()
     expect(s.every((x) => x.ownedId)).toBe(true)
     expect(new Set(s.filter((x) => x.label === 'Aero #1').map((x) => x.ownedId)).size).toBe(1)
+  })
+})
+
+describe('measurements and lead on owned rackets', () => {
+  const measured = (count: number): OwnedRacket => ({
+    id: 'o1',
+    name: 'Aero #1',
+    racketId: 'stock-x',
+    measurements: Array.from({ length: count }, (_, i) => ({
+      id: `m${i}`,
+      date: 1_000_000 - i,
+      weightG: 318.5,
+      balanceCm: 32.15,
+      swingweight: 324,
+      twistweight: 14.2,
+      strung: true,
+      origin: i % 2 ? ('shop' as const) : ('pendulum' as const),
+    })),
+    lead: { leadG: { tip: 0, tenTwo: 0, threeNine: 2, throat: 0, handle: 4 }, extra: [{ id: 'x', kind: 'hoop', hour: 2, sides: 2, grams: 1 }] },
+    createdAt: 1,
+    updatedAt: 7,
+  })
+
+  it('travel to the other device whole, and the fullest racket fits the server’s 16 KB', async () => {
+    const server = fakeServer()
+    const a = await device()
+    const b = await device()
+    const o = measured(MAX_MEASUREMENTS)
+    await a.db.owned.put(o)
+    await settle()
+    await a.sync(server.remote)
+    await b.sync(server.remote)
+    expect(await b.db.owned.get('o1')).toEqual(o)
+    expect(new TextEncoder().encode(JSON.stringify(server.rows.get('owned:o1')!.data)).length).toBeLessThan(16_384)
+  })
+
+  it('a measurement that makes no sense, or one too many, is refused', async () => {
+    const a = await device()
+    const bad = measured(1)
+    bad.measurements![0].weightG = 10
+    expect(await applyRemote(a.db, [{ kind: 'owned', id: 'o1', data: bad, deleted: false, client_updated_at: 7 }])).toBe(0)
+    expect(await applyRemote(a.db, [{ kind: 'owned', id: 'o1', data: measured(MAX_MEASUREMENTS + 1), deleted: false, client_updated_at: 7 }])).toBe(0)
+    expect(await a.db.owned.get('o1')).toBeUndefined()
   })
 })

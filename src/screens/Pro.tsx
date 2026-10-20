@@ -229,7 +229,8 @@ export function ProGate({ children, title, reason, bare, preview }: { children: 
   )
   if (preview)
     return (
-      <div className="relative">
+      // Tall enough for the lock, however short the preview.
+      <div className="relative min-h-48">
         <div aria-hidden inert className="pointer-events-none blur-sm select-none">
           {preview}
         </div>

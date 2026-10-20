@@ -262,3 +262,16 @@ export function matchRackets(bases: Base[], opts: MatchOptions = {}): BatchResul
     for (let bal = c.balanceCm! - 0.5; bal <= c.balanceCm! + 0.5 + 1e-9; bal += 0.1) tryTarget(extra, bal)
   return best!
 }
+
+/**
+ * Makes every frame feel like the first: its numbers are the target, and
+ * the others get lead to reach them (the first's plan is empty). Lead only
+ * adds, so a frame heavier than the first is told what it cannot lose.
+ */
+export function toReference(bases: Base[], opts: MatchOptions = {}): BatchResult {
+  const [ref] = bases
+  const target: Target = { weightG: ref.weightG, balanceCm: ref.balanceCm, swingweight: ref.swingweight }
+  if (bases.every((b) => b.twistweight !== undefined && !b.twistweightEstimated)) target.twistweight = ref.twistweight
+  const plans = bases.map((b) => solveTarget(b, target, opts))
+  return { target, plans, matchPct: Math.min(...plans.slice(1).map((p) => p.matchPct)) }
+}

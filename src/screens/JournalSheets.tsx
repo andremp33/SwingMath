@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Pencil, RotateCw, Save, Trash2 } from 'lucide-react'
+import { ChevronDown, FileText, Pencil, Plus, RotateCw, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { db, deleteOwned, deleteStringing, saveOwned, saveSession, saveStringing, uid } from '../data/db'
 import { useRacket, useSetups } from '../data/hooks'
@@ -15,9 +15,11 @@ import {
   type Session,
   type Stringing,
 } from '../domain/journal'
+import { needsRemeasure } from '../domain/fleet'
 import { DEFAULT_STRINGBED, type Stringbed } from '../domain/strings'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum, racketLabel } from '../lib/format'
+import { specLine } from '../lib/specLine'
 import { Button, ChoiceChips, cx, Label, NumberField, RatingInput, Select, TextField, Toggle } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { RacketPicker } from '../ui/RacketPicker'
@@ -39,7 +41,7 @@ const sameDay = (a: number, b: number) => toDateInput(a) === toDateInput(b)
 
 const inputClass = 'h-11 w-full rounded-md border border-border-input bg-bg px-3'
 
-function DateField({ label, value, onChange }: { label: string; value: number; onChange: (ms: number) => void }) {
+export function DateField({ label, value, onChange }: { label: string; value: number; onChange: (ms: number) => void }) {
   const id = useId()
   return (
     <div>
@@ -418,6 +420,7 @@ export function RacketSheet({
   onEditStringing,
   onEditSession,
   onReport,
+  onMeasure,
 }: {
   value: OwnedRacket | null
   stringings: Stringing[]
@@ -428,6 +431,7 @@ export function RacketSheet({
   onEditStringing: (s: Stringing) => void
   onEditSession: (s: Session) => void
   onReport: (s: Stringing) => void
+  onMeasure: (o: OwnedRacket) => void
 }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
@@ -478,6 +482,8 @@ export function RacketSheet({
           </div>
         </dl>
         {now0 && mine[0] && <LifeBar life={now0} />}
+
+        <Measurements owned={value} latest={mine[0]} onAdd={() => onMeasure(value)} />
 
         <section aria-label={t.journal.stringings}>
           <h3 className="mb-2 text-sm font-semibold">{t.journal.stringings}</h3>
@@ -594,5 +600,58 @@ export function SessionList({ sessions, stringings, owned, onOpen }: { sessions:
         )
       })}
     </ul>
+  )
+}
+
+/** A racket's measurements, newest first, and the lead on it: free to see
+ *  and to delete, like all the player's data. */
+function Measurements({ owned, latest, onAdd }: { owned: OwnedRacket; latest?: Stringing; onAdd: () => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const list = owned.measurements ?? []
+  const lead = owned.lead && Object.values(owned.lead.leadG).reduce((a, b) => a + b, 0) + (owned.lead.extra ?? []).reduce((a, e) => a + e.grams, 0)
+  const save = (p: Partial<OwnedRacket>) => saveOwned({ ...owned, ...p, updatedAt: Date.now() })
+  return (
+    <section aria-label={t.measurements.title}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">{t.measurements.title}</h3>
+        <Button size="sm" variant="ghost" icon={Plus} onClick={onAdd}>
+          {t.measurements.add}
+        </Button>
+      </div>
+      {needsRemeasure(owned, latest) && <p className="mb-2 text-sm text-warning">{t.fleet.remeasure}</p>}
+      {lead !== undefined && lead > 0 && (
+        <p className="num mb-2 flex items-center justify-between gap-2 text-sm">
+          {fmt(t.measurements.lead, { g: fmtNum(lead, 1, lang) })}
+          <button type="button" onClick={() => save({ lead: undefined })} className="text-xs font-medium text-accent-text hover:underline">
+            {t.measurements.removeLead}
+          </button>
+        </p>
+      )}
+      {list.length === 0 ? (
+        <p className="text-sm text-muted">{t.measurements.none}</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {list.map((m) => (
+            <li key={m.id} className="flex items-center gap-2 py-2 text-sm">
+              <span className="min-w-0 flex-1">
+                <span className="num block font-medium">{specLine(m, t, lang)}</span>
+                <span className="num block text-muted">
+                  {fmtDate(m.date, lang)} · {t.measurements.origins[m.origin]} · {m.strung ? t.fleet.strung : t.fleet.unstrung}
+                </span>
+              </span>
+              <button
+                type="button"
+                aria-label={fmt(t.measurements.delete, { date: fmtDate(m.date, lang) })}
+                onClick={() => save({ measurements: list.filter((x) => x.id !== m.id) })}
+                className="rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-text"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }

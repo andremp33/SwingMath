@@ -1,11 +1,12 @@
-import { Calculator, Plus, Sparkles, Target as TargetIcon, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Calculator, Plus, Save, Sparkles, Target as TargetIcon, X } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { matchRackets, solveTarget, type BatchResult, type MatchResult, type Target, type TargetKey } from '../domain/match'
+import { matchRackets, solveTarget, toReference, type BatchResult, type MatchResult, type Target, type TargetKey } from '../domain/match'
 import type { Base } from '../domain/physics'
+import { latestMeasurement } from '../domain/fleet'
 import { latestOf, type OwnedRacket, type Stringing } from '../domain/journal'
 import { POSITIONS, type Position, type Racket, type SetupConfig } from '../domain/types'
-import { findRacket } from '../data/db'
+import { findRacket, saveOwned } from '../data/db'
 import { useAllRackets, useCustomRackets, useOwned, useRacket, useSetups, useStringings } from '../data/hooks'
 import { compute } from '../domain/physics'
 import { defaultConfig, isPro, useStore } from '../data/store'
@@ -20,6 +21,7 @@ import { ProList } from '../ui/ProPicker'
 import { useFreePlans } from './freePlans'
 import { ProGate } from './Pro'
 import { InfoTip } from '../ui/disclosure'
+import { useToast } from '../ui/overlay'
 
 type Mode = 'smart' | 'batch'
 
@@ -29,7 +31,8 @@ export function Match() {
   const left = freePlansLeft(useStore((s) => s.freePlans))
   // The free plans are shared by both modes, so the count shows once.
   const badge = !pro && <Badge tone="pro">{left <= 0 ? 'Pro' : left === 1 ? t.pro.freePlanOne : fmt(t.pro.freePlans, { n: left })}</Badge>
-  const [mode, setMode] = useState<Mode>('smart')
+  const handoff = useLocation().state as MatchHandoff | null
+  const [mode, setMode] = useState<Mode>(handoff?.fleet ? 'batch' : 'smart')
   return (
     <>
       <PageTitle action={badge}>{t.match.title}</PageTitle>
@@ -96,6 +99,8 @@ export interface MatchHandoff {
   from?: Source
   pro?: string
   run?: boolean
+  /** The fleet's rackets (owned ids) to match, the reference first. */
+  fleet?: string[]
 }
 
 /** The starting point: the frame, its numbers, with or without strings, and
@@ -169,7 +174,20 @@ function useStarts(libraryId: string) {
     const [kind, id] = src.split(':') as ['owned' | 'setup', string]
     if (kind === 'owned') {
       const o = owned?.find((x) => x.id === id)
-      return o ? asPlayed(ownedConfig(o)) : null
+      if (!o) return null
+      const m = latestMeasurement(o)
+      if (!m) return asPlayed(ownedConfig(o))
+      // As measured: the numbers are the racket with whatever is on it.
+      const measured = { weightG: m.weightG, balanceCm: m.balanceCm, swingweight: m.swingweight, twistweight: m.twistweight }
+      const cfg: SetupConfig = {
+        ...ownedConfig(o),
+        baseMode: 'measured',
+        measured,
+        accessories: { strings: false, leatherGrip: false, overgrip: false, dampener: false },
+        leadG: { tip: 0, tenTwo: 0, threeNine: 0, throat: 0, handle: 0 },
+        extra: [],
+      }
+      return { racketId: o.racketId, vals: asVals(measured, m.twistweight !== undefined), strung: m.strung, config: cfg }
     }
     const s = setups?.find((x) => x.id === id)
     return s ? asPlayed(s) : null
@@ -460,7 +478,7 @@ function Smart() {
  * whether lead gets there, where it lands), and the plan per position
  * behind the Pro gate.
  */
-function PlanCard({ res, full, diag, onOpen, title }: { res: MatchResult; full: boolean; diag: Diagnosis; onOpen?: () => void; title?: string }) {
+function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult; full: boolean; diag: Diagnosis; onOpen?: () => void; title?: string; action?: ReactNode }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const [sel, setSel] = useState<Position>('tip')
@@ -549,6 +567,7 @@ function PlanCard({ res, full, diag, onOpen, title }: { res: MatchResult; full: 
           {t.match.openInCalc}
         </Button>
       )}
+      {action}
     </Card>
   )
 }
@@ -558,19 +577,44 @@ interface Slot {
   racketId?: string
   vals: Vals
   base?: Base | null
+  /** One of the player's rackets, from the fleet. */
+  owned?: OwnedRacket
 }
+
+/** Rackets matched at once: three, or six with Pro (a whole fleet). */
+const MAX_SLOTS = { free: 3, pro: 6 }
 
 function Batch() {
   const plans = useFreePlans()
   const t = useT()
+  const toast = useToast()
   const pro = useStore(isPro)
   const lang = useStore((s) => s.lang)
+  const rackets = useAllRackets()
+  const owned = useOwned()
+  const fleet = (useLocation().state as MatchHandoff | null)?.fleet
   const [slots, setSlots] = useState<Slot[]>([
     { key: 'a', vals: {} },
     { key: 'b', vals: {} },
   ])
-  const [res, setRes] = useState<{ batch: BatchResult; full: boolean; diags: Diagnosis[] } | null>(null)
+  // A fleet from the profile: each racket as last measured, #1 the target.
+  const [seeded, setSeeded] = useState(false)
+  const [toFirst, setToFirst] = useState(!!fleet)
+  if (fleet && owned && !seeded) {
+    setSeeded(true)
+    const picked = fleet.map((id) => owned.find((o) => o.id === id)).filter((o): o is OwnedRacket => !!o && !!latestMeasurement(o))
+    if (picked.length >= 2)
+      setSlots(
+        picked.slice(0, MAX_SLOTS.pro).map((o) => {
+          const m = latestMeasurement(o)!
+          return { key: o.id, racketId: o.racketId, owned: o, vals: { weightG: m.weightG, balanceMm: Math.round(m.balanceCm * 10), swingweight: m.swingweight, twistweight: m.twistweight } }
+        }),
+      )
+  }
+  const [res, setRes] = useState<{ batch: BatchResult; full: boolean; diags: Diagnosis[]; toFirst: boolean } | null>(null)
   const [err, setErr] = useState<string>()
+  const max = pro ? MAX_SLOTS.pro : MAX_SLOTS.free
+  const nameOf = (i: number) => slots[i].owned?.name ?? fmt(t.match.racketN, { n: i + 1 })
 
   const update = (i: number, s: Partial<Slot>) => {
     setSlots((x) => x.map((y, j) => (j === i ? { ...y, ...s } : y)))
@@ -588,6 +632,7 @@ function Batch() {
           <BatchSlot
             key={s.key}
             n={i + 1}
+            name={s.owned?.name}
             slot={s}
             onChange={(p) => update(i, p)}
             onRemove={slots.length > 2 ? () => setSlots(slots.filter((_, j) => j !== i)) : undefined}
@@ -595,7 +640,18 @@ function Batch() {
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
-        {slots.length < 3 && (
+        <div className="w-full max-w-md">
+          <Segmented
+            label={t.match.target}
+            value={toFirst ? 'first' : 'common'}
+            onChange={(v) => (setToFirst(v === 'first'), setRes(null))}
+            options={[
+              { value: 'common', label: t.match.targetCommon },
+              { value: 'first', label: t.match.targetFirst },
+            ]}
+          />
+        </div>
+        {slots.length < max && (
           <Button icon={Plus} onClick={() => setSlots([...slots, { key: String(Date.now()), vals: {} }])}>
             {t.match.addRacket}
           </Button>
@@ -605,14 +661,20 @@ function Batch() {
           icon={pro ? TargetIcon : Sparkles}
           onClick={() => {
             setErr(undefined)
-            const bases = slots.map((s) => s.racketId && s.base)
+            // A slot from the fleet has its numbers but not yet its frame's.
+            const bases = slots.map((s) => {
+              const r = s.racketId ? rackets.find((x) => x.id === s.racketId) : undefined
+              return s.base ?? (r ? toBase(r, s.vals) : null)
+            })
             if (bases.some((b) => !b)) return setErr(t.racketForm.invalid)
-            const batch = matchRackets(bases as Base[], { maxPerPositionG: LEAD_MAX })
+            const all = bases as Base[]
+            const opts = { maxPerPositionG: LEAD_MAX }
+            const batch: BatchResult = toFirst ? toReference(all, opts) : matchRackets(all, opts)
             // The same racquets again (in any order) are the same plan.
-            const key = matchPlanKey(slots.map((s) => s.racketId!))
+            const key = matchPlanKey(slots.map((s) => s.owned?.id ?? s.racketId!)) + (toFirst ? '|first' : '')
             const access = plans.access(key)
             plans.record(key, access)
-            setRes({ batch, full: access.full, diags: batch.plans.map((p, i) => diagnose(bases[i] as Base, batch.target, p)) })
+            setRes({ batch, full: access.full, toFirst, diags: batch.plans.map((p, i) => diagnose(all[i], batch.target, p)) })
           }}
         >
           {t.match.run}
@@ -626,7 +688,9 @@ function Batch() {
       {res && (
         <>
           <Card label={t.match.commonTarget}>
-            <CardTitle action={<Badge plain tone="accent">{fmt(t.match.match, { pct: fmtNum(res.batch.matchPct, 1, lang) })}</Badge>}>{t.match.commonTarget}</CardTitle>
+            <CardTitle action={<Badge plain tone="accent">{fmt(t.match.match, { pct: fmtNum(res.batch.matchPct, 1, lang) })}</Badge>}>
+              {res.toFirst ? fmt(t.match.targetIs, { name: nameOf(0) }) : t.match.commonTarget}
+            </CardTitle>
             <dl className="num grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
               <Stat label={t.spec.weight} value={`${fmtNum(res.batch.target.weightG, 0, lang)} g`} />
               <Stat label={t.spec.balance} value={`${fmtNum((res.batch.target.balanceCm ?? 0) * 10, 0, lang)} mm`} />
@@ -635,9 +699,25 @@ function Batch() {
             </dl>
           </Card>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {res.batch.plans.map((p, i) => (
-              <PlanCard key={slots[i].key} res={p} full={res.full} diag={res.diags[i]} title={fmt(t.match.racketN, { n: i + 1 })} />
-            ))}
+            {res.batch.plans.map((p, i) => {
+              // Matched to #1, #1 itself has nothing to do.
+              if (res.toFirst && i === 0) return null
+              const o = slots[i].owned
+              const saveLead =
+                o && res.full && p.totalG > 0 ? (
+                  <Button
+                    className="mt-2 w-full"
+                    icon={Save}
+                    onClick={async () => {
+                      await saveOwned({ ...o, lead: { leadG: p.lead }, updatedAt: Date.now() })
+                      toast(fmt(t.measurements.leadSaved, { name: o.name }))
+                    }}
+                  >
+                    {fmt(t.measurements.saveLead, { name: o.name })}
+                  </Button>
+                ) : undefined
+              return <PlanCard key={slots[i].key} res={p} full={res.full} diag={res.diags[i]} title={nameOf(i)} action={saveLead} />
+            })}
           </div>
         </>
       )}
@@ -654,7 +734,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function BatchSlot({ n, slot, onChange, onRemove }: { n: number; slot: Slot; onChange: (s: Partial<Slot>) => void; onRemove?: () => void }) {
+function BatchSlot({ n, name, slot, onChange, onRemove }: { n: number; name?: string; slot: Slot; onChange: (s: Partial<Slot>) => void; onRemove?: () => void }) {
   const t = useT()
   const racket = useRacket(slot.racketId)
   return (
@@ -668,7 +748,7 @@ function BatchSlot({ n, slot, onChange, onRemove }: { n: number; slot: Slot; onC
           )
         }
       >
-        {fmt(t.match.racketN, { n })}
+        {name ?? fmt(t.match.racketN, { n })}
       </CardTitle>
       <RacketPicker
         label={t.calc.racket}
