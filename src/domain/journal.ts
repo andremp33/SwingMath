@@ -67,10 +67,12 @@ export function hoursOn(stringingId: string, sessions: Session[]) {
   return sessions.reduce((h, s) => (s.stringingId === stringingId ? h + s.minutes / 60 : h), 0)
 }
 
-export function lifeOf(st: Stringing, sessions: Session[], now = Date.now()): StringLife & { hours: number; days: number } {
+/** A stringing's life so far. With the player's other stringings, how long
+ *  their strings of the same material lasted counts (lifeHoursFor). */
+export function lifeOf(st: Stringing, sessions: Session[], now = Date.now(), all: Stringing[] = []): StringLife & { hours: number; days: number } {
   const hours = hoursOn(st.id, sessions)
   const days = Math.max(0, (now - st.date) / DAY)
-  return { ...stringLife(st.bed, hours, days, st.lifeHours), hours, days }
+  return { ...stringLife(st.bed, hours, days, lifeHoursFor(st, all, sessions)), hours, days }
 }
 
 /** The latest stringing of each racket, newest racket first. */
@@ -121,10 +123,12 @@ export function linkOwned(stringings: Stringing[], owned: OwnedRacket[], newId: 
  * playing hours, whichever comes first. The hours run at the pace of the
  * sessions logged on it (over at least a week, so one long first session
  * does not race the date); with none logged yet, at the player's own
- * estimate of hours a week. Neither: the weeks alone.
+ * estimate of hours a week. Neither: the weeks alone. The hours are the
+ * player's own (set on the stringing), else how long their strings of that
+ * material lasted, else the material's.
  */
-export function restringDue(st: Stringing, sessions: Session[], hoursPerWeek?: number, now = Date.now()): number {
-  const { hours: life, weeks } = lifeLimits(st.bed, st.lifeHours)
+export function restringDue(st: Stringing, sessions: Session[], hoursPerWeek?: number, now = Date.now(), all: Stringing[] = []): number {
+  const { hours: life, weeks } = lifeLimits(st.bed, lifeHoursFor(st, all, sessions))
   const byTime = st.date + weeks * 7 * DAY
   const mine = sessions.filter((s) => s.stringingId === st.id)
   const played = mine.reduce((h, s) => h + s.minutes / 60, 0)
@@ -137,7 +141,7 @@ export function restringDue(st: Stringing, sessions: Session[], hoursPerWeek?: n
 
 /** Rackets whose strings are at or past the end of their life. */
 export function dueForRestring(all: Stringing[], sessions: Session[], now = Date.now()) {
-  return currentStringings(all).filter((s) => lifeOf(s, sessions, now).used >= 1)
+  return currentStringings(all).filter((s) => lifeOf(s, sessions, now, all).used >= 1)
 }
 
 export interface StringingInsight extends SessionSummary {
@@ -146,6 +150,21 @@ export interface StringingInsight extends SessionSummary {
   /** The same named strings at the same tension count as one; otherwise
    *  one stringing. */
   stringings: Stringing[]
+  /** Too few sessions, or too close to a neighbour, to call it better. */
+  noise: boolean
+}
+
+/** Fewer sessions than this, or a gap smaller than NOISE_GAP, and a
+ *  ranking is still noise. */
+export const NOISE_SESSIONS = 3
+export const NOISE_GAP = 0.3
+
+export interface InsightOptions {
+  /** Only sessions of this kind. */
+  kind?: SessionKind
+  /** Only sessions played while the strings were alive: dead strings say
+   *  nothing about the strings. */
+  withinLife?: boolean
 }
 
 /** What a set of sessions adds up to. Only rated sessions count towards
@@ -181,17 +200,180 @@ export function bedKey(st: Stringing): string {
 
 /** Averages per string (see bedKey), best overall first. Only rated
  *  sessions count towards each average. */
-export function insights(all: Stringing[], sessions: Session[]): StringingInsight[] {
+export function insights(all: Stringing[], sessions: Session[], { kind, withinLife }: InsightOptions = {}): StringingInsight[] {
   const groups = new Map<string, Stringing[]>()
   for (const st of all) groups.set(bedKey(st), [...(groups.get(bedKey(st)) ?? []), st])
-  return [...groups.values()]
+  const counted = (st: Stringing) => {
+    const life = withinLife ? lifeLimits(st.bed, lifeHoursFor(st, all, sessions)).hours : Infinity
+    return sessionsWithAge(st.id, sessions)
+      .filter((x) => x.atHours < life && (!kind || x.session.kind === kind))
+      .map((x) => x.session)
+  }
+  const rows = [...groups.values()]
     .map((list) => {
-      const ids = new Set(list.map((st) => st.id))
       const latest = list.reduce((a, b) => (b.date > a.date ? b : a))
-      return { stringing: latest, stringings: list, ...summariseSessions(sessions.filter((s) => s.stringingId && ids.has(s.stringingId))) }
+      return { stringing: latest, stringings: list, noise: false, ...summariseSessions(list.flatMap(counted)) }
     })
     .filter((i) => i.sessions > 0)
     .sort((a, b) => (b.avg.overall ?? 0) - (a.avg.overall ?? 0) || b.sessions - a.sessions)
+  const near = (a: StringingInsight, b?: StringingInsight) =>
+    !!b && a.avg.overall !== undefined && b.avg.overall !== undefined && Math.abs(a.avg.overall - b.avg.overall) < NOISE_GAP
+  return rows.map((r, i) => ({ ...r, noise: r.sessions < NOISE_SESSIONS || near(r, rows[i - 1]) || near(r, rows[i + 1]) }))
+}
+
+/** How a session played, 1-5: its overall rating, else the mean of power,
+ *  control and spin. Undefined when none of them is rated. */
+export function sessionScore(s: Session): number | undefined {
+  if (s.ratings.overall !== undefined) return s.ratings.overall
+  const parts = (['power', 'control', 'spin'] as const).map((k) => s.ratings[k]).filter((v): v is number => v !== undefined)
+  return parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : undefined
+}
+
+/** One stringing's sessions in the order played, each with the hours the
+ *  strings had when it started. */
+export function sessionsWithAge(stringingId: string, sessions: Session[]) {
+  const mine = sessions.filter((s) => s.stringingId === stringingId).sort((a, b) => a.date - b.date || a.createdAt - b.createdAt)
+  let h = 0
+  return mine.map((session) => {
+    const atHours = h
+    h += session.minutes / 60
+    return { session, atHours }
+  })
+}
+
+/** Hours of play in each block of a stringing's report. */
+export const REPORT_BLOCK_HOURS = 3
+/** A block this much below the first (out of 5) is strings gone dead. */
+export const DEATH_DROP = 0.7
+/** Fewer rated sessions than this in a block say nothing about it. */
+const MIN_BLOCK_SESSIONS = 2
+
+export interface ReportBlock {
+  /** Hours on the strings where the block starts. */
+  fromHours: number
+  sessions: number
+  /** Mean score of its rated sessions (sessionScore). */
+  score?: number
+}
+
+export interface StringingReport extends SessionSummary {
+  /** Every REPORT_BLOCK_HOURS of play, first to last. */
+  blocks: ReportBlock[]
+  /** Hours on the strings when they went dead, if they did. */
+  deathHours?: number
+  /** The hours the strings had in each session with arm pain. */
+  armPainAtHours: number[]
+}
+
+const mean = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined)
+
+/**
+ * What a stringing's life looked like: hours, sessions, averages, how it
+ * played every 3 hours, and where it went dead: the first block scoring
+ * DEATH_DROP or more below the first one, both with at least two rated
+ * sessions.
+ */
+export function stringingReport(st: Stringing, sessions: Session[]): StringingReport {
+  const aged = sessionsWithAge(st.id, sessions)
+  const blocks: { fromHours: number; sessions: number; scores: number[] }[] = []
+  for (const { session, atHours } of aged) {
+    const i = Math.floor(atHours / REPORT_BLOCK_HOURS)
+    while (blocks.length <= i) blocks.push({ fromHours: blocks.length * REPORT_BLOCK_HOURS, sessions: 0, scores: [] })
+    blocks[i].sessions++
+    const score = sessionScore(session)
+    if (score !== undefined) blocks[i].scores.push(score)
+  }
+  const [first, ...rest] = blocks
+  const dead =
+    first && first.scores.length >= MIN_BLOCK_SESSIONS
+      ? rest.find((b) => b.scores.length >= MIN_BLOCK_SESSIONS && mean(first.scores)! - mean(b.scores)! >= DEATH_DROP - 1e-9)
+      : undefined
+  return {
+    ...summariseSessions(aged.map((x) => x.session)),
+    blocks: blocks.map((b) => ({ fromHours: b.fromHours, sessions: b.sessions, score: mean(b.scores) })),
+    deathHours: dead?.fromHours,
+    armPainAtHours: aged.filter((x) => x.session.armPain).map((x) => x.atHours),
+  }
+}
+
+/** A stringing is finished once its racket has been strung again. */
+export const isFinished = (st: Stringing, all: Stringing[]) =>
+  all.some((o) => o.id !== st.id && ownerKey(o) === ownerKey(st) && (o.date > st.date || (o.date === st.date && o.createdAt > st.createdAt)))
+
+/** The materials of a stringbed, mains then crosses: what sets how long it lasts. */
+export const materialKey = (bed: Stringbed) =>
+  bed.crosses && bed.crosses.material !== bed.mains.material ? `${bed.mains.material}/${bed.crosses.material}` : bed.mains.material
+
+/**
+ * How many hours the player's own strings of this material last: the median
+ * of where their finished stringings of it went dead. Undefined until one
+ * has.
+ */
+export function personalLife(bed: Stringbed, all: Stringing[], sessions: Session[]): number | undefined {
+  const key = materialKey(bed)
+  const deaths = all
+    .filter((st) => materialKey(st.bed) === key && isFinished(st, all))
+    .map((st) => stringingReport(st, sessions).deathHours)
+    .filter((h): h is number => h !== undefined)
+    .sort((a, b) => a - b)
+  if (!deaths.length) return undefined
+  const m = deaths.length >> 1
+  return deaths.length % 2 ? deaths[m] : (deaths[m - 1] + deaths[m]) / 2
+}
+
+/** The hours a stringing should last: the player's own, else their
+ *  personal life for the material; undefined leaves the material's. */
+export const lifeHoursFor = (st: Stringing, all: Stringing[], sessions: Session[]) => st.lifeHours ?? personalLife(st.bed, all, sessions)
+
+export interface NextStringing {
+  /** Mains tension for the next stringing (the crosses keep their gap). */
+  tensionKg: number
+  why: 'keep' | 'best' | 'armPain' | 'noData'
+  /** Share of the sessions at that tension with arm pain, for 'armPain'. */
+  armPainShare: number
+  /** Hours to play it before restringing. */
+  changeAtHours: number
+}
+
+/** The same strings, whatever the tension: their names, else materials. */
+const stringsKey = (bed: Stringbed) =>
+  [bed.mains, bed.crosses ?? bed.mains].map((s) => s.name?.trim().toLowerCase().replace(/\s+/g, ' ') || s.material).join('|')
+
+/**
+ * What to string next on this racket, from its stringings of the same
+ * strings. The tension stays, unless two or more tensions have at least
+ * NOISE_SESSIONS rated sessions each (then the best rated one), or the arm
+ * hurt in a quarter or more of the sessions at it, and more than at any
+ * other tension (then a kilo less). Only sessions on live strings count.
+ */
+export function nextStringing(st: Stringing, all: Stringing[], sessions: Session[]): NextStringing {
+  const same = all.filter((o) => ownerKey(o) === ownerKey(st) && stringsKey(o.bed) === stringsKey(st.bed))
+  const byKg = new Map<number, { scores: number[]; n: number; pain: number }>()
+  for (const o of same) {
+    const life = lifeLimits(o.bed, lifeHoursFor(o, all, sessions)).hours
+    for (const { session, atHours } of sessionsWithAge(o.id, sessions)) {
+      if (atHours >= life) continue
+      const g = byKg.get(o.bed.mains.tensionKg) ?? { scores: [], n: 0, pain: 0 }
+      g.n++
+      if (session.armPain) g.pain++
+      const score = sessionScore(session)
+      if (score !== undefined) g.scores.push(score)
+      byKg.set(o.bed.mains.tensionKg, g)
+    }
+  }
+  const tried = [...byKg].filter(([, g]) => g.scores.length >= NOISE_SESSIONS).sort((a, b) => mean(b[1].scores)! - mean(a[1].scores)!)
+  const current = st.bed.mains.tensionKg
+  let kg = tried.length >= 2 ? tried[0][0] : current
+  let why: NextStringing['why'] = kg !== current ? 'best' : (byKg.get(current)?.n ?? 0) >= NOISE_SESSIONS ? 'keep' : 'noData'
+  const share = (g?: { n: number; pain: number }) => (g?.n ? g.pain / g.n : 0)
+  const here = byKg.get(kg)
+  const elsewhere = Math.max(0, ...[...byKg].filter(([k]) => k !== kg).map(([, g]) => share(g)))
+  const pain = share(here)
+  if (here && here.n >= NOISE_SESSIONS && pain >= 0.25 && pain > elsewhere) {
+    kg -= 1
+    why = 'armPain'
+  }
+  return { tensionKg: kg, why, armPainShare: pain, changeAtHours: Math.round(lifeLimits(st.bed, lifeHoursFor(st, all, sessions)).hours) }
 }
 
 /** Fewer sessions than this say nothing about a setup. */

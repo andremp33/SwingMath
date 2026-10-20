@@ -205,7 +205,12 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
 
 /** Shows children for Pro users; otherwise a card that opens the paywall.
  *  `bare` drops the card when it already sits inside one. */
-export function ProGate({ children, title, reason, bare }: { children: ReactNode; title: string; reason: PaywallReason; bare?: boolean }) {
+/**
+ * Pro content, or for everyone else the lock. With `preview`, the lock sits
+ * over that, blurred: made-up numbers showing what Pro adds, never the
+ * player's own (those stay out of the page).
+ */
+export function ProGate({ children, title, reason, bare, preview }: { children: ReactNode; title: string; reason: PaywallReason; bare?: boolean; preview?: ReactNode }) {
   const pro = useStore(isPro)
   const paywall = usePaywall()
   const t = useT()
@@ -222,6 +227,15 @@ export function ProGate({ children, title, reason, bare }: { children: ReactNode
       </Button>
     </>
   )
+  if (preview)
+    return (
+      <div className="relative">
+        <div aria-hidden inert className="pointer-events-none blur-sm select-none">
+          {preview}
+        </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-bg/60 p-4 text-center">{body}</div>
+      </div>
+    )
   if (bare) return <div className="flex flex-col items-center gap-3 py-6 text-center">{body}</div>
   return <Card className="flex flex-col items-center gap-3 py-10 text-center">{body}</Card>
 }

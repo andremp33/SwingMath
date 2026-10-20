@@ -89,6 +89,10 @@ test.describe('F18 the strings by name', () => {
     await expect(r.getByRole('combobox', { name: 'Corda' })).toHaveValue('Luxilon ALU Power')
     await r.getByRole('button', { name: 'Guardar' }).click()
     await expect(r).toBeHidden()
+    // The strings it replaced get their report.
+    const report = page.getByRole('dialog', { name: 'Relatório da corda' })
+    await expect(report).toContainText('ALU Power 1,25 · 23 kg')
+    await report.getByRole('button', { name: 'Fechar' }).click()
     await logSession(page, 2)
     const best = page.getByRole('region', { name: 'O que joga melhor' }).getByRole('listitem')
     await expect(best).toHaveCount(1)

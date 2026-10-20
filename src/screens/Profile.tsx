@@ -115,7 +115,7 @@ function RacketsGroup() {
         inPlay.map((o) => {
           const st = latestOf(o.id, stringings)
           const r = rackets.find((x) => x.id === o.racketId)
-          const due = st && restringDue(st, sessions, hoursPerWeek)
+          const due = st && restringDue(st, sessions, hoursPerWeek, undefined, stringings)
           const when = !st ? t.profile.noStrings : due! <= Date.now() ? t.profile.restringNow : fmt(t.profile.nextRestring, { date: fmtDate(due!, lang) })
           return (
             <SettingsRow key={o.id} label={o.name} hint={[r && `${r.brand} ${r.model}`, st && bedLabel(st.bed, t, lang), when].filter(Boolean).join(' · ')}>

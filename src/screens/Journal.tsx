@@ -4,14 +4,15 @@ import { Link } from 'react-router-dom'
 import { uid } from '../data/db'
 import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hooks'
 import { useStore } from '../data/store'
-import { insights, latestOf, lifeOf, weeklyHours, type OwnedRacket, type Session, type Stringing } from '../domain/journal'
+import { hoursOn, insights, latestOf, lifeOf, ownerKey, SESSION_KINDS, weeklyHours, type OwnedRacket, type Session, type SessionKind, type Stringing } from '../domain/journal'
 import { DEFAULT_STRINGBED } from '../domain/strings'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
-import { Button, Card, CardTitle, cx, PageTitle } from '../ui/basics'
+import { Button, Card, CardTitle, ChoiceChips, cx, PageTitle } from '../ui/basics'
 import { InfoTip } from '../ui/disclosure'
 import { bedLabel } from '../ui/strings'
 import { LifeBar, OwnedSheet, RacketSheet, SessionList, SessionSheet, StringingSheet } from './JournalSheets'
+import { StringingReportSheet } from './JournalReport'
 import { ProGate } from './Pro'
 
 const DAY = 86_400_000
@@ -35,6 +36,7 @@ export function Journal() {
   const [viewing, setViewing] = useState<OwnedRacket | null>(null)
   const [stringing, setStringing] = useState<Stringing | null>(null)
   const [logging, setLogging] = useState<Session | null>(null)
+  const [report, setReport] = useState<Stringing | null>(null)
   // One clock per visit keeps the page steady while it re-renders.
   const [now] = useState(() => Date.now())
 
@@ -69,7 +71,15 @@ export function Journal() {
   const sheets = (
     <>
       {editingOwned && <OwnedSheet value={editingOwned} onClose={() => setEditingOwned(null)} />}
-      {stringing && <StringingSheet value={stringing} owned={owned ?? []} onClose={() => setStringing(null)} />}
+      {stringing && (
+        <StringingSheet
+          value={stringing}
+          owned={owned ?? []}
+          onClose={() => setStringing(null)}
+          onRestrung={(st) => setReport(previousOf(st, stringings ?? [], sessions ?? []) ?? null)}
+        />
+      )}
+      {report && <StringingReportSheet value={report} stringings={stringings ?? []} sessions={sessions ?? []} owned={owned ?? []} onClose={() => setReport(null)} />}
       {logging && <SessionSheet value={logging} stringings={stringings ?? []} owned={owned ?? []} onClose={() => setLogging(null)} />}
       {viewing && (
         <RacketSheet
@@ -81,6 +91,7 @@ export function Journal() {
           onRestring={(o) => (setViewing(null), setStringing(restring(o)))}
           onEditStringing={(s) => (setViewing(null), setStringing(s))}
           onEditSession={(s) => (setViewing(null), setLogging(s))}
+          onReport={(s) => (setViewing(null), setReport(s))}
         />
       )}
     </>
@@ -154,7 +165,7 @@ export function Journal() {
           {sessions.length === 0 ? (
             <p className="py-3 text-sm text-muted">{t.journal.noSessions}</p>
           ) : (
-            <Timeline sessions={shown} stringings={stringings} owned={owned} now={now} onOpen={setLogging} />
+            <Timeline sessions={shown} stringings={stringings} owned={owned} now={now} onOpen={setLogging} onReport={setReport} />
           )}
         </section>
 
@@ -220,7 +231,7 @@ function RacketCard({
   const rackets = useAllRackets()
   const racket = rackets.find((r) => r.id === owned.racketId)
   const st = latestOf(owned.id, stringings)
-  const life = st ? lifeOf(st, sessions, now) : undefined
+  const life = st ? lifeOf(st, sessions, now, stringings) : undefined
   const days = life ? Math.floor(life.days) : 0
   return (
     <article className="relative flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-4">
@@ -312,34 +323,75 @@ function Summary({ sessions, stringings, owned, now }: { sessions: Session[]; st
   )
 }
 
-/** Sessions grouped by week, newest first, each week with its totals. */
-function Timeline({ sessions, stringings, owned, now, onOpen }: { sessions: Session[]; stringings: Stringing[]; owned: OwnedRacket[]; now: number; onOpen: (s: Session) => void }) {
+/** The stringing a new one replaced on the same racket, if it was played. */
+function previousOf(st: Stringing, all: Stringing[], sessions: Session[]) {
+  const prev = all
+    .filter((o) => o.id !== st.id && ownerKey(o) === ownerKey(st) && (o.date < st.date || (o.date === st.date && o.createdAt < st.createdAt)))
+    .sort((a, b) => b.date - a.date || b.createdAt - a.createdAt)[0]
+  return prev && hoursOn(prev.id, sessions) > 0 ? prev : undefined
+}
+
+/**
+ * Sessions grouped by week, newest first, each week with its totals. A
+ * restring shows in its week, with the report on the strings it replaced.
+ */
+function Timeline({
+  sessions,
+  stringings,
+  owned,
+  now,
+  onOpen,
+  onReport,
+}: {
+  sessions: Session[]
+  stringings: Stringing[]
+  owned: OwnedRacket[]
+  now: number
+  onOpen: (s: Session) => void
+  onReport: (st: Stringing) => void
+}) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const groups = useMemo(() => {
-    const m = new Map<number, Session[]>()
-    for (const s of sessions) {
-      const w = weekStart(s.date)
-      m.set(w, [...(m.get(w) ?? []), s])
+    const m = new Map<number, { sessions: Session[]; restrings: { st: Stringing; prev: Stringing }[] }>()
+    const week = (ms: number) => {
+      const w = weekStart(ms)
+      if (!m.has(w)) m.set(w, { sessions: [], restrings: [] })
+      return m.get(w)!
+    }
+    for (const s of sessions) week(s.date).sessions.push(s)
+    for (const st of stringings) {
+      const prev = previousOf(st, stringings, sessions)
+      if (prev) week(st.date).restrings.push({ st, prev })
     }
     return [...m].sort((a, b) => b[0] - a[0])
-  }, [sessions])
+  }, [sessions, stringings])
   const thisWeek = weekStart(now)
   return (
     <div className="space-y-4">
-      {groups.map(([w, list]) => {
-        const h = list.reduce((a, s) => a + s.minutes / 60, 0)
-        const title = w === thisWeek ? t.journal.thisWeek : w === thisWeek - WEEK ? t.journal.lastWeek : fmt(t.journal.weekOf, { date: fmtDate(w, lang) })
-        return (
-          <div key={w}>
-            <h3 className="num flex items-baseline justify-between gap-2 border-b border-border pb-1.5 text-sm">
-              <span className="font-semibold">{title}</span>
-              <span className="text-muted">{fmt(list.length === 1 ? t.journal.weekSummaryOne : t.journal.weekSummary, { n: list.length, h: fmtNum(h, 1, lang) })}</span>
-            </h3>
-            <SessionList sessions={list} stringings={stringings} owned={owned} onOpen={onOpen} />
-          </div>
-        )
-      })}
+        {groups.map(([w, { sessions: list, restrings }]) => {
+          const h = list.reduce((a, s) => a + s.minutes / 60, 0)
+          const title = w === thisWeek ? t.journal.thisWeek : w === thisWeek - WEEK ? t.journal.lastWeek : fmt(t.journal.weekOf, { date: fmtDate(w, lang) })
+          return (
+            <div key={w}>
+              <h3 className="num flex items-baseline justify-between gap-2 border-b border-border pb-1.5 text-sm">
+                <span className="font-semibold">{title}</span>
+                <span className="text-muted">{fmt(list.length === 1 ? t.journal.weekSummaryOne : t.journal.weekSummary, { n: list.length, h: fmtNum(h, 1, lang) })}</span>
+              </h3>
+              {restrings.map(({ st, prev }) => (
+                <button key={st.id} type="button" onClick={() => onReport(prev)} className="flex w-full items-center gap-3 border-b border-border py-2.5 text-left text-sm">
+                  <RotateCw className="size-4 shrink-0 text-muted" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium">{fmt(t.journal.restrung, { name: owned.find((o) => o.id === st.ownedId)?.name ?? st.label })}</span>
+                    <span className="block text-accent-text">{t.journal.prevReport}</span>
+                  </span>
+                  <ArrowRight className="size-4 shrink-0 text-muted" aria-hidden />
+                </button>
+              ))}
+              <SessionList sessions={list} stringings={stringings} owned={owned} onOpen={onOpen} />
+            </div>
+          )
+        })}
     </div>
   )
 }
@@ -348,9 +400,27 @@ function Timeline({ sessions, stringings, owned, now, onOpen }: { sessions: Sess
 function Insights({ stringings, sessions, owned }: { stringings: Stringing[]; sessions: Session[]; owned: OwnedRacket[] }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
-  const rows = insights(stringings, sessions).filter((r) => r.avg.overall !== undefined)
-  if (rows.length === 0) return <p className="text-sm text-muted">{t.journal.insightsEmpty}</p>
+  const [kind, setKind] = useState<SessionKind | 'all'>('all')
+  // Only sessions on live strings: dead strings say nothing about the strings.
+  const rows = insights(stringings, sessions, { kind: kind === 'all' ? undefined : kind, withinLife: true }).filter((r) => r.avg.overall !== undefined)
+  const filter = (
+    <ChoiceChips
+      label={t.journal.kindFilter}
+      value={kind}
+      onChange={setKind}
+      options={[{ value: 'all' as const, label: t.journal.allKinds }, ...SESSION_KINDS.map((k) => ({ value: k, label: t.journal.kinds[k] }))]}
+    />
+  )
+  if (rows.length === 0)
+    return (
+      <div className="space-y-3">
+        {kind !== 'all' && filter}
+        <p className="text-sm text-muted">{t.journal.insightsEmpty}</p>
+      </div>
+    )
   return (
+    <div className="space-y-4">
+    {filter}
     <ol className="space-y-3">
       {rows.map((r) => {
         // The same strings on several stringings: one row, under their name.
@@ -376,10 +446,18 @@ function Insights({ stringings, sessions, owned }: { stringings: Stringing[]; se
             <p className="num mt-1 text-xs text-muted">
               {many ? fmt(t.journal.stringingsN, { n: r.stringings.length }) : fmtDate(r.stringing.date, lang)} · {r.sessions === 1 ? t.journal.sessionOne : fmt(t.journal.sessions, { n: r.sessions })}
               {r.armPainShare > 0 && <> · {fmt(t.journal.pain, { n: Math.round(r.armPainShare * 100) })}</>}
+              {r.noise && (
+                <>
+                  {' · '}
+                  <span className="font-medium">{t.journal.noise}</span>
+                </>
+              )}
             </p>
           </li>
         )
       })}
     </ol>
+    <p className="text-xs text-muted">{t.journal.withinLife}</p>
+    </div>
   )
 }

@@ -1,4 +1,4 @@
-import { ChevronDown, Pencil, RotateCw, Save, Trash2 } from 'lucide-react'
+import { ChevronDown, FileText, Pencil, RotateCw, Save, Trash2 } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { db, deleteOwned, deleteStringing, saveOwned, saveSession, saveStringing, uid } from '../data/db'
 import { useRacket, useSetups } from '../data/hooks'
@@ -216,7 +216,18 @@ export function OwnedSheet({ value, onClose, initialBed }: { value: OwnedRacket 
 }
 
 /** A stringing of one owned racket: a restring (prefilled from the last) or an edit. */
-export function StringingSheet({ value, owned, onClose }: { value: Stringing | null; owned: OwnedRacket[]; onClose: () => void }) {
+export function StringingSheet({
+  value,
+  owned,
+  onClose,
+  onRestrung,
+}: {
+  value: Stringing | null
+  owned: OwnedRacket[]
+  onClose: () => void
+  /** After a new stringing (not an edit) is saved. */
+  onRestrung?: (st: Stringing) => void
+}) {
   const t = useT()
   const toast = useToast()
   const [draft, setDraft] = useState<Stringing | null>(value)
@@ -229,15 +240,17 @@ export function StringingSheet({ value, owned, onClose }: { value: Stringing | n
   const isEdit = value !== null && value.updatedAt !== value.createdAt
   const set = (p: Partial<Stringing>) => setDraft({ ...draft, ...p })
   const save = async () => {
-    await saveStringing({
+    const saved = {
       ...draft,
       label: o?.name ?? draft.label,
       racketId: o?.racketId ?? draft.racketId,
       notes: draft.notes?.trim() || undefined,
       updatedAt: Date.now() + (isEdit ? 0 : 1),
-    })
+    }
+    await saveStringing(saved)
     toast(t.journal.saved)
     onClose()
+    if (!isEdit) onRestrung?.(saved)
   }
 
   return (
@@ -404,6 +417,7 @@ export function RacketSheet({
   onRestring,
   onEditStringing,
   onEditSession,
+  onReport,
 }: {
   value: OwnedRacket | null
   stringings: Stringing[]
@@ -413,6 +427,7 @@ export function RacketSheet({
   onRestring: (o: OwnedRacket) => void
   onEditStringing: (s: Stringing) => void
   onEditSession: (s: Session) => void
+  onReport: (s: Stringing) => void
 }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
@@ -428,7 +443,7 @@ export function RacketSheet({
   const rated = played.map((s) => s.ratings.overall).filter((v): v is number => v !== undefined)
   const avg = rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : undefined
   const perStringing = new Map(insights(history, sessions).map((i) => [i.stringing.id, i]))
-  const now0 = mine[0] ? lifeOf(mine[0], sessions, now) : undefined
+  const now0 = mine[0] ? lifeOf(mine[0], sessions, now, stringings) : undefined
 
   return (
     <Sheet
@@ -469,17 +484,23 @@ export function RacketSheet({
           <ul className="divide-y divide-border">
             {history.map((s) => {
               const i = perStringing.get(s.id)
+              const h = hoursOn(s.id, sessions)
               return (
-                <li key={s.id}>
-                  <button type="button" onClick={() => onEditStringing(s)} className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm">
+                <li key={s.id} className="flex items-center gap-2">
+                  <button type="button" onClick={() => onEditStringing(s)} className="flex min-w-0 flex-1 items-center justify-between gap-3 py-2.5 text-left text-sm">
                     <span className="min-w-0">
                       <span className="num block font-medium">{bedLabel(s.bed, t, lang)}</span>
                       <span className="num block text-muted">
-                        {fmtDate(s.date, lang)} · {fmt(t.journal.hours, { h: fmtNum(hoursOn(s.id, sessions), 1, lang) })}
+                        {fmtDate(s.date, lang)} · {fmt(t.journal.hours, { h: fmtNum(h, 1, lang) })}
                       </span>
                     </span>
                     {i?.avg.overall !== undefined && <span className="readout shrink-0">{fmtNum(i.avg.overall, 1, lang)}</span>}
                   </button>
+                  {h > 0 && (
+                    <Button size="sm" variant="ghost" icon={FileText} aria-label={fmt(t.journal.reportOf, { date: fmtDate(s.date, lang) })} onClick={() => onReport(s)}>
+                      {t.journal.reportOpen}
+                    </Button>
+                  )}
                 </li>
               )
             })}

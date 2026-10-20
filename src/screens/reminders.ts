@@ -79,7 +79,7 @@ export function useRestringReminders(): number {
   const plan = IS_NATIVE && ready
     ? currentStringings(stringings!)
         .filter((s) => s.ownedId && inPlay(s))
-        .map((s) => ({ s, at: eveningOf(restringDue(s, sessions!, hoursPerWeek, now)) }))
+        .map((s) => ({ s, at: eveningOf(restringDue(s, sessions!, hoursPerWeek, now, stringings!)) }))
         .filter((x) => x.at.getTime() > now)
     : []
   const planKey = plan.map((x) => `${x.s.id}@${x.at.getTime()}`).join()

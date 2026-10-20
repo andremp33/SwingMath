@@ -76,6 +76,11 @@ test.describe('F14 journal', () => {
     await expect(d).toContainText('Blade')
     await d.getByLabel('Tensão').fill('21')
     await d.getByRole('button', { name: 'Guardar' }).click()
+    // The strings it replaced get their report; one session says too little to change.
+    const report = page.getByRole('dialog', { name: 'Relatório da corda' })
+    await expect(report.getByTestId('report-next')).toContainText('Da próxima: 23 kg, trocar às ~18 h')
+    await expect(report.getByTestId('report-next')).toContainText('Ainda não há sessões que cheguem')
+    await report.getByRole('button', { name: 'Fechar' }).click()
     await expect(rackets.getByRole('article')).toHaveCount(1)
     await expect(rackets).toContainText('Poli 21 kg')
     await logSession(page, 60, 5)
@@ -219,5 +224,87 @@ test.describe('F17 phone sections', () => {
     await a11y(page)
     await page.reload()
     await expect(page.getByRole('button', { name: 'Sensação estimada', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  })
+})
+
+const DAY = 86_400_000
+
+/** One racket strung twice: the old strings played 12 hour-long sessions,
+ *  fine for 6 hours, then dead; the arm hurt at 7 h. */
+async function seedDeadStrings(page: Page) {
+  await page.evaluate(async (DAY) => {
+    const dbUrl = '/src/data/db.ts'
+    const racketsUrl = '/src/data/rackets.ts'
+    const { db } = await import(/* @vite-ignore */ dbUrl)
+    const { STOCK_RACKETS } = await import(/* @vite-ignore */ racketsUrl)
+    const now = Date.now()
+    const bed = { mains: { material: 'poly', tensionKg: 23 } }
+    const strung = (id: string, daysAgo: number) => ({ id, ownedId: 'o1', label: 'Aero', racketId: STOCK_RACKETS[0].id, date: now - daysAgo * DAY, bed, createdAt: now - daysAgo * DAY, updatedAt: now - daysAgo * DAY + 1 })
+    await db.owned.put({ id: 'o1', name: 'Aero', racketId: STOCK_RACKETS[0].id, createdAt: now - 60 * DAY, updatedAt: now - 60 * DAY + 1 })
+    await db.stringings.bulkPut([strung('old', 40), strung('new', 3)])
+    const scores = [5, 5, 5, 5, 4, 5, 4, 4, 4, 3, 3, 3]
+    await db.sessions.bulkPut(
+      scores.map((overall, i) => ({ id: `s${i}`, date: now - (38 - 2 * i) * DAY, minutes: 60, kind: 'practice', stringingId: 'old', ratings: { overall }, armPain: i === 7, createdAt: i, updatedAt: i + 1 })),
+    )
+  }, DAY)
+}
+
+test.describe('F14 string report', () => {
+  test('F14-R1 free: restringing opens the old strings’ hours, sessions and how long they lasted; the rest is Pro', async ({ page }) => {
+    await start(page, { path: '/diario' })
+    await addRacket(page, 'Aero')
+    await logSession(page, 120, 4)
+    await logSession(page, 60, 3)
+    await page.getByRole('region', { name: 'As tuas raquetes' }).getByRole('button', { name: 'Encordei' }).click()
+    await page.getByRole('dialog', { name: 'Encordoamento' }).getByRole('button', { name: 'Guardar' }).click()
+    const report = page.getByRole('dialog', { name: 'Relatório da corda' })
+    await expect(report.getByRole('definition').first()).toHaveText('3,0')
+    await expect(report.getByRole('definition').nth(1)).toHaveText('2')
+    await expect(report.getByTestId('report-headline')).toHaveText('Trocaste-a ao fim de 3,0 h')
+    // The Pro part is a lock over made-up numbers, not the player's.
+    await expect(report.getByRole('button', { name: 'Experimentar o Pro' })).toBeVisible()
+    await expect(report.getByTestId('report-next')).toHaveCount(1)
+    await expect(report.getByTestId('report-next')).toContainText('Da próxima: 22 kg')
+    await a11y(page)
+    await report.getByRole('button', { name: 'Fechar' }).click()
+    // The restring stays on the timeline, with the report one tap away.
+    await page.getByRole('region', { name: 'Sessões' }).getByRole('button', { name: /Encordoaste Aero/ }).click()
+    await expect(report.getByTestId('report-headline')).toHaveText('Trocaste-a ao fim de 3,0 h')
+  })
+
+  test('F14-R2 Pro: where the strings went dead, arm pain, and what to string next', async ({ page }) => {
+    await start(page, { path: '/diario', pro: true })
+    await seedDeadStrings(page)
+    await page.getByRole('region', { name: 'As tuas raquetes' }).getByRole('button', { name: 'Aero', exact: true }).click()
+    const sheet = page.getByRole('dialog', { name: 'Aero' })
+    // Only the stringing that was played has a report.
+    await expect(sheet.getByRole('button', { name: /^Relatório da corda de/ })).toHaveCount(1)
+    await sheet.getByRole('button', { name: /^Relatório da corda de/ }).click()
+    const report = page.getByRole('dialog', { name: 'Relatório da corda' })
+    await expect(report.getByTestId('report-headline')).toHaveText('A tua corda durou ~6 h')
+    await expect(report.getByRole('region', { name: 'Como jogou a cada 3 h' }).getByRole('listitem')).toHaveCount(4)
+    await expect(report.getByRole('listitem', { name: '6 a 9 h: 4,0' })).toBeVisible()
+    await expect(report).toContainText('Perdeu rendimento por volta das 6 h de jogo.')
+    await expect(report).toContainText('Dor no braço com 7 h de corda.')
+    // Their own strings last 6 h, so that is when to change them; dead hours do not count.
+    await expect(report.getByTestId('report-next')).toContainText('Da próxima: 23 kg, trocar às ~6 h')
+    await expect(report.getByTestId('report-next')).toContainText('Mantém a tensão')
+    await expect(report.getByRole('button', { name: 'Experimentar o Pro' })).toHaveCount(0)
+    await a11y(page)
+  })
+
+  test('F14-R3 Pro: what plays best by kind of session, with live strings only', async ({ page }) => {
+    await start(page, { path: '/diario', pro: true })
+    await seedDeadStrings(page)
+    const best = page.getByRole('region', { name: 'O que joga melhor' })
+    // The six sessions on live strings: all 5 but one 4.
+    await expect(best.getByRole('listitem')).toHaveCount(1)
+    await expect(best.getByRole('listitem')).toContainText('4,8')
+    await expect(best.getByRole('listitem')).toContainText('6 sessões')
+    await expect(best).toContainText('Só contam as sessões com a corda ainda viva.')
+    await best.getByRole('radiogroup', { name: 'Tipo de sessão' }).getByRole('radio', { name: 'Jogo' }).click()
+    await expect(best).toContainText('Dá notas às sessões')
+    // The free line stays.
+    await expect(page.getByText('O que joga melhor até agora: Aero')).toBeVisible()
   })
 })

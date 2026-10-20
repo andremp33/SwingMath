@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { currentStringings, dueForRestring, hoursOn, insights, latestOf, lifeOf, linkOwned, restringDue, setupResults, weeklyHours, type OwnedRacket, type Session, type Stringing } from './journal'
+import {
+  currentStringings,
+  dueForRestring,
+  hoursOn,
+  insights,
+  isFinished,
+  latestOf,
+  lifeOf,
+  linkOwned,
+  nextStringing,
+  personalLife,
+  restringDue,
+  sessionScore,
+  setupResults,
+  stringingReport,
+  weeklyHours,
+  type OwnedRacket,
+  type Session,
+  type Stringing,
+} from './journal'
 
 const DAY = 86_400_000
 const NOW = Date.UTC(2026, 9, 9)
@@ -167,5 +186,124 @@ describe('restring date', () => {
   it('a long first session is spread over a week, and a spent stringing is due now', () => {
     expect(restringDue(st(1), [session('r', 180, 0)], undefined, NOW)).toBeCloseTo(NOW + 35 * DAY, -3)
     expect(restringDue(st(20), [session('r', 20 * 60, 5)], undefined, NOW)).toBe(NOW)
+  })
+})
+
+/** Hour-long sessions on one stringing, oldest first, rated in turn. */
+const played = (id: string, scores: (number | undefined)[], pain: number[] = []) =>
+  scores.map((overall, i) => ({ ...session(id, 60, 40 - i, overall, pain.includes(i)), id: `${id}-${i}`, createdAt: i }))
+
+describe('stringing report', () => {
+  it('scores a session by its overall rating, else power, control and spin', () => {
+    const s = session('a', 60, 1)
+    expect(sessionScore({ ...s, ratings: { overall: 2, power: 5 } })).toBe(2)
+    expect(sessionScore({ ...s, ratings: { power: 5, control: 3, spin: 4, comfort: 1 } })).toBe(4)
+    expect(sessionScore({ ...s, ratings: { comfort: 4 } })).toBeUndefined()
+  })
+
+  it('adds up the life, block by block, and finds where it went dead', () => {
+    const st = stringing('r', 'x', 45)
+    // 0-3 h: 5; 3-6 h: 4.7 (only 0.3 down); 6-9 h: 4 (1 down); 9-12 h: 3.
+    const s = played('r', [5, 5, 5, 5, 4, 5, 4, 4, 4, 3, 3, 3], [7])
+    const r = stringingReport(st, s)
+    expect(r.hours).toBe(12)
+    expect(r.sessions).toBe(12)
+    expect(r.blocks.map((b) => b.fromHours)).toEqual([0, 3, 6, 9])
+    expect(r.blocks[1].score).toBeCloseTo(14 / 3, 6)
+    expect(r.deathHours).toBe(6)
+    expect(r.armPainAtHours).toEqual([7])
+  })
+
+  it('needs two rated sessions in a block to call it', () => {
+    const st = stringing('r', 'x', 45)
+    expect(stringingReport(st, played('r', [5, undefined, undefined, 2, 2, 2])).deathHours).toBeUndefined()
+    expect(stringingReport(st, played('r', [5, 5, 5, 2, undefined, undefined])).deathHours).toBeUndefined()
+    // Without overall ratings, power, control and spin count.
+    const parts = played('r', [undefined, undefined, undefined, undefined, undefined, undefined]).map((x, i) => ({ ...x, ratings: i < 3 ? { power: 5, control: 5 } : { spin: 3 } }))
+    expect(stringingReport(st, parts).deathHours).toBe(3)
+  })
+})
+
+describe('personal string life', () => {
+  const on = (id: string, daysAgo: number, material: 'poly' | 'multi' = 'poly'): Stringing => ({ ...stringing(id, 'Aero', daysAgo), ownedId: 'o', bed: { mains: { material, tensionKg: 23 } } })
+  const all = [on('s1', 90), on('s2', 60), on('m1', 50, 'multi'), on('now', 5)]
+  // s1 went dead at 6 h, s2 at 9 h; the multi at 3 h; the current one is not finished.
+  const s = [...played('s1', [5, 5, 5, 5, 5, 5, 4, 4, 4]), ...played('s2', [5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 3, 3]), ...played('m1', [5, 5, 5, 3, 3, 3])]
+
+  it('is the median of where the finished stringings of that material went dead', () => {
+    expect(isFinished(all[0], all)).toBe(true)
+    expect(isFinished(all[3], all)).toBe(false)
+    expect(personalLife(all[3].bed, all, s)).toBe(7.5)
+    expect(personalLife({ mains: { material: 'multi', tensionKg: 23 } }, all, s)).toBe(3)
+    expect(personalLife({ mains: { material: 'gut', tensionKg: 23 } }, all, s)).toBeUndefined()
+  })
+
+  it('sets the restring date: the player’s hours first, then their own, then the material’s', () => {
+    const now = all[3]
+    // 7 h a week is an hour a day.
+    expect(restringDue({ ...now, lifeHours: 12 }, s, 7, NOW, all)).toBeCloseTo(now.date + 12 * DAY, -3)
+    expect(restringDue(now, s, 7, NOW, all)).toBeCloseTo(now.date + 7.5 * DAY, -3)
+    expect(restringDue(now, s, 7, NOW)).toBeCloseTo(now.date + 18 * DAY, -3)
+    expect(lifeOf(now, s, NOW, all).hoursLeft).toBeLessThan(7.5)
+  })
+})
+
+describe('next stringing', () => {
+  const at = (id: string, kg: number, daysAgo: number, lifeHours?: number): Stringing => ({
+    ...stringing(id, 'Aero', daysAgo),
+    ownedId: 'o',
+    lifeHours,
+    bed: { mains: { material: 'poly', tensionKg: kg, name: 'RPM Blast' } },
+  })
+
+  it('without enough sessions, keeps the tension and says so', () => {
+    const st = at('a', 23, 10)
+    expect(nextStringing(st, [st], played('a', [4]))).toEqual({ tensionKg: 23, why: 'noData', armPainShare: 0, changeAtHours: 18 })
+    expect(nextStringing(st, [st], played('a', [4, 4, 5])).why).toBe('keep')
+  })
+
+  it('with two tensions tried, the better rated one', () => {
+    const all = [at('a', 21, 60), at('b', 23, 10)]
+    const s = [...played('a', [5, 4, 5]), ...played('b', [3, 3, 4])]
+    expect(nextStringing(all[1], all, s)).toMatchObject({ tensionKg: 21, why: 'best' })
+    // Other strings do not count.
+    const other = [{ ...all[0], bed: { mains: { ...all[0].bed.mains, name: 'Hyper-G' } } }, all[1]]
+    expect(nextStringing(all[1], other, s).why).toBe('keep')
+  })
+
+  it('a kilo less when the arm hurt in a quarter of the sessions, and more than elsewhere', () => {
+    const st = at('a', 23, 10)
+    expect(nextStringing(st, [st], played('a', [4, 4, 4, 4], [2]))).toMatchObject({ tensionKg: 22, why: 'armPain', armPainShare: 0.25 })
+    // It hurt more at another tension: not the tension, then.
+    const all = [at('z', 21, 60), st]
+    const s = [...played('z', [undefined, undefined, undefined, undefined], [0, 1]), ...played('a', [4, 4, 4, 4], [2])]
+    expect(nextStringing(st, all, s)).toMatchObject({ tensionKg: 23, why: 'keep' })
+  })
+
+  it('only sessions on live strings count', () => {
+    const st = at('a', 23, 10, 2)
+    expect(nextStringing(st, [st], played('a', [4, 4, 1, 1], [2, 3]))).toMatchObject({ tensionKg: 23, why: 'noData', changeAtHours: 2 })
+  })
+})
+
+describe('what plays best', () => {
+  it('by kind of session, and only while the strings were alive', () => {
+    const a = { ...stringing('a', 'A', 30), lifeHours: 2 }
+    const s = [...played('a', [5, 5, 1, 1]), { ...session('a', 60, 0, 2), kind: 'match' as const }]
+    expect(insights([a], s)[0].avg.overall).toBe(2.8)
+    expect(insights([a], s, { withinLife: true })[0].avg.overall).toBe(5)
+    expect(insights([a], s, { kind: 'match' })[0]).toMatchObject({ sessions: 1, avg: { overall: 2 } })
+  })
+
+  it('calls it noise with fewer than 3 sessions or less than 0.3 apart', () => {
+    const list = [stringing('a', 'A', 30), stringing('b', 'B', 20), stringing('c', 'C', 10)]
+    const s = [...played('a', [5, 5, 4]), ...played('b', [4, 4, 4]), ...played('c', [3, 3])]
+    expect(insights(list, s).map((r) => [r.stringing.id, r.noise])).toEqual([
+      ['a', false],
+      ['b', false],
+      ['c', true],
+    ])
+    const close = [...played('a', [4, 4, 4, 4]), ...played('b', [4, 4, 4, 5])]
+    expect(insights(list, close).every((r) => r.noise)).toBe(true)
   })
 })
