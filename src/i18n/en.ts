@@ -547,6 +547,8 @@ export const en: Dict = {
     replacedAfter: 'You changed them after {h} h',
     goingOn: '{h} h of play so far',
     reportPro: 'Curve, dead point and next tension',
+    reminderPro: 'Before you restring: Pro tells you what tension to use and when to change.',
+    reminderReport: 'See these strings’ report',
     averages: 'Averages',
     curve: 'How they played every 3 h',
     curveBlock: '{from} to {to} h: {score}',

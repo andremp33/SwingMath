@@ -1,10 +1,12 @@
-import { useStore } from '../data/store'
+import { RotateCw, Sparkles } from 'lucide-react'
+import { isPro, useStore } from '../data/store'
 import { isFinished, nextStringing, REPORT_BLOCK_HOURS, SESSION_RATINGS, stringingReport, type NextStringing, type OwnedRacket, type Session, type Stringing, type StringingReport } from '../domain/journal'
 import { fmt, useT, type Dict } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
+import { Button } from '../ui/basics'
 import { Sheet } from '../ui/overlay'
 import { bedLabel } from '../ui/strings'
-import { ProGate } from './Pro'
+import { ProGate, usePaywall } from './Pro'
 
 // What Pro adds, behind the lock: made-up numbers, never the player's.
 const SAMPLE: StringingReport = {
@@ -91,6 +93,71 @@ export function StringingReportSheet({ value, stringings, sessions, owned, onClo
         <ProGate title={t.journal.reportPro} reason="journal" preview={<ReportDetails report={SAMPLE} next={SAMPLE_NEXT} />}>
           <ReportDetails report={report} next={nextStringing(value, stringings, sessions)} />
         </ProGate>
+      </div>
+    </Sheet>
+  )
+}
+
+/**
+ * A restring reminder, opened from its notification: the racket, its
+ * strings and how long they have played, then the new stringing. With Pro,
+ * the strings' report; otherwise what Pro says about them, blurred (made-up
+ * numbers), and the plans.
+ */
+export function RestringReminderSheet({
+  value,
+  stringings,
+  sessions,
+  owned,
+  onRestring,
+  onReport,
+  onClose,
+}: {
+  value: Stringing
+  stringings: Stringing[]
+  sessions: Session[]
+  owned: OwnedRacket[]
+  onRestring?: () => void
+  onReport: () => void
+  onClose: () => void
+}) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const pro = useStore(isPro)
+  const paywall = usePaywall()
+  const name = owned.find((o) => o.id === value.ownedId)?.name ?? value.label
+  return (
+    <Sheet open onClose={onClose} title={t.journal.notifyTitle}>
+      <div className="space-y-4">
+        <div className="rounded-md bg-surface-2 px-3 py-2.5">
+          <p className="font-semibold">{name}</p>
+          <p className="num text-sm text-muted">
+            {bedLabel(value.bed, t, lang)} · {fmtDate(value.date, lang)}
+          </p>
+        </div>
+        <p className="text-lg font-semibold" data-testid="reminder-headline">
+          {headlineOf(value, stringings, stringingReport(value, sessions), t, lang)}
+        </p>
+        {onRestring && (
+          <Button variant={pro ? 'primary' : 'secondary'} icon={RotateCw} className="w-full" onClick={onRestring}>
+            {t.journal.addStringing}
+          </Button>
+        )}
+        {pro ? (
+          <Button className="w-full" onClick={onReport}>
+            {t.journal.reminderReport}
+          </Button>
+        ) : (
+          <div data-testid="reminder-pro" className="space-y-3 rounded-lg border border-accent/40 bg-accent/5 p-4">
+            <p className="font-semibold">{t.journal.reminderPro}</p>
+            <div aria-hidden inert className="pointer-events-none max-h-28 overflow-hidden blur-sm select-none">
+              <ReportDetails report={SAMPLE} next={SAMPLE_NEXT} />
+            </div>
+            <Button variant="primary" icon={Sparkles} className="w-full" onClick={() => (onClose(), paywall('journal', { asked: true }))}>
+              {t.paywall.seePro}
+            </Button>
+          </div>
+        )}
       </div>
     </Sheet>
   )

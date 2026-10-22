@@ -10,6 +10,7 @@ import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { Avatar } from '../ui/Avatar'
 import { useFreeProEnd } from '../screens/freeProEnd'
+import { useProNudge } from '../screens/proNudge'
 import { useRestringReminders } from '../screens/reminders'
 
 const TABS = [
@@ -49,6 +50,7 @@ export function Shell() {
   const loc = useLocation()
   const due = useRestringReminders()
   useFreeProEnd()
+  useProNudge()
   useEffect(() => {
     scrollToTop('instant')
   }, [loc.pathname])

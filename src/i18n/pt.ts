@@ -545,6 +545,8 @@ export const pt = {
     replacedAfter: 'Trocaste-a ao fim de {h} h',
     goingOn: 'Vai em {h} h de jogo',
     reportPro: 'Curva, ponto de morte e próxima tensão',
+    reminderPro: 'Antes de encordares: o Pro diz-te que tensão pôr e quando trocar.',
+    reminderReport: 'Ver o relatório destas cordas',
     averages: 'Médias',
     curve: 'Como jogou a cada 3 h',
     curveBlock: '{from} a {to} h: {score}',

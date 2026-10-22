@@ -10,6 +10,15 @@ import type { Plan } from './entitlement'
 /** What opened the paywall; its title follows. */
 export type PaywallReason = 'solver' | 'journal' | 'fleet' | 'profile'
 
+const DAY = 86_400_000
+
+/** Days without seeing the paywall before Pro is brought up again. */
+export const NUDGE_DAYS = 7
+
+/** Time to bring Pro up again: a week since the paywall was last open (or
+ *  since the first launch). */
+export const nudgeDue = (lastAt: number | null, now = Date.now()) => lastAt !== null && now - lastAt >= NUDGE_DAYS * DAY
+
 /** Annual first (and chosen), then lifetime, then monthly. */
 export const PLAN_ORDER: Plan[] = ['annual', 'lifetime', 'monthly']
 

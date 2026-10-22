@@ -547,6 +547,8 @@ export const es: Dict = {
     replacedAfter: 'La cambiaste a las {h} h',
     goingOn: 'Lleva {h} h de juego',
     reportPro: 'Curva, punto muerto y próxima tensión',
+    reminderPro: 'Antes de encordar: el Pro te dice qué tensión poner y cuándo cambiar.',
+    reminderReport: 'Ver el informe de estas cuerdas',
     averages: 'Medias',
     curve: 'Cómo jugó cada 3 h',
     curveBlock: '{from} a {to} h: {score}',

@@ -4,7 +4,7 @@ import { useStore } from '../data/store'
 import { currentStringings, dueForRestring, hoursOn, restringDue } from '../domain/journal'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
-import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
+import { IS_NATIVE, IS_PREVIEW, openPath, reminderPath } from '../lib/platform'
 import { bedLabel } from '../ui/strings'
 
 // The app's preview in a browser has no reminders.
@@ -40,15 +40,21 @@ export function eveningOf(ms: number): Date {
   return d
 }
 
+/** `tag`: the stringing the reminder is about; a tap opens it. */
 async function notify(title: string, body: string, tag: string) {
   if (IS_NATIVE) {
     // A stable number per stringing, so a reminder is not shown twice.
-    return import('../lib/native').then((n) => n.notifyNative(numberFor(tag), title, body))
+    return import('../lib/native').then((n) => n.notifyNative(numberFor(tag), title, body, tag))
   }
   // Android Chrome only allows notifications through the service worker.
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => undefined)
-  if (reg) await reg.showNotification(title, { body, icon: `${import.meta.env.BASE_URL}icon-192.png`, tag })
-  else new Notification(title, { body, tag })
+  if (reg) return reg.showNotification(title, { body, icon: `${import.meta.env.BASE_URL}icon-192.png`, tag })
+  const n = new Notification(title, { body, tag })
+  n.onclick = () => {
+    window.focus()
+    openPath(reminderPath(tag))
+    n.close()
+  }
 }
 
 /**
@@ -94,6 +100,7 @@ export function useRestringReminders(): number {
             at,
             title: t.journal.notifyTitle,
             body: fmt(t.journal.notifyDueBody, { label: name(s.ownedId), bed: bedLabel(s.bed, t, lang), date: fmtDate(s.date, lang) }),
+            stringingId: s.id,
           })),
         ),
       )
