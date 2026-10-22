@@ -71,11 +71,12 @@ export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
 export interface Profile {
   /** Playing hours a week, for the restring date until sessions are logged. */
   hoursPerWeek?: number
-  /** What they want to improve (up to 2): picks the community's recipes. */
+  /** What they want to improve (up to 2): the calculator's goal advice and
+   *  the community's default filter. */
   goals?: Goal[]
+  /** Places their swingweight against what is usual (domain/goals.ts). */
   level?: Level
   style?: Style
-  hand?: 'right' | 'left'
 }
 
 interface State {

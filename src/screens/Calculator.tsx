@@ -15,7 +15,7 @@ import { Sheet, useToast } from '../ui/overlay'
 import { MyRacketsRow } from '../ui/MyRackets'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
-import { ComfortCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
+import { ComfortCard, GoalsCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
 import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { InfoTip } from '../ui/disclosure'
@@ -294,6 +294,7 @@ export function Calculator() {
             <FeelRings feel={f} />
             <FeelSource racket={racket} />
           </Card>
+          <div className="order-5 xl:order-none"><GoalsCard racket={racket} result={result} /></div>
           <div className="order-8 xl:order-none"><ComfortCard racket={racket} specs={result} /></div>
           <div className="order-9 xl:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
           <div className="order-10 xl:order-none"><VerifyCard predicted={result} catalog={catalog} /></div>
@@ -417,6 +418,7 @@ const writeOpen = (k: string, v: boolean) => {
 function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: { racket: Racket; result: Specs; base: Specs; feel: Feel; feelBase: Feel; open: boolean; onToggle: () => void }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const goals = useStore((s) => s.profile.goals) ?? []
   return (
     <div className="result-bar fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 backdrop-blur lg:hidden">
       {open && (
@@ -430,7 +432,7 @@ function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: 
           </div>
           <ul aria-label={t.calc.feel} className="grid grid-cols-3 gap-x-2 gap-y-2">
             {FEEL_KEYS.map((k) => (
-              <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} />
+              <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} mark={(goals as string[]).includes(k)} />
             ))}
           </ul>
         </div>
@@ -453,7 +455,7 @@ function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: 
   )
 }
 
-function MiniRing({ label, value, delta, color, lang }: { label: string; value: number; delta: number; color: string; lang: string }) {
+function MiniRing({ label, value, delta, color, lang, mark }: { label: string; value: number; delta: number; color: string; lang: string; mark?: boolean }) {
   const R = 15
   const C = 2 * Math.PI * R
   const d = Math.round(delta)
@@ -481,7 +483,7 @@ function MiniRing({ label, value, delta, color, lang }: { label: string; value: 
         </div>
         <span className={cx('num w-7 pl-1 text-[11px]', d === 0 ? 'text-muted' : 'font-semibold text-text')}>{d === 0 ? '·' : fmtSigned(d, 0, lang)}</span>
       </div>
-      <span className="max-w-full truncate text-[11px] text-muted">{label}</span>
+      <span className={cx('max-w-full truncate text-[11px]', mark ? 'font-semibold text-text' : 'text-muted')}>{label}</span>
     </li>
   )
 }

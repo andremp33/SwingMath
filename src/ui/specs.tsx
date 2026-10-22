@@ -99,7 +99,7 @@ export function SpecTable({ rows, showDelta = true }: { rows: SpecRow[]; showDel
 
 /** One ring: a full circle filled to the value, starting at 12 o'clock. An
  *  optional inner ring shows a second setup for comparison. */
-export function Ring({ value, compare, label, small, color = 'var(--c-bar)' }: { value: number; compare?: number; label: string; small?: boolean; color?: string }) {
+export function Ring({ value, compare, label, small, color = 'var(--c-bar)', mark }: { value: number; compare?: number; label: string; small?: boolean; color?: string; mark?: boolean }) {
   const R = 34
   const C = 2 * Math.PI * R
   const r2 = 25
@@ -146,14 +146,16 @@ export function Ring({ value, compare, label, small, color = 'var(--c-bar)' }: {
           </span>
         </span>
       </div>
-      <span className="text-center text-xs leading-tight text-muted">{label}</span>
+      <span className={cx('text-center text-xs leading-tight', mark ? 'font-semibold text-text' : 'text-muted')}>{label}</span>
     </div>
   )
 }
 
-/** The six feel estimates as rings, like a recovery dashboard. */
+/** The six feel estimates as rings, like a recovery dashboard; the
+ *  player's goals have their names in bold. */
 export function FeelRings({ feel, compare, labels }: { feel: Feel; compare?: Feel; labels?: [string, string] }) {
   const t = useT()
+  const goals = useStore((s) => s.profile.goals) ?? []
   return (
     <div>
       {labels && compare && (
@@ -168,7 +170,7 @@ export function FeelRings({ feel, compare, labels }: { feel: Feel; compare?: Fee
       )}
       <div className="grid grid-cols-3 gap-x-2 gap-y-4">
         {FEEL_KEYS.map((k) => (
-          <Ring key={k} value={feel[k]} compare={compare?.[k]} label={t.feel[k]} color={`var(--c-${k})`} />
+          <Ring key={k} value={feel[k]} compare={compare?.[k]} label={t.feel[k]} color={`var(--c-${k})`} mark={(goals as string[]).includes(k)} />
         ))}
       </div>
     </div>
