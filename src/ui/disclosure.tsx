@@ -54,8 +54,9 @@ export function openCollapsible(id: string) {
   requestAnimationFrame(find)
 }
 
-/** Open on wide screens, closed on phones, until the player chooses. */
-function useOpen(id: string): [boolean, (v: boolean) => void] {
+/** Open on wide screens (from `openFrom` px), closed on phones, until the
+ *  player chooses. */
+function useOpen(id: string, openFrom = 1024): [boolean, (v: boolean) => void] {
   const [open, setOpen] = useState(() => {
     try {
       const saved = localStorage.getItem(KEY(id))
@@ -63,7 +64,7 @@ function useOpen(id: string): [boolean, (v: boolean) => void] {
     } catch {
       // Storage may be unavailable; fall back to the screen size.
     }
-    return typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+    return typeof window !== 'undefined' && window.matchMedia(`(min-width: ${openFrom}px)`).matches
   })
   useEffect(() => {
     const on = (e: Event) => (e as CustomEvent<string>).detail === id && setOpen(true)
@@ -84,8 +85,8 @@ function useOpen(id: string): [boolean, (v: boolean) => void] {
 }
 
 /** A card whose body opens and closes. Closed, it shows a one-line summary. */
-export function CollapsibleCard({ id, title, summary, info, children }: { id: string; title: string; summary?: ReactNode; info?: ReactNode; children: ReactNode }) {
-  const [open, setOpen] = useOpen(id)
+export function CollapsibleCard({ id, title, summary, info, openFrom, children }: { id: string; title: string; summary?: ReactNode; info?: ReactNode; openFrom?: number; children: ReactNode }) {
+  const [open, setOpen] = useOpen(id, openFrom)
   const bodyId = useId()
   return (
     <Card label={title} id={`card-${id}`} className="scroll-mt-20">

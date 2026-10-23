@@ -1,9 +1,9 @@
-import { FunctionsHttpError, type Session } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 import { useEffect } from 'react'
 import { db, ensureOwned } from '../data/db'
 import { useStore, type AccountPro } from '../data/store'
 import { enqueueAll, supabaseRemote, syncOnce, trackChanges } from '../data/sync'
-import { cloudConfigured, getCloud } from '../lib/cloud'
+import { cloudConfigured, getCloud, sessionLikely, whenCloud } from '../lib/cloud'
 import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
 
 /**
@@ -68,8 +68,11 @@ export async function deleteAccount() {
   // deployed (it answers 404), the database deletes the account itself.
   const { error } = await c.functions.invoke('delete-account', { method: 'POST' })
   if (error) {
-    const notThere = error instanceof FunctionsHttpError && (error.context as Response).status === 404
-    if (!notThere) throw new AccountError(error instanceof FunctionsHttpError ? 'invalid' : 'offline')
+    // An HTTP error from the function (by name: the class would load the
+    // whole Supabase library at start).
+    const http = error.name === 'FunctionsHttpError'
+    const notThere = http && (error.context as Response).status === 404
+    if (!notThere) throw new AccountError(http ? 'invalid' : 'offline')
     const fallback = await c.rpc('delete_account')
     if (fallback.error) throw new AccountError(kindOf(fallback.error))
   }
@@ -148,11 +151,13 @@ async function onSession(session: Session | null) {
 /** Mount once: follows the session, syncs after changes and on return. */
 export function useAccountSync() {
   useEffect(() => {
-    const c = getCloud()
-    if (!cloudConfigured() || !c) return
+    if (!cloudConfigured()) return
     trackChanges(db, soon)
     let unsub: (() => void) | undefined
-    c.then((cl) => {
+    // Never signed in here: the library waits until something needs it
+    // (signing in, the community), and the session is followed from then.
+    if (sessionLikely()) void getCloud()
+    whenCloud((cl) => {
       // INITIAL_SESSION arrives first, then sign-ins and sign-outs. Supabase
       // calls made inside this callback can deadlock, so they run after it.
       const { data } = cl.auth.onAuthStateChange((event, session) => {

@@ -25,6 +25,8 @@ export { expect }
 export async function start(page: Page, opts: { pro?: boolean; lang?: 'pt' | 'en' | 'es'; path?: string } = {}) {
   await page.addInitScript(
     ([pro, lang]) => {
+      // The result table, folded on phones, starts open: the specs read it.
+      if (localStorage.getItem('swingmath-open:result') === null) localStorage.setItem('swingmath-open:result', '1')
       if (!localStorage.getItem('swingmath'))
         localStorage.setItem(
           'swingmath',

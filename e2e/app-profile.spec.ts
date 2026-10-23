@@ -66,7 +66,7 @@ test.describe('A02 profile', () => {
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('swingmath')!).state.config.strings.mains.tensionKg)).toBe(21)
   })
 
-  test('A02-H3 each racket shows its strings and when to restring, and logs a restring', async ({ page }) => {
+  test('A02-H3 each racket shows its strings and when to restring', async ({ page }) => {
     await open(page, '/diario')
     await page.getByRole('button', { name: 'Nova raquete' }).first().click()
     const d = page.getByRole('dialog', { name: 'Nova raquete' })
@@ -77,8 +77,9 @@ test.describe('A02 profile', () => {
     const rackets = page.getByRole('region', { name: 'As minhas raquetes' })
     await expect(rackets).toContainText('Aero #1')
     await expect(rackets).toContainText(/Poli 23 kg · encordar a \d/)
-    await rackets.getByRole('button', { name: 'Encordei hoje: Aero #1' }).click()
-    await expect(page.getByText('Aero #1: encordoamento registado')).toBeVisible()
+    // Strung today, as it was added: nothing to log twice (F19-H2 logs a restring).
+    await expect(rackets).toContainText('Encordada hoje')
+    await expect(rackets.getByRole('button', { name: 'Encordei hoje: Aero #1' })).toHaveCount(0)
   })
 
   test('A02-H4 settings are a subpage, with a way back', async ({ page }) => {

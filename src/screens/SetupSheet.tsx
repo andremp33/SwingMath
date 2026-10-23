@@ -1,11 +1,13 @@
 import { ArrowLeft, Printer, Share2 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { POSITIONS } from '../domain/types'
+import { useMemo } from 'react'
+import { emptyLead, POSITIONS } from '../domain/types'
 import { useComputed, useRacket, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
 import { useT } from '../i18n'
 import { extraLabel, fmtNum, racketLabel, tapeCm } from '../lib/format'
 import { IS_NATIVE } from '../lib/platform'
+import { useUnits } from '../lib/units'
 import { encodeShare, shareUrl, siteHost } from '../lib/share'
 import { Button, EmptyState } from '../ui/basics'
 import { Logo } from '../ui/Logo'
@@ -19,20 +21,25 @@ export function SetupSheet() {
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
   const tape = useStore((s) => s.tapeGPer10cm)
+  const u = useUnits()
   const setups = useSetups()
   const setup = setups?.find((s) => s.id === id)
   const racket = useRacket(setup?.racketId)
   const computed = useComputed(setup, racket)
+  // Where the stringer starts: the racket with its strings and grips on, no lead.
+  const bare = useMemo(() => setup && { ...setup, leadG: emptyLead(), extra: [] }, [setup])
+  const unleaded = useComputed(bare, racket)
 
   if (setups === undefined) return null
-  if (!setup || !racket || !computed)
+  if (!setup || !racket || !computed || !unleaded)
     return (
       <div className="p-8">
         <EmptyState icon={SearchX} text={t.errors.notFound} />
       </div>
     )
 
-  const { base, result } = computed
+  const { result } = computed
+  const base = unleaded.result
   const acc = (['strings', 'overgrip', 'leatherGrip', 'dampener'] as const).filter((k) => setup.accessories[k])
   // Grams per position, split in two where the lead goes on both sides, and
   // the centimetres of the player's tape when they gave its weight.
@@ -54,7 +61,7 @@ export function SetupSheet() {
       `${t.acc.title}: ${acc.length ? acc.map((k) => t.acc[k]).join(' · ') : '—'}`,
       ...(setup.strings ? [`${t.strings.title}: ${bedLabel(setup.strings, t, lang)}`] : []),
       '',
-      `${t.setups.sheetResult}: ${fmtNum(result.weightG, 0, lang)} g · ${fmtNum(result.balanceCm * 10, 0, lang)} mm · SW ${fmtNum(result.swingweight, 0, lang)}`,
+      `${t.setups.sheetResult}: ${u.weight(result.weightG)} ${u.weightUnit} · ${u.balance(result.balanceCm)} ${u.balanceUnit} · SW ${fmtNum(result.swingweight, 0, lang)}`,
       ...(setup.notes ? ['', setup.notes] : []),
     ].join('\n')
     void import('../lib/native').then((n) => n.shareText(t.setups.sheet, text, shareUrl(encodeShare(setup, racket))))
@@ -150,13 +157,13 @@ export function SetupSheet() {
             <thead>
               <tr className="text-[#55615a]">
                 <th />
-                <th className="pb-1 pr-4 text-right font-normal">{t.setups.sheetBase}</th>
+                <th className="pb-1 pr-4 text-right font-normal">{t.setups.sheetNoLead}</th>
                 <th className="pb-1 text-right font-normal">{t.calc.result}</th>
               </tr>
             </thead>
             <tbody>
-              {row(t.spec.weight, `${fmtNum(base.weightG, 1, lang)} g`, `${fmtNum(result.weightG, 1, lang)} g`)}
-              {row(t.spec.balance, `${fmtNum(base.balanceCm * 10, 1, lang)} mm`, `${fmtNum(result.balanceCm * 10, 1, lang)} mm · ${fmtNum(result.ptsHL, 1, lang)} ${t.units.pts}`)}
+              {row(t.spec.weight, `${u.weight(base.weightG)} ${u.weightUnit}`, `${u.weight(result.weightG)} ${u.weightUnit}`)}
+              {row(t.spec.balance, `${u.balance(base.balanceCm)} ${u.balanceUnit}`, `${u.balance(result.balanceCm)} ${u.balanceUnit} · ${fmtNum(result.ptsHL, 1, lang)} ${t.units.pts}`)}
               {row(t.spec.swingweight, fmtNum(base.swingweight, 1, lang), fmtNum(result.swingweight, 1, lang))}
               {row(t.spec.twistweight, fmtNum(base.twistweight, 2, lang), fmtNum(result.twistweight, 2, lang))}
               {row(t.spec.recoil, fmtNum(base.recoilWeight, 1, lang), fmtNum(result.recoilWeight, 1, lang))}

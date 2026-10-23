@@ -10,6 +10,8 @@ import { specLine } from '../lib/specLine'
 import { Button, ChoiceChips, NumberField, Toggle } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { DateField } from './JournalSheets'
+import { BalanceField, WeightField } from '../ui/unitFields'
+import { useUnits } from '../lib/units'
 
 /**
  * A measurement saved to one of the player's rackets: from the pendulum
@@ -32,6 +34,7 @@ export function MeasurementSheet({
   onClose: () => void
 }) {
   const t = useT()
+  const units = useUnits()
   const lang = useStore((s) => s.lang)
   const toast = useToast()
   const [racket, setRacket] = useState(ownedId ?? owned[0]?.id)
@@ -80,15 +83,14 @@ export function MeasurementSheet({
             <ChoiceChips label={t.measurements.which} value={racket} onChange={setRacket} options={owned.map((o) => ({ value: o.id, label: o.name }))} />
           ))}
         {fromPendulum ? (
-          <p className="num rounded-md bg-surface-2 px-3 py-2.5 font-semibold">{specLine(m as Measurement, t, lang)}</p>
+          <p className="num rounded-md bg-surface-2 px-3 py-2.5 font-semibold">{specLine(m as Measurement, t, lang, units)}</p>
         ) : (
           <>
             <DateField label={t.journal.date} value={m.date!} onChange={(date) => set({ date })} />
             <div className="grid grid-cols-2 gap-3">
-              <NumberField label={t.spec.weight} unit="g" min={150} max={500} required value={m.weightG} onChange={(weightG) => set({ weightG })} />
-              <NumberField
+              <WeightField label={t.spec.weight} min={150} max={500} required value={m.weightG} onChange={(weightG) => set({ weightG })} />
+              <BalanceField
                 label={t.spec.balance}
-                unit="mm"
                 min={250}
                 max={400}
                 required

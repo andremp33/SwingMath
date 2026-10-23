@@ -16,6 +16,7 @@ import { useToast } from '../ui/overlay'
 import { OwnedSheet } from './JournalSheets'
 import { SetupEditSheet } from './SetupEdit'
 import { ShareSheet } from './ShareSheet'
+import { useUnits } from '../lib/units'
 
 export function Setups() {
   const t = useT()
@@ -153,6 +154,7 @@ function SetupCard({
   const t = useT()
   const nav = useNavigate()
   const lang = useStore((x) => x.lang)
+  const u = useUnits()
   const masses = useStore((x) => x.masses)
   const loadConfig = useStore((x) => x.loadConfig)
   const compare = useStore((x) => x.compare)
@@ -188,7 +190,7 @@ function SetupCard({
           />
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium">{s.name}</h3>
+          <h2 className="truncate font-medium">{s.name}</h2>
           <p className="truncate text-sm text-muted">{racket ? racketLabel(racket) : t.errors.notFound}</p>
         </div>
         <button
@@ -203,7 +205,7 @@ function SetupCard({
       </div>
       {result && (
         <p className="num mt-2 text-sm font-medium">
-          {fmtNum(result.weightG, 0, lang)} g · {fmtNum(result.balanceCm * 10, 0, lang)} mm · SW {fmtNum(result.swingweight, 0, lang)}
+          {u.weight(result.weightG)} {u.weightUnit} · {u.balance(result.balanceCm)} {u.balanceUnit} · SW {fmtNum(result.swingweight, 0, lang)}
         </p>
       )}
       {s.strings && (

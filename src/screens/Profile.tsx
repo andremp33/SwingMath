@@ -205,6 +205,8 @@ function RacketsGroup() {
   const stringings = useStringings()
   const sessions = useSessions()
   const rackets = useAllRackets()
+  // Today, as the page opened: a racket strung today has nothing to log.
+  const [today] = useState(() => new Date().toDateString())
   if (!owned || !stringings || !sessions) return null
   const inPlay = owned.filter((o) => !o.retired)
   return (
@@ -229,30 +231,35 @@ function RacketsGroup() {
                   <p className="text-sm font-medium">{o.name}</p>
                   <p className="mt-0.5 text-sm text-muted">{[r && `${r.brand} ${r.model}`, st && bedLabel(st.bed, t, lang), when].filter(Boolean).join(' · ')}</p>
                 </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={RotateCw}
-                  aria-label={`${t.profile.strungToday}: ${o.name}`}
-                  onClick={async () => {
-                    const now = Date.now()
-                    await saveStringing({
-                      id: uid(),
-                      ownedId: o.id,
-                      label: o.name,
-                      racketId: o.racketId,
-                      setupId: st?.setupId ?? o.setupId,
-                      date: now,
-                      bed: st?.bed ?? useStore.getState().config.strings ?? DEFAULT_STRINGBED,
-                      lifeHours: st?.lifeHours,
-                      createdAt: now,
-                      updatedAt: now,
-                    })
-                    toast(fmt(t.profile.strungSaved, { name: o.name }))
-                  }}
-                >
-                  {t.profile.strungToday}
-                </Button>
+                {st && new Date(st.date).toDateString() === today ? (
+                  // Strung today already: nothing to log twice.
+                  <span className="shrink-0 py-1.5 text-sm text-muted">{t.journal.strungToday}</span>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={RotateCw}
+                    aria-label={`${t.profile.strungToday}: ${o.name}`}
+                    onClick={async () => {
+                      const now = Date.now()
+                      await saveStringing({
+                        id: uid(),
+                        ownedId: o.id,
+                        label: o.name,
+                        racketId: o.racketId,
+                        setupId: st?.setupId ?? o.setupId,
+                        date: now,
+                        bed: st?.bed ?? useStore.getState().config.strings ?? DEFAULT_STRINGBED,
+                        lifeHours: st?.lifeHours,
+                        createdAt: now,
+                        updatedAt: now,
+                      })
+                      toast(fmt(t.profile.strungSaved, { name: o.name }))
+                    }}
+                  >
+                    {t.profile.strungToday}
+                  </Button>
+                )}
               </div>
               {st && (
                 <div className="mt-3">

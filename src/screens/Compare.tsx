@@ -17,6 +17,7 @@ import { extraLabel, fmtNum, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, EmptyState, PageTitle } from '../ui/basics'
 import { monthYear, ProList } from '../ui/ProPicker'
 import type { MatchHandoff } from './Match'
+import { useUnits } from '../lib/units'
 
 export function Compare() {
   const t = useT()
@@ -126,20 +127,25 @@ function Diff({ a, b, digits }: { a?: number; b?: number; digits: number }) {
 export function CompareView({ a, b, below }: { a: CompareSide; b: CompareSide; below?: ReactNode }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const num = (v: number | undefined, digits: number, unit?: string) => (v === undefined ? '—' : `${fmtNum(v, digits, lang)}${unit ? ` ${unit}` : ''}`)
 
+  // Weight and balance in the player's units (oz to hundredths, in to hundredths).
+  const w = (g?: number) => (g === undefined ? undefined : u.toWeight(g))
+  const bal = (cm?: number) => (cm === undefined ? undefined : u.toBalanceMm(cm * 10))
+  const len = (cm?: number) => (cm === undefined ? undefined : u.imperial ? cm / 2.54 : cm)
   const specRows: [string, number | undefined, number | undefined, number, string?][] = [
-    [t.spec.weight, a.specs.weightG, b.specs.weightG, 1, 'g'],
-    [t.spec.balance, a.specs.balanceCm && a.specs.balanceCm * 10, b.specs.balanceCm && b.specs.balanceCm * 10, 1, 'mm'],
+    [t.spec.weight, w(a.specs.weightG), w(b.specs.weightG), u.imperial ? 2 : 1, u.weightUnit],
+    [t.spec.balance, bal(a.specs.balanceCm), bal(b.specs.balanceCm), u.imperial ? 2 : 1, u.balanceUnit],
     [t.spec.swingweight, a.specs.swingweight, b.specs.swingweight, 1],
     [t.spec.twistweight, a.specs.twistweight, b.specs.twistweight, 2],
     [t.spec.recoil, a.specs.recoilWeight, b.specs.recoilWeight, 1],
-    [t.spec.sweetSpot, a.specs.sweetSpotCm, b.specs.sweetSpotCm, 1, 'cm'],
+    [t.spec.sweetSpot, len(a.specs.sweetSpotCm), len(b.specs.sweetSpotCm), 1, u.lengthUnit],
   ]
   const head = (s: CompareSide, i: 0 | 1) => (
     <th scope="col" className="pb-3 pl-2 text-left align-bottom font-normal">
-      <span className="flex items-center gap-1.5 font-bold wrap-anywhere">
-        <Mark i={i} /> {s.title}
+      <span className="flex items-center gap-1.5 font-bold hyphens-auto">
+        <Mark i={i} /> <span className="min-w-0 wrap-anywhere">{s.title}</span>
       </span>
       <span className="block text-xs text-muted wrap-anywhere">{s.racket}</span>
       {s.strings && <span className="block text-xs text-muted wrap-anywhere">{s.strings}</span>}
@@ -161,11 +167,12 @@ export function CompareView({ a, b, below }: { a: CompareSide; b: CompareSide; b
     <div className="space-y-4">
       <Card>
         <table className="num w-full table-fixed text-sm">
+          {/* On a phone the two sides get the room: narrower labels and difference. */}
           <colgroup>
-            <col className="w-[26%]" />
+            <col className="w-[22%] sm:w-[26%]" />
             <col />
             <col />
-            <col className="w-[18%]" />
+            <col className="w-[15%] sm:w-[18%]" />
           </colgroup>
           <thead>
             <tr>

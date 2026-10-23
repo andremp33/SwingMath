@@ -1,4 +1,4 @@
-import { a11y, expect, start, test } from './fixtures'
+import { a11y, expect, resultCard, start, test } from './fixtures'
 
 test.describe('F08 library and custom rackets', () => {
   test('F08-H1 search and filter', async ({ page }) => {
@@ -86,6 +86,20 @@ test.describe('F09 Pro and settings', () => {
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
     await page.getByRole('radio', { name: 'Light' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await a11y(page)
+  })
+
+  test('F09-E5 imperial units: ounces and inches on screen, grams kept', async ({ page }) => {
+    await start(page, { path: '/settings' })
+    await page.getByRole('radio', { name: 'Imperiais (oz, in)' }).click()
+    await page.getByRole('link', { name: 'Calcular' }).first().click()
+    const result = resultCard(page)
+    await expect(result).toContainText('oz')
+    await expect(result).toContainText(/\d+,\d{2}\s*in/)
+    // A measured weight typed in ounces is stored in grams.
+    await page.getByRole('button', { name: 'Usar as minhas medições' }).click()
+    await page.getByLabel('Peso', { exact: true }).fill('11,3')
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('swingmath')!).state.config.measured.weightG)).toBeCloseTo(320.35, 1)
     await a11y(page)
   })
 

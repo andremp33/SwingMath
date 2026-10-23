@@ -4,6 +4,7 @@ import { racketSchema, setupSchema } from '../data/db'
 import type { Feel } from '../domain/feel'
 import type { Racket, Setup, Specs } from '../domain/types'
 import { fmtNum } from './format'
+import type { Units } from './units'
 import { IS_NATIVE, IS_PREVIEW } from './platform'
 
 /** What travels in a share link: the setup and the frame it is built on. */
@@ -182,10 +183,10 @@ function wrap(g: CanvasRenderingContext2D, s: string, x: number, y: number, maxW
 /** The image's rows, as the app shows them: whole grams, millimetres and
  *  swingweight, the twistweight to a tenth, with their units. The recoil
  *  weight stays in the app, so the racket and its lead have the room. */
-export function specRowsText(s: Specs, lang: string, labels: { w: string; b: string; sw: string; tw: string; pts: string; kgcm2: string }): [string, string][] {
+export function specRowsText(s: Specs, lang: string, labels: { w: string; b: string; sw: string; tw: string; pts: string; kgcm2: string }, u: Units): [string, string][] {
   return [
-    [labels.w, `${fmtNum(s.weightG, 0, lang)} g`],
-    [labels.b, `${fmtNum(s.balanceCm * 10, 0, lang)} mm · ${fmtNum(s.ptsHL, 1, lang)} ${labels.pts}`],
+    [labels.w, `${u.weight(s.weightG)} ${u.weightUnit}`],
+    [labels.b, `${u.balance(s.balanceCm)} ${u.balanceUnit} · ${fmtNum(s.ptsHL, 1, lang)} ${labels.pts}`],
     [labels.sw, `${fmtNum(s.swingweight, 0, lang)} ${labels.kgcm2}`],
     [labels.tw, `${fmtNum(s.twistweight, 1, lang)} ${labels.kgcm2}`],
   ]

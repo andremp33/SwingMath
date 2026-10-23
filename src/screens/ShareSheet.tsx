@@ -12,11 +12,13 @@ import { Sheet, useToast } from '../ui/overlay'
 import { PublishSetup } from './Community'
 import { racketFeel } from '../data/racketFeel'
 import { bedLabel } from '../lib/bedLabel'
+import { useUnits } from '../lib/units'
 
 export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: () => void }) {
   const t = useT()
   const toast = useToast()
   const lang = useStore((s) => s.lang)
+  const units = useUnits()
   const racket = useRacket(setup?.racketId)
   const computed = useComputed(setup ?? undefined, racket)
   const [img, setImg] = useState<{ blob: Blob; url: string } | null>(null)
@@ -38,7 +40,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
           tw: t.spec.twistweight,
           pts: t.units.pts,
           kgcm2: t.units.kgcm2,
-        }),
+        }, units),
         feel: FEEL_KEYS.map((k) => [t.feel[k], f[k]]),
         lead:
           `${t.calc.lead}: ` +
@@ -69,7 +71,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
       if (made) URL.revokeObjectURL(made)
       setImg(null)
     }
-  }, [setup, racket, computed, lang, t, link])
+  }, [setup, racket, computed, lang, t, link, units])
 
   const file = img && setup ? new File([img.blob], `${setup.name.replace(/[^\w-]+/g, '_')}.png`, { type: 'image/png' }) : null
   const canShareFile = !!file && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })

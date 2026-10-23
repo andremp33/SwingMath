@@ -79,9 +79,13 @@ export interface Profile {
   style?: Style
 }
 
+/** Grams and millimetres, or ounces and inches (as players in the US read them). */
+export type UnitSystem = 'metric' | 'imperial'
+
 interface State {
   lang: Lang
   theme: Theme
+  units: UnitSystem
   masses: AccessoryMasses
   /** Mass of 10 cm of the player's lead tape, to show how much to cut. */
   tapeGPer10cm?: number
@@ -124,6 +128,7 @@ interface State {
 
   setLang: (l: Lang) => void
   setTheme: (t: Theme) => void
+  setUnits: (u: UnitSystem) => void
   setMasses: (m: Partial<AccessoryMasses>) => void
   setTape: (g: number | undefined) => void
   setLicense: (l: License | null) => void
@@ -155,6 +160,9 @@ interface State {
   setSync: (s: Partial<SyncState>) => void
 }
 
+/** Ounces and inches where the device says the US; grams and mm elsewhere. */
+const browserUnits = (): UnitSystem => (typeof navigator !== 'undefined' && /^en-us$/i.test(navigator.language ?? '') ? 'imperial' : 'metric')
+
 const browserLang = (): Lang => {
   const l = typeof navigator === 'undefined' ? '' : navigator.language?.toLowerCase() ?? ''
   return l.startsWith('pt') ? 'pt' : l.startsWith('es') ? 'es' : 'en'
@@ -165,6 +173,7 @@ export const useStore = create<State>()(
     (set) => ({
       lang: browserLang(),
       theme: 'system',
+      units: browserUnits(),
       masses: DEFAULT_ACCESSORY_MASSES,
       license: null,
       config: defaultConfig(),
@@ -188,6 +197,7 @@ export const useStore = create<State>()(
 
       setLang: (lang) => set({ lang }),
       setTheme: (theme) => set({ theme }),
+      setUnits: (units) => set({ units }),
       setMasses: (m) => set((s) => ({ masses: { ...s.masses, ...m } })),
       setTape: (tapeGPer10cm) => set({ tapeGPer10cm }),
       setLicense: (license) => set({ license }),

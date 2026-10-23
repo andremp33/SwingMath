@@ -69,7 +69,7 @@ const pt = {
   shareOpen: 'Abrir na app',
   shareGet: 'Ainda não tens a app?',
   shareBad: 'Esta ligação não tem um setup válido.',
-  shareSpecs: 'Peso {w} g · equilíbrio {b} mm · swingweight {sw}',
+  shareSpecs: 'Peso {w} · equilíbrio {b} · swingweight {sw}',
   fichaTitle: 'Ficha para o encordoador',
   fichaText: 'Esta ficha está guardada na app de quem a criou. Abre-a na app SwingMath no mesmo telemóvel.',
 }
@@ -143,7 +143,7 @@ const en: LandingDict = {
   shareOpen: 'Open in the app',
   shareGet: 'Do not have the app yet?',
   shareBad: 'This link does not hold a valid setup.',
-  shareSpecs: 'Weight {w} g · balance {b} mm · swingweight {sw}',
+  shareSpecs: 'Weight {w} · balance {b} · swingweight {sw}',
   fichaTitle: 'Stringer’s sheet',
   fichaText: 'This sheet is kept in the app of whoever made it. Open it in the SwingMath app on the same phone.',
 }
@@ -215,7 +215,7 @@ const es: LandingDict = {
   shareOpen: 'Abrir en la app',
   shareGet: '¿Aún no tienes la app?',
   shareBad: 'Este enlace no contiene un setup válido.',
-  shareSpecs: 'Peso {w} g · balance {b} mm · swingweight {sw}',
+  shareSpecs: 'Peso {w} · balance {b} · swingweight {sw}',
   fichaTitle: 'Ficha para el encordador',
   fichaText: 'Esta ficha está guardada en la app de quien la creó. Ábrela en la app SwingMath en el mismo móvil.',
 }

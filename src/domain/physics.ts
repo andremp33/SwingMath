@@ -40,14 +40,20 @@ export interface Point {
   y: number
 }
 
+/** Lead tape sits on the hoop's outer face, about half the hoop's 1 cm wall
+ *  out from the stringbed's edge (the head size is the stringbed's area). */
+export const HOOP_MID_CM = 0.5
+
 /** Where lead sits for each position. y is the distance from the centre line;
  *  10/2h and 3/9h are split equally on both sides, so one |y| covers both. */
 export function leadPositions(g: Geometry): Record<Position, Point> {
+  const a = g.a + HOOP_MID_CM
+  const b = g.b + HOOP_MID_CM
   return {
-    tip: { x: g.L - 1.0, y: 0 },
-    tenTwo: { x: g.xc + g.a * Math.cos(Math.PI / 3), y: g.b * Math.sin(Math.PI / 3) },
-    threeNine: { x: g.xc, y: g.b },
-    throat: { x: g.xc - g.a, y: 0 },
+    tip: { x: g.xc + a, y: 0 },
+    tenTwo: { x: g.xc + a * Math.cos(Math.PI / 3), y: b * Math.sin(Math.PI / 3) },
+    threeNine: { x: g.xc, y: b },
+    throat: { x: g.xc - a, y: 0 },
     handle: { x: 6, y: 0 },
   }
 }
@@ -110,7 +116,7 @@ export function leadElements(g: Geometry, lead: LeadMap): MassElement[] {
 /** A point on the hoop at a clock hour (12 at the tip, clockwise). */
 export function hoopPoint(g: Geometry, hour: number): Point {
   const th = (hour / 12) * 2 * Math.PI
-  return { x: g.xc + g.a * Math.cos(th), y: Math.abs(g.b * Math.sin(th)) }
+  return { x: g.xc + (g.a + HOOP_MID_CM) * Math.cos(th), y: Math.abs((g.b + HOOP_MID_CM) * Math.sin(th)) }
 }
 
 export function extraPoint(g: Geometry, e: ExtraLead): Point {

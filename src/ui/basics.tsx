@@ -494,28 +494,37 @@ export function PageTitle({ children, action, subtitle }: { children: ReactNode;
   )
 }
 
-/** 1 to 5; tapping the chosen value again clears it. */
-export function RatingInput({ label, value, onChange }: { label: string; value?: number; onChange: (v: number | undefined) => void }) {
+/** 1 to 5; tapping the chosen value again clears it. `ends` names the two
+ *  ends of the scale under it, so every player reads it the same way. */
+export function RatingInput({ label, value, onChange, ends }: { label: string; value?: number; onChange: (v: number | undefined) => void; ends?: [string, string] }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-sm">{label}</span>
-      <div role="radiogroup" aria-label={label} className="flex gap-1.5">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <button
-            key={i}
-            type="button"
-            role="radio"
-            aria-checked={value === i}
-            aria-label={`${i}/5`}
-            onClick={() => onChange(value === i ? undefined : i)}
-            className={cx(
-              'num size-9 rounded-full text-sm font-bold transition',
-              value !== undefined && i <= value ? 'bg-accent text-on-accent' : 'bg-surface-2 text-muted hover:text-text',
-            )}
-          >
-            {i}
-          </button>
-        ))}
+    <div className="flex items-start justify-between gap-3">
+      <span className="pt-2 text-sm">{label}</span>
+      <div className="space-y-1">
+        <div role="radiogroup" aria-label={label} className="flex gap-1.5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <button
+              key={i}
+              type="button"
+              role="radio"
+              aria-checked={value === i}
+              aria-label={ends && (i === 1 || i === 5) ? `${i}/5, ${ends[i === 1 ? 0 : 1]}` : `${i}/5`}
+              onClick={() => onChange(value === i ? undefined : i)}
+              className={cx(
+                'num size-9 rounded-full text-sm font-bold transition',
+                value !== undefined && i <= value ? 'bg-accent text-on-accent' : 'bg-surface-2 text-muted hover:text-text',
+              )}
+            >
+              {i}
+            </button>
+          ))}
+        </div>
+        {ends && (
+          <div aria-hidden className="flex justify-between px-1 text-[11px] text-muted">
+            <span>{ends[0]}</span>
+            <span>{ends[1]}</span>
+          </div>
+        )}
       </div>
     </div>
   )

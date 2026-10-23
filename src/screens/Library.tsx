@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Racket, RacketType } from '../domain/types'
 import { saveRacket, uid } from '../data/db'
-import { useAllRackets } from '../data/hooks'
+import { useAllRackets, useOwned } from '../data/hooks'
 import { defaultConfig, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
@@ -14,6 +14,7 @@ import { RacketMap } from '../ui/RacketMap'
 import { useToast } from '../ui/overlay'
 import { useSetupCounts } from './Community'
 import { matchesQuery } from '../ui/RacketPicker'
+import { useUnits } from '../lib/units'
 
 /** Frame types wear the colour of the sensation they lean to. */
 const TYPE_COLOR: Record<RacketType, string> = {
@@ -63,6 +64,10 @@ export function Library() {
     return out
   }, [list, sort])
   const filtered = q || type !== 'all' || brand !== 'all'
+  const owned = useOwned()
+  const mine = owned?.find((o) => !o.retired)
+  const mineFrame = mine && all.find((r) => r.id === mine.racketId)
+  const similar = useMemo(() => (mineFrame ? similarTo(mineFrame, all) : []), [mineFrame, all])
 
   return (
     <>
@@ -121,6 +126,19 @@ export function Library() {
         {fmt(t.library.count, { n: list.length })}
       </p>
 
+      {!filtered && mine && similar.length > 0 && (
+        <section aria-label={fmt(t.library.similar, { name: mine.name })} className="mb-8">
+          <h2 className="mb-3 text-md font-semibold tracking-tight">{fmt(t.library.similar, { name: mine.name })}</h2>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {similar.map((r) => (
+              <li key={r.id} className="flex min-w-0">
+                <RacketCard racket={r} showBrand community={counts.get(r.id)} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {list.length === 0 ? (
         <EmptyState
           icon={SearchX}
@@ -164,10 +182,22 @@ export function Library() {
   )
 }
 
+/** The stock frames that play closest to `r`: weight, balance, swingweight
+ *  and head size, each over what a player can tell apart. */
+function similarTo(r: Racket, all: Racket[], n = 4): Racket[] {
+  const d = (x: Racket) =>
+    Math.hypot((x.weightG - r.weightG) / 8, (x.balanceCm - r.balanceCm) / 0.5, (x.swingweight - r.swingweight) / 8, (x.headSizeSqIn - r.headSizeSqIn) / 4)
+  return all
+    .filter((x) => x.isStock && x.id !== r.id && !(x.brand === r.brand && x.model === r.model))
+    .sort((a, b) => d(a) - d(b))
+    .slice(0, n)
+}
+
 function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showBrand: boolean; community?: number }) {
   const t = useT()
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const loadConfig = useStore((s) => s.loadConfig)
   const onMap = useStore((s) => s.mapIds.includes(r.id))
   const toggleMap = useStore((s) => s.toggleMap)
@@ -191,7 +221,7 @@ function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showB
   const facts = [`${r.headSizeSqIn} in²`, r.pattern, r.ra && `RA ${r.ra}`, Math.abs(r.lengthCm - 68.58) > 0.3 && `${fmtNum(r.lengthCm, 1, lang)} cm`].filter(Boolean)
 
   return (
-    <article className="flex w-full flex-col rounded-lg border border-border bg-surface p-4">
+    <article className="flex w-full flex-col rounded-lg border border-border bg-surface p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs text-muted">
@@ -219,19 +249,23 @@ function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showB
         )}
       </div>
 
-      <dl className="num my-3 grid grid-cols-3 gap-2 border-y border-border py-3">
+      {/* Phones: the three numbers on one line, so a screen holds more rackets. */}
+      <p className="num mt-1 text-sm sm:hidden">
+        {u.weight(r.weightG)} {u.weightUnit} · {u.balance(r.balanceCm)} {u.balanceUnit} · SW {fmtNum(r.swingweight, 0, lang)}
+      </p>
+      <dl className="num my-3 hidden grid-cols-3 gap-2 border-y border-border py-3 sm:grid">
         <div>
           <dt className="text-xs text-muted">{t.spec.weight}</dt>
           <dd className="readout text-lg">
-            {fmtNum(r.weightG, 0, lang)}
-            <span className="ml-0.5 text-xs font-normal text-muted">g</span>
+            {u.weight(r.weightG)}
+            <span className="ml-0.5 text-xs font-normal text-muted">{u.weightUnit}</span>
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted">{t.spec.balance}</dt>
           <dd className="readout text-lg">
-            {fmtNum(r.balanceCm * 10, 0, lang)}
-            <span className="ml-0.5 text-xs font-normal text-muted">mm</span>
+            {u.balance(r.balanceCm)}
+            <span className="ml-0.5 text-xs font-normal text-muted">{u.balanceUnit}</span>
           </dd>
           <dd className="text-xs text-muted">
             {fmtNum(Math.abs(pts), 1, lang)} {pts >= 0 ? t.units.pts : t.units.ptsHH}
@@ -243,7 +277,7 @@ function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showB
         </div>
       </dl>
 
-      <p className="num mb-3 text-sm text-muted">{facts.join(' · ')}</p>
+      <p className="num mb-2 text-sm text-muted sm:mb-3">{facts.join(' · ')}</p>
 
       <div className="mt-auto flex items-center gap-1">
         <Button variant="secondary" size="sm" icon={Calculator} className={community ? undefined : 'mr-auto'} onClick={openInCalc}>

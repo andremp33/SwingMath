@@ -15,6 +15,7 @@ import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { LegalBody } from './Legal'
 import { bedLabel } from '../lib/bedLabel'
+import { useUnits } from '../lib/units'
 
 /**
  * The website: the store apps' shop window. What the app does, screenshots,
@@ -336,6 +337,7 @@ export function SharePreview() {
   const ta = useT()
   const lang = useStore((s) => s.lang)
   const masses = useStore((s) => s.masses)
+  const units = useUnits()
   const open = useOpenApp(`s/${data}`)
   const shared = decodeShare(data)
   const racket = shared && (STOCK_RACKETS.find((r) => r.id === shared.racket.id) ?? { ...shared.racket, createdAt: 0, updatedAt: 0 })
@@ -350,7 +352,7 @@ export function SharePreview() {
             {racket.brand} {racket.model}
             {racket.year ? ` (${racket.year})` : ''}
           </p>
-          <p className="num text-muted">{fmt(t.shareSpecs, { w: fmtNum(result.weightG, 0, lang), b: fmtNum(result.balanceCm * 10, 0, lang), sw: fmtNum(result.swingweight, 0, lang) })}</p>
+          <p className="num text-muted">{fmt(t.shareSpecs, { w: `${units.weight(result.weightG)} ${units.weightUnit}`, b: `${units.balance(result.balanceCm)} ${units.balanceUnit}`, sw: fmtNum(result.swingweight, 0, lang) })}</p>
           <p className="num text-muted">{leadParts(shared.setup, ta, lang).join(' · ') || ta.setups.noLead}</p>
           {shared.setup.strings && (
             <p className="num text-muted">

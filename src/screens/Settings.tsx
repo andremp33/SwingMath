@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core'
 import { useRef, useState } from 'react'
 import { signOut } from '../app/account'
 import { deleteAll, exportAll, importAll } from '../data/db'
-import { accountProActive, isPro, useStore, type Theme } from '../data/store'
+import { accountProActive, isPro, useStore, type Theme, type UnitSystem } from '../data/store'
 import { freeProActive } from '../domain/trial'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, loadLang, useT, type Lang } from '../i18n'
@@ -39,6 +39,17 @@ export function Settings() {
                 { value: 'pt', label: 'Português' },
                 { value: 'en', label: 'English' },
                 { value: 'es', label: 'Español' },
+              ]}
+            />
+          </SettingsRow>
+          <SettingsRow label={t.settings.units} stack>
+            <Segmented<UnitSystem>
+              label={t.settings.units}
+              value={s.units}
+              onChange={s.setUnits}
+              options={[
+                { value: 'metric', label: t.settings.unitOptions.metric },
+                { value: 'imperial', label: t.settings.unitOptions.imperial },
               ]}
             />
           </SettingsRow>
