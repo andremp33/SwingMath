@@ -72,7 +72,7 @@ test('PC03 in compare mode, the second place can be a pro', async ({ page }) => 
 test('PC04 “How to get there” opens Igualar with both sides filled in; Igualar counts the plan', async ({ page }) => {
   await setupAndPro(page, /Novak Djokovic/)
   await page.getByRole('button', { name: 'Como chegar lá' }).click()
-  await expect(page.getByRole('heading', { name: 'Igualar' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Planear' })).toBeVisible()
   const from = page.getByRole('region', { name: 'De onde partes' })
   await expect(from.getByLabel('Ponto de partida').locator('option:checked')).toHaveText('Torneio')
   const to = page.getByRole('region', { name: 'Onde queres chegar' })

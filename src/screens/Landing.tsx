@@ -5,7 +5,7 @@ import { STOCK_RACKETS } from '../data/rackets'
 import { useStore } from '../data/store'
 import { compute } from '../domain/physics'
 import type { Lang } from '../i18n'
-import { fmt, useT } from '../i18n'
+import { fmt, loadLang, useT } from '../i18n'
 import { useLanding } from '../i18n/landing'
 import { useLegal } from '../i18n/legal'
 import { decodeShare } from '../lib/share'
@@ -50,7 +50,7 @@ function LangSwitch() {
           type="button"
           role="radio"
           aria-checked={lang === l}
-          onClick={() => setLang(l)}
+          onClick={() => void loadLang(l).then(() => setLang(l))}
           className={cx('rounded-md px-2 py-1 uppercase', lang === l ? 'font-medium text-text underline decoration-accent decoration-2 underline-offset-[6px]' : 'text-muted hover:text-text')}
         >
           {l}

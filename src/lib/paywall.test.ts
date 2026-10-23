@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { pt } from '../i18n/pt'
-import { offerCopy, orderPlans, savingPct } from './paywall'
+import { nudgeDue, offerCopy, orderPlans, savingPct } from './paywall'
 
 const t = pt.paywall
 
+const DAY = 86_400_000
+
 describe('paywall', () => {
+  it('brings Pro up again a week after the paywall was last open, not before', () => {
+    const now = 100 * DAY
+    expect(nudgeDue(null, now)).toBe(false)
+    expect(nudgeDue(now - 6.9 * DAY, now)).toBe(false)
+    expect(nudgeDue(now - 7 * DAY, now)).toBe(true)
+    expect(nudgeDue(now - 40 * DAY, now)).toBe(true)
+  })
+
   it('orders the plans annual, lifetime, monthly, whatever the store sends', () => {
     const plans = [{ plan: 'monthly' as const }, { plan: 'lifetime' as const }, { plan: 'annual' as const }]
     expect(orderPlans(plans).map((p) => p.plan)).toEqual(['annual', 'lifetime', 'monthly'])

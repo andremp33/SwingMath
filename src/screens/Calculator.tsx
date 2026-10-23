@@ -1,5 +1,5 @@
-import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Gauge, Info, Plus, RotateCcw, Ruler, Save, Scale, X } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { geometry } from '../domain/physics'
 import { DEFAULT_STRINGBED } from '../domain/strings'
@@ -7,15 +7,15 @@ import { emptyLead, POSITIONS, type Position, type Racket, type Setup, type Spec
 import { saveOwned, saveSetup, saveStringing, uid } from '../data/db'
 import { useComputed, useOwned, useRacket, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
-import { fmt, useT } from '../i18n'
+import { fmt, useT, type Dict } from '../i18n'
 import { fmtNum, fmtSigned, LOCALE } from '../lib/format'
-import { Badge, Button, Card, CardTitle, ChoiceChips, cx, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
+import { Badge, Button, Card, CardTitle, ChoiceChips, cx, IconButton, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
-import { MyRacketsRow } from '../ui/MyRackets'
+import { MyRacketsRow, useActiveOwned } from '../ui/MyRackets'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
-import { ComfortCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
+import { ComfortCard, GoalsCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
 import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { InfoTip } from '../ui/disclosure'
@@ -47,6 +47,11 @@ export function Calculator() {
   const addExtra = useStore((s) => s.addExtra)
   const [infoOpen, setInfoOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
+  const mine = useActiveOwned()
+  // The first launch's tip, by the player's goal, until they try it or close it.
+  const [params, setParams] = useSearchParams()
+  const tip = params.get('dica')
+  const closeTip = () => setParams({}, { replace: true })
 
   const [accOpen, setAccOpen] = useState(false)
   const playing = noLead?.result ?? computed?.base
@@ -106,11 +111,12 @@ export function Calculator() {
         <div className="contents xl:block xl:space-y-4">
           <Card className="order-1 border-t-0 pt-0 xl:order-none">
             <div className="space-y-4">
+              {/* The player's own rackets first; the picker then names their model. */}
+              <MyRacketsRow />
               <div>
-                <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
+                <RacketPicker label={mine ? fmt(t.calc.modelOf, { name: mine.name }) : t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
                 <CommunityLink racket={racket} />
               </div>
-              <MyRacketsRow />
               {config.baseMode === 'reference' ? (
                 <div>
                   <div className="mb-1 flex items-center justify-between">
@@ -219,7 +225,19 @@ export function Calculator() {
             <CardTitle action={<span className="text-sm text-muted">{t.calc.totalLead}: <span className="readout text-text">{fmtNum(totalLead, 1, lang)} g</span></span>}>
               {t.calc.lead}
             </CardTitle>
-            <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
+            {tip && tip in t.onboarding.tips ? (
+              <TipCard
+                goal={tip as keyof typeof t.onboarding.tips}
+                onTry={(p, g) => {
+                  setLead(p, Math.max(config.leadG[p], g))
+                  closeTip()
+                  focusSlider(p)
+                }}
+                onClose={closeTip}
+              />
+            ) : (
+              <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
+            )}
             <div className="@container"><div className="grid grid-cols-1 items-center gap-4 @lg:grid-cols-[150px_minmax(0,1fr)]">
               <RacketDiagram
                 sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
@@ -294,6 +312,7 @@ export function Calculator() {
             <FeelRings feel={f} />
             <FeelSource racket={racket} />
           </Card>
+          <div className="order-5 xl:order-none"><GoalsCard racket={racket} result={result} /></div>
           <div className="order-8 xl:order-none"><ComfortCard racket={racket} specs={result} /></div>
           <div className="order-9 xl:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
           <div className="order-10 xl:order-none"><VerifyCard predicted={result} catalog={catalog} /></div>
@@ -302,7 +321,7 @@ export function Calculator() {
 
       {/* Phones: the result (and, opened, the feel) follows you while you move the sliders. */}
       <ResultBar racket={racket} result={result} base={play} feel={f} feelBase={racketFeel(racket, noLead?.result ?? result, config.strings, masses)} open={barOpen} onToggle={toggleBar} />
-      <div className={cx('lg:hidden', barOpen ? 'h-44' : 'h-12')} />
+      <div className={cx('lg:hidden', barOpen ? 'h-52' : 'h-20')} />
 
       <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
       <AddPositionSheet
@@ -312,6 +331,36 @@ export function Calculator() {
       />
       <SaveSetupSheet open={saveOpen} onClose={() => setSaveOpen(false)} count={setups?.length ?? 0} />
     </>
+  )
+}
+
+/** What each goal's tip has the player try: grams (all of them, both sides
+ *  where there are two) at one position. Spin and comfort are the strings'. */
+const TRY_LEAD: Partial<Record<string, [Position, number]>> = {
+  stability: ['threeNine', 4],
+  control: ['threeNine', 4],
+  power: ['tip', 2],
+  manoeuvrability: ['handle', 5],
+}
+
+/** The first launch's tip, by the player's first goal, with the lead to try
+ *  in one tap: the numbers below then show what it did. */
+function TipCard({ goal, onTry, onClose }: { goal: keyof Dict['onboarding']['tips']; onTry: (p: Position, g: number) => void; onClose: () => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const lead = TRY_LEAD[goal]
+  return (
+    <div role="note" className="mb-3 flex items-start gap-2 rounded-md bg-surface-2 py-2.5 pl-3 pr-1.5 text-sm">
+      <div className="min-w-0 flex-1 space-y-2">
+        <p>{t.onboarding.tips[goal]}</p>
+        {lead && (
+          <Button size="sm" variant="primary" onClick={() => onTry(lead[0], lead[1])}>
+            {fmt(t.calc.tryLead, { g: fmtNum(lead[1], 0, lang), pos: t.pos[lead[0]] })}
+          </Button>
+        )}
+      </div>
+      <IconButton icon={X} label={t.common.close} onClick={onClose} />
+    </div>
   )
 }
 
@@ -412,11 +461,14 @@ const writeOpen = (k: string, v: boolean) => {
   }
 }
 
-/** The bar above the tabs: the four numbers; a tap opens the feel above
- *  them, with how much the lead moved each one. */
+/** The bar above the tabs: the four numbers, and under them the feel the
+ *  player cares about (their goals, else power, control and spin); a tap
+ *  there opens all six above, with how much the lead moved each one. */
 function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: { racket: Racket; result: Specs; base: Specs; feel: Feel; feelBase: Feel; open: boolean; onToggle: () => void }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const goals = useStore((s) => s.profile.goals) ?? []
+  const keys = [...new Set([...FEEL_KEYS.filter((k) => (goals as string[]).includes(k)), 'power', 'control', 'spin'] as const)].slice(0, 3)
   return (
     <div className="result-bar fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 backdrop-blur lg:hidden">
       {open && (
@@ -430,30 +482,49 @@ function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: 
           </div>
           <ul aria-label={t.calc.feel} className="grid grid-cols-3 gap-x-2 gap-y-2">
             {FEEL_KEYS.map((k) => (
-              <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} />
+              <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} mark={(goals as string[]).includes(k)} />
             ))}
           </ul>
         </div>
       )}
+      <div className="num mx-auto flex w-full max-w-lg items-center pt-2 text-center text-xs">
+        <Mini label={t.spec.weight} unit={t.units.g} value={fmtNum(result.weightG, 0, lang)} delta={result.weightG - base.weightG} lang={lang} />
+        <Mini label={t.spec.balance} unit={t.units.mm} value={fmtNum(result.balanceCm * 10, 0, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
+        <Mini label="SW" unit={t.units.kgcm2} value={fmtNum(result.swingweight, 0, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
+        <Mini label="TW" unit={t.units.kgcm2} value={fmtNum(result.twistweight, 1, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} lang={lang} />
+      </div>
       <button
         type="button"
         aria-expanded={open}
         aria-controls="result-bar-feel"
         aria-label={t.calc.feel}
         onClick={onToggle}
-        className="num mx-auto flex w-full max-w-lg items-center py-2 text-center text-xs"
+        className="mx-auto mt-1 flex w-full max-w-lg items-center gap-2 border-t border-border/60 py-1.5 text-xs"
       >
-        <Mini label={t.spec.weight} unit={t.units.g} value={fmtNum(result.weightG, 0, lang)} delta={result.weightG - base.weightG} lang={lang} />
-        <Mini label={t.spec.balance} unit={t.units.mm} value={fmtNum(result.balanceCm * 10, 0, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
-        <Mini label="SW" unit={t.units.kgcm2} value={fmtNum(result.swingweight, 0, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
-        <Mini label="TW" unit={t.units.kgcm2} value={fmtNum(result.twistweight, 1, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} lang={lang} />
+        <Gauge className="size-4 shrink-0 text-muted" aria-hidden />
+        <span className="flex min-w-0 flex-1 justify-around gap-2">
+          {open ? (
+            <span className="font-medium text-muted">{t.calc.feel}</span>
+          ) : (
+            keys.map((k) => {
+              const d = Math.round(f[k] - feelBase[k])
+              return (
+                <span key={k} className="num min-w-0 truncate">
+                  <span className="text-muted">{t.feel[k]} </span>
+                  <span className="font-semibold">{Math.round(f[k])}</span>
+                  {d !== 0 && <span className="ml-0.5 font-semibold text-accent-text">{fmtSigned(d, 0, lang)}</span>}
+                </span>
+              )
+            })
+          )}
+        </span>
         <ChevronUp className={cx('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
     </div>
   )
 }
 
-function MiniRing({ label, value, delta, color, lang }: { label: string; value: number; delta: number; color: string; lang: string }) {
+function MiniRing({ label, value, delta, color, lang, mark }: { label: string; value: number; delta: number; color: string; lang: string; mark?: boolean }) {
   const R = 15
   const C = 2 * Math.PI * R
   const d = Math.round(delta)
@@ -481,7 +552,7 @@ function MiniRing({ label, value, delta, color, lang }: { label: string; value: 
         </div>
         <span className={cx('num w-7 pl-1 text-[11px]', d === 0 ? 'text-muted' : 'font-semibold text-text')}>{d === 0 ? '·' : fmtSigned(d, 0, lang)}</span>
       </div>
-      <span className="max-w-full truncate text-[11px] text-muted">{label}</span>
+      <span className={cx('max-w-full truncate text-[11px]', mark ? 'font-semibold text-text' : 'text-muted')}>{label}</span>
     </li>
   )
 }

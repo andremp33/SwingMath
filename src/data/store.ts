@@ -71,11 +71,12 @@ export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
 export interface Profile {
   /** Playing hours a week, for the restring date until sessions are logged. */
   hoursPerWeek?: number
-  /** What they want to improve (up to 2): picks the community's recipes. */
+  /** What they want to improve (up to 2): the calculator's goal advice and
+   *  the community's default filter. */
   goals?: Goal[]
+  /** Places their swingweight against what is usual (domain/goals.ts). */
   level?: Level
   style?: Style
-  hand?: 'right' | 'left'
 }
 
 interface State {
@@ -105,6 +106,9 @@ interface State {
   freeProUntil: number | null
   /** The player was shown that the free Pro ended. */
   freeProEndTold: boolean
+  /** Last time the paywall was open, asked or not (ms): Pro is brought up
+   *  again a while after (lib/paywall.ts); null until the first launch. */
+  proNudgeAt: number | null
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
@@ -138,6 +142,7 @@ interface State {
   setLastPro: (id: string) => void
   setFreeProUntil: (until: number | null) => void
   markFreeProEndTold: () => void
+  setProNudgeAt: (at: number) => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
@@ -171,6 +176,7 @@ export const useStore = create<State>()(
       lastProId: null,
       freeProUntil: null,
       freeProEndTold: false,
+      proNudgeAt: null,
       reminded: [],
       profile: {},
       onboarded: false,
@@ -205,6 +211,7 @@ export const useStore = create<State>()(
       setLastPro: (lastProId) => set({ lastProId }),
       setFreeProUntil: (freeProUntil) => set({ freeProUntil }),
       markFreeProEndTold: () => set({ freeProEndTold: true }),
+      setProNudgeAt: (proNudgeAt) => set({ proNudgeAt }),
       setAccount: (account) => set({ account }),
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),

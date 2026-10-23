@@ -5,6 +5,7 @@ import { Share } from '@capacitor/share'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { getCloud } from './cloud'
+import { openPath, reminderPath } from './platform'
 
 /** Address the sign-in email's link opens in the store apps. */
 export const APP_AUTH_URL = 'app.swingmath://auth'
@@ -18,7 +19,18 @@ export async function initNative() {
   }
   paintStatusBar()
   new MutationObserver(paintStatusBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-  SplashScreen.hide().catch(() => {})
+  // The splash stays until the first screen has something on it (a screen
+  // still loading shows nothing), or 3 s at the most.
+  const root = document.getElementById('root')!
+  const hide = () => {
+    painted.disconnect()
+    clearTimeout(late)
+    SplashScreen.hide().catch(() => {})
+  }
+  const painted = new MutationObserver(() => root.innerText.trim() && hide())
+  const late = setTimeout(hide, 3000)
+  if (root.innerText.trim()) hide()
+  else painted.observe(root, { childList: true, subtree: true, characterData: true })
   void import('./purchases')
     .then((m) => m.initPurchases())
     .catch(() => {})
@@ -39,8 +51,7 @@ export async function initNative() {
   App.addListener('appUrlOpen', async ({ url }) => {
     const page = /^app\.swingmath:\/\/((?:s|ficha)\/[^?#]+)/.exec(url)?.[1]
     if (page) {
-      history.pushState({}, '', `/${page}`)
-      dispatchEvent(new PopStateEvent('popstate'))
+      openPath(`/${page}`)
       return
     }
     if (!url.startsWith(APP_AUTH_URL)) return
@@ -52,15 +63,20 @@ export async function initNative() {
     if (code) await cloud.auth.exchangeCodeForSession(code)
     else if (hash.get('access_token') && hash.get('refresh_token'))
       await cloud.auth.setSession({ access_token: hash.get('access_token')!, refresh_token: hash.get('refresh_token')! })
-    history.pushState({}, '', '/perfil')
-    dispatchEvent(new PopStateEvent('popstate'))
+    openPath('/perfil')
+  })
+
+  // A tap on a restring reminder opens it in the journal.
+  LocalNotifications.addListener('localNotificationActionPerformed', ({ notification }) => {
+    const id = (notification.extra as { stringingId?: string } | undefined)?.stringingId
+    if (id) openPath(reminderPath(id))
   })
 }
 
-export async function notifyNative(id: number, title: string, body: string) {
+export async function notifyNative(id: number, title: string, body: string, stringingId: string) {
   const { display } = await LocalNotifications.checkPermissions()
   if (display !== 'granted') return
-  await LocalNotifications.schedule({ notifications: [{ id, title, body }] })
+  await LocalNotifications.schedule({ notifications: [{ id, title, body, extra: { stringingId } }] })
 }
 
 export async function nativeNotifyPermission(ask: boolean): Promise<NotificationPermission> {
@@ -78,10 +94,10 @@ export async function shareFile(name: string, text: string, title: string) {
 
 /** The restring reminders, at their dates: whatever was scheduled before is
  *  replaced, so a new stringing or a retired racket drops its old date. */
-export async function scheduleRestrings(items: { id: number; at: Date; title: string; body: string }[]) {
+export async function scheduleRestrings(items: { id: number; at: Date; title: string; body: string; stringingId: string }[]) {
   const { display } = await LocalNotifications.checkPermissions()
   if (display !== 'granted') return
   const { notifications } = await LocalNotifications.getPending()
   if (notifications.length) await LocalNotifications.cancel({ notifications: notifications.map((n) => ({ id: n.id })) })
-  if (items.length) await LocalNotifications.schedule({ notifications: items.map((i) => ({ id: i.id, title: i.title, body: i.body, schedule: { at: i.at, allowWhileIdle: true } })) })
+  if (items.length) await LocalNotifications.schedule({ notifications: items.map((i) => ({ id: i.id, title: i.title, body: i.body, schedule: { at: i.at, allowWhileIdle: true }, extra: { stringingId: i.stringingId } })) })
 }

@@ -13,28 +13,57 @@ test.describe('A02 profile', () => {
   test('A02-H1 the avatar opens the profile', async ({ page }) => {
     await open(page)
     await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
-    await page.getByRole('link', { name: 'Perfil' }).click()
+    await page.getByRole('link', { name: 'Perfil', exact: true }).click()
     await expect(page).toHaveURL(/\/perfil$/)
-    await expect(page.getByText('Sem conta: os dados ficam neste telemóvel.')).toBeVisible()
-    for (const h of ['O teu jogo', 'As minhas raquetes', 'Plano', 'Definições', 'Ajuda e legal']) await expect(page.getByRole('heading', { name: h })).toBeVisible()
+    await expect(page.getByText('Dados neste telemóvel')).toBeVisible()
+    for (const h of ['O teu jogo', 'As minhas raquetes', 'Plano', 'Mais']) await expect(page.getByRole('heading', { name: h })).toBeVisible()
+    // The journal at a glance: rackets, hours lately, the next restring.
+    await expect(page.getByRole('link', { name: /^\S+ (Raquetes|Horas · 8 semanas|Encordar)$/ })).toHaveCount(3)
     // Free: see the plans, or restore what was bought before.
     await expect(page.getByRole('button', { name: 'Ver planos' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Restaurar compras' })).toBeVisible()
     await a11y(page)
   })
 
-  test('A02-H2 the game is edited in place and kept', async ({ page }) => {
+  test('A02-H2 the game is edited in a sheet and kept', async ({ page }) => {
     await open(page, '/perfil')
-    await page.getByRole('checkbox', { name: 'Conforto' }).click()
-    await page.getByRole('radio', { name: 'Rede' }).click()
-    await page.getByRole('radio', { name: 'Esquerda' }).click()
-    await page.getByLabel('Horas de jogo por semana').fill('4')
-    await page.getByLabel('Horas de jogo por semana').blur()
+    await page.getByRole('button', { name: 'Definir o meu jogo' }).click()
+    const d = page.getByRole('dialog', { name: 'O teu jogo' })
+    await d.getByRole('checkbox', { name: 'Conforto' }).click()
+    await d.getByRole('radio', { name: 'Intermédio' }).click()
+    await d.getByRole('radio', { name: 'Rede' }).click()
+    await d.getByLabel('Horas de jogo por semana').fill('4')
+    await d.getByRole('button', { name: 'Guardar' }).click()
+    await expect(d).toBeHidden()
     await page.reload()
-    await expect(page.getByRole('checkbox', { name: 'Conforto' })).toHaveAttribute('aria-checked', 'true')
-    await expect(page.getByRole('radio', { name: 'Rede' })).toHaveAttribute('aria-checked', 'true')
-    await expect(page.getByRole('radio', { name: 'Esquerda' })).toHaveAttribute('aria-checked', 'true')
-    await expect(page.getByLabel('Horas de jogo por semana')).toHaveValue('4')
+    const game = page.getByRole('region', { name: 'O teu jogo' })
+    await expect(game.getByRole('list', { name: 'O que queres melhorar' })).toHaveText('Conforto')
+    await expect(game).toContainText('Intermédio · Rede · 4 h por semana')
+    // Cancelling leaves it as it was.
+    await game.getByRole('button', { name: 'Editar' }).click()
+    await d.getByRole('checkbox', { name: 'Spin' }).click()
+    await d.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(game.getByRole('list', { name: 'O que queres melhorar' })).toHaveText('Conforto')
+  })
+
+  test('A02-H5 the goals steer the calculator', async ({ page }) => {
+    await open(page, '/')
+    const card = page.getByRole('region', { name: 'Os teus objetivos' })
+    // Cards open on wide screens, closed on phones.
+    const toggle = card.getByRole('button', { name: /^Os teus objetivos/ })
+    if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+    await card.getByRole('link', { name: 'Escolher no perfil' }).click()
+    await page.getByRole('button', { name: 'Definir o meu jogo' }).click()
+    const d = page.getByRole('dialog', { name: 'O teu jogo' })
+    await d.getByRole('checkbox', { name: 'Conforto' }).click()
+    await d.getByRole('radio', { name: 'Intermédio' }).click()
+    await d.getByRole('button', { name: 'Guardar' }).click()
+    await page.getByRole('link', { name: 'Calcular' }).click()
+    // Less tension is kinder to the arm: one tap sets it.
+    await expect(card).toContainText('−2 kg de tensão')
+    await expect(card).toContainText(/Swingweight \d+: .+ para intermédio/)
+    await card.getByRole('button', { name: 'Aplicar' }).click()
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('swingmath')!).state.config.strings.mains.tensionKg)).toBe(21)
   })
 
   test('A02-H3 each racket shows its strings and when to restring, and logs a restring', async ({ page }) => {

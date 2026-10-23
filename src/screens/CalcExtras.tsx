@@ -2,13 +2,14 @@ import { ArrowDown, ArrowRight, ArrowUp, Minus, Plus } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { armComfort } from '../domain/comfort'
+import { goalAdvice, swingweightForLevel, SW_BY_LEVEL, type GoalMove } from '../domain/goals'
 import { GRIP_SIZES, gripInches, gripMm, gripSize } from '../domain/grip'
 import { bedBand, DEFAULT_STRINGBED, stringbedIndex } from '../domain/strings'
 import type { Geometry } from '../domain/physics'
 import { PROBES, sweetSpotEffects, type ProbeKey } from '../domain/sweetSpot'
-import type { ExtraLead, GripConfig, Racket, Specs } from '../domain/types'
+import { POSITIONS, type ExtraLead, type GripConfig, type Position, type Racket, type Specs } from '../domain/types'
 import { useStore } from '../data/store'
-import { fmt, useT } from '../i18n'
+import { fmt, useT, type Dict } from '../i18n'
 import { fmtNum, fmtSigned, gripLabel } from '../lib/format'
 import { Button, cx, Segmented, Select } from '../ui/basics'
 import { Ring } from '../ui/specs'
@@ -21,6 +22,9 @@ function comfortBand(score: number) {
   if (score >= 40) return { key: 'mid' as const, color: 'var(--c-warning)' }
   return { key: 'harsh' as const, color: 'var(--c-danger)' }
 }
+
+/** "3h e 9h", "4h e 8h": where a sweet spot probe sits. */
+const probeLabel = (k: ProbeKey, t: Dict) => (k === 'fourEight' ? fmt(t.custom.hoopBoth, { a: t.custom.hour(4), b: t.custom.hour(8) }) : t.pos[k])
 
 const DEFAULT_GRIP: GripConfig = { base: 2, extraOvergrips: 0, sleeves: 0 }
 
@@ -142,7 +146,7 @@ export function SweetSpotCard({ racket, result, noLead, geo, onAdd }: { racket: 
   const dir = centre >= 0 ? t.sweet.above : t.sweet.below
   const has48 = (config.extra ?? []).some((e) => e.kind === 'hoop' && e.sides === 2 && (e.hour === 4 || e.hour === 8))
   const max = Math.max(4, ...effects.map((e) => Math.abs(e.mm)))
-  const label = (k: ProbeKey) => (k === 'fourEight' ? fmt(t.custom.hoopBoth, { a: t.custom.hour(4), b: t.custom.hour(8) }) : t.pos[k])
+  const label = (k: ProbeKey) => probeLabel(k, t)
   return (
     <CollapsibleCard
       id="sweet-spot"
@@ -196,6 +200,94 @@ export function SweetSpotCard({ racket, result, noLead, geo, onAdd }: { racket: 
         })}
       </ul>
       <p className="mt-3 text-sm text-muted">{t.sweet.rule}</p>
+    </CollapsibleCard>
+  )
+}
+
+/**
+ * The player's goals (from the profile) on this setup: where each stands,
+ * the one change that raises it most, with a tap to make it, and what it
+ * costs. With a level, where the swingweight sits for it.
+ */
+export function GoalsCard({ racket, result }: { racket: Racket; result: Specs }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const config = useStore((s) => s.config)
+  const masses = useStore((s) => s.masses)
+  const goals = useStore((s) => s.profile.goals)
+  const level = useStore((s) => s.profile.level)
+  const setConfig = useStore((s) => s.setConfig)
+  const setLead = useStore((s) => s.setLead)
+  const addExtra = useStore((s) => s.addExtra)
+  const advice = useMemo(() => (goals?.length ? goalAdvice({ spec: racket, ...config, masses }, goals) : []), [racket, config, masses, goals])
+  const bed = config.strings ?? DEFAULT_STRINGBED
+
+  const describe = (m: GoalMove) =>
+    m.kind === 'lead' ? fmt(t.goals.lead, { g: m.grams, where: probeLabel(m.probe, t) }) : fmt(t.goals.tension, { kg: fmtSigned(m.kg, 0, lang) })
+  const make = (m: GoalMove) => {
+    if (m.kind === 'tension') {
+      const kg = (x: number) => x + m.kg
+      setConfig({ strings: { mains: { ...bed.mains, tensionKg: kg(bed.mains.tensionKg) }, ...(bed.crosses && { crosses: { ...bed.crosses, tensionKg: kg(bed.crosses.tensionKg) } }) } })
+    } else if ((POSITIONS as readonly string[]).includes(m.probe)) {
+      const p = m.probe as Position
+      setLead(p, config.leadG[p] + m.grams)
+    } else {
+      addExtra({ id: crypto.randomUUID().slice(0, 8), grams: m.grams, ...PROBES[m.probe] })
+    }
+  }
+
+  const fit = level && swingweightForLevel(result.swingweight, level)
+  const [lo, hi] = level ? SW_BY_LEVEL[level] : [0, 0]
+  const summary = advice.length ? advice.map((a) => `${t.community.goals[a.goal]} ${Math.round(a.now)}`).join(' · ') : t.goals.pick
+  return (
+    <CollapsibleCard id="goals" title={t.goals.title} summary={summary} info={<InfoTip title={t.goals.title}>{t.goals.hint}</InfoTip>}>
+      {advice.length === 0 ? (
+        <p className="text-sm text-muted">
+          {t.goals.none}{' '}
+          <Link to="/perfil" className="font-semibold text-accent-text">
+            {t.goals.pick}
+          </Link>
+        </p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {advice.map((a) => (
+            <li key={a.goal} className="flex items-center gap-3 py-2.5">
+              <span className="readout w-9 shrink-0 text-center text-lg" style={{ color: `var(--c-${a.goal})` }}>
+                {Math.round(a.now)}
+              </span>
+              <div className="min-w-0 flex-1 text-sm">
+                <p className="font-medium">{t.community.goals[a.goal]}</p>
+                {a.best ? (
+                  <p className="num text-muted">
+                    {describe(a.best.move)} <span className="font-semibold text-success">{fmtSigned(a.best.gain, 0, lang)}</span>
+                    {a.best.cost && (
+                      <>
+                        {' · '}
+                        {fmtSigned(a.best.cost.delta, 0, lang)} {t.community.goals[a.best.cost.goal].toLowerCase()}
+                      </>
+                    )}
+                  </p>
+                ) : (
+                  <p className="text-muted">{t.goals.nothing}</p>
+                )}
+              </div>
+              {a.best && (
+                <Button size="sm" variant="secondary" icon={a.best.move.kind === 'lead' ? Plus : undefined} onClick={() => make(a.best!.move)}>
+                  {a.best.move.kind === 'lead' ? t.goals.add : t.goals.apply}
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {fit && level && (
+        <p className={cx('num mt-3 flex items-start gap-1.5 text-sm', fit === 'within' ? 'text-muted' : 'text-warning')}>
+          <span className="min-w-0 flex-1">
+            {fmt(t.goals.level[fit], { sw: fmtNum(result.swingweight, 0, lang), level: t.community.levels[level].toLowerCase(), lo, hi })}
+          </span>
+          <InfoTip title={t.community.level}>{t.goals.levelHint}</InfoTip>
+        </p>
+      )}
     </CollapsibleCard>
   )
 }

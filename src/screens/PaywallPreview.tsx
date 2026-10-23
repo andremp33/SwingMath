@@ -87,15 +87,15 @@ function RacketTeaser({
   const lang = useStore((s) => s.lang)
   const shown = useStripsShown(strips.length)
   const n = strips.length
-  const wta = pro.tour === 'WTA'
-  const title = n === 1 ? (wta ? t.paywall.previewTitleOneWta : t.paywall.previewTitleOne) : wta ? t.paywall.previewTitleWta : t.paywall.previewTitle
+  // The tour, not the player: a name stays out of a screen that sells.
+  const title = n === 1 ? t.paywall.previewTitleOne : t.paywall.previewTitle
   const sw = fromSw + ((toSw - fromSw) * shown) / n
   const sub = reason === 'profile' ? '' : t.paywall.subs[reason]
   return (
     <div className="space-y-3">
       <div>
         <h3 className="text-lg font-semibold tracking-tight" data-testid="preview-title">
-          {fmt(title, { racket: name, n, pro: pro.player })}
+          {fmt(title, { racket: name, n, tour: pro.tour })}
         </h3>
         {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
       </div>

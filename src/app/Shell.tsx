@@ -10,6 +10,7 @@ import { cx } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { Avatar } from '../ui/Avatar'
 import { useFreeProEnd } from '../screens/freeProEnd'
+import { useProNudge } from '../screens/proNudge'
 import { useRestringReminders } from '../screens/reminders'
 
 const TABS = [
@@ -31,7 +32,7 @@ export function useApplyTheme() {
     const apply = () => {
       const resolved = theme === 'system' ? (mq.matches ? 'light' : 'dark') : theme
       document.documentElement.dataset.theme = resolved
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'light' ? '#f4f6f2' : '#0e1210')
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'light' ? '#f5f3ee' : '#141312')
     }
     apply()
     mq.addEventListener('change', apply)
@@ -49,6 +50,7 @@ export function Shell() {
   const loc = useLocation()
   const due = useRestringReminders()
   useFreeProEnd()
+  useProNudge()
   useEffect(() => {
     scrollToTop('instant')
   }, [loc.pathname])
@@ -64,7 +66,7 @@ export function Shell() {
   return (
     <div id="app-scroll" className="h-dvh overflow-y-auto overscroll-y-contain lg:pl-56">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-on-accent">
-        Skip to content
+        {t.common.skip}
       </a>
       <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b border-border/60 bg-bg/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
         <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">

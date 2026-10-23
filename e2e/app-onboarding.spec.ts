@@ -73,7 +73,7 @@ test.describe('A01 first launch', () => {
     await page.getByRole('button', { name: 'Abrir na calculadora' }).click()
     await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
     await expect(page.getByText('Dica: 2 a 4 g às 3h e 9h dão mais estabilidade.')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Pure Aero 98 #1' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Pure Aero 98 #1', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
     await page.goto('/diario')
     const rackets = page.getByRole('region', { name: 'As tuas raquetes' })

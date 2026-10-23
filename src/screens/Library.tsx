@@ -66,15 +66,17 @@ export function Library() {
 
   return (
     <>
-      <PageTitle
-        action={
-          <Button variant="primary" icon={Plus} onClick={() => nav('/rackets/new')}>
-            {t.library.add}
-          </Button>
-        }
-      >
-        {t.library.title}
-      </PageTitle>
+      <PageTitle>{t.library.title}</PageTitle>
+
+      {/* The player's own rackets first; the catalogue, to explore, under them. */}
+      <MyRacketsSection />
+
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-md font-semibold tracking-tight">{t.library.catalogue}</h2>
+        <Button size="sm" variant="ghost" icon={Plus} onClick={() => nav('/rackets/new')}>
+          {t.library.add}
+        </Button>
+      </div>
 
       <div className="mb-3 grid grid-cols-3 gap-2 md:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr] md:gap-3">
         <div className="col-span-3 md:col-span-1">
@@ -109,7 +111,6 @@ export function Library() {
         <Ruler className="size-4 shrink-0" aria-hidden />
         {t.library.stockNote}
       </p>
-      <MyRacketsSection />
 
       <Card label={t.library.map.title} className="mb-6">
         <CardTitle info={<InfoTip title={t.library.map.title}>{t.library.map.info}</InfoTip>}>{t.library.map.title}</CardTitle>
