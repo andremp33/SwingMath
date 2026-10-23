@@ -1,7 +1,7 @@
 {
   "name": "swingmath",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,7 @@
     "e2e": "npm run build && playwright test",
     "preview": "vite preview",
     "test:cloud": "vitest run --config vitest.cloud.config.ts",
-    "build:app": "node scripts/check-app-env.mjs && tsc -b && vite build --mode app",
+    "build:app": "node scripts/check-app-env.mjs && node scripts/sync-version.mjs && tsc -b && vite build --mode app",
     "build:preview": "vite build --mode preview --outDir dist/preview",
     "android": "npm run build:app && npx cap sync android && npx cap open android",
     "ios": "npm run build:app && npx cap sync ios && npx cap open ios",

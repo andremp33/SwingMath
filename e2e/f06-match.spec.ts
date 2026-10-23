@@ -82,7 +82,7 @@ test.describe('F06 hit a target', () => {
     await expect(plan.getByRole('button', { name: 'Abrir na calculadora' })).toHaveCount(0)
     await expect(plan).toContainText('O plano por posição é Pro')
     await plan.getByRole('button', { name: 'Experimentar o Pro' }).click()
-    await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toContainText('Usaste os 3 planos grátis do Igualar.')
+    await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toContainText('Usaste os 3 planos grátis do Planear.')
     await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click()
     // One of the three again: whole.
     await target.getByRole('radio', { name: /Rafael Nadal/ }).click()

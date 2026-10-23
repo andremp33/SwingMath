@@ -6,17 +6,19 @@ import { useComputed, useRacket } from '../data/hooks'
 import { useStore } from '../data/store'
 import { useT } from '../i18n'
 import { leadParts, racketLabel } from '../lib/format'
-import { encodeShare, renderShareImage, shareUrl, specRowsText } from '../lib/share'
+import { encodeShare, renderShareImage, shareUrl, siteHost, specRowsText } from '../lib/share'
 import { Button } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { PublishSetup } from './Community'
 import { racketFeel } from '../data/racketFeel'
 import { bedLabel } from '../lib/bedLabel'
+import { useUnits } from '../lib/units'
 
 export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: () => void }) {
   const t = useT()
   const toast = useToast()
   const lang = useStore((s) => s.lang)
+  const units = useUnits()
   const racket = useRacket(setup?.racketId)
   const computed = useComputed(setup ?? undefined, racket)
   const [img, setImg] = useState<{ blob: Blob; url: string } | null>(null)
@@ -36,9 +38,9 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
           b: t.spec.balance,
           sw: t.spec.swingweight,
           tw: t.spec.twistweight,
-          rw: t.spec.recoil,
           pts: t.units.pts,
-        }),
+          kgcm2: t.units.kgcm2,
+        }, units),
         feel: FEEL_KEYS.map((k) => [t.feel[k], f[k]]),
         lead:
           `${t.calc.lead}: ` +
@@ -56,7 +58,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
           .join(' · '),
         scan: t.share.scan,
         appName: t.appName,
-        domain: location.host,
+        domain: siteHost(),
       },
       link,
     ).then((blob) => {
@@ -69,7 +71,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
       if (made) URL.revokeObjectURL(made)
       setImg(null)
     }
-  }, [setup, racket, computed, lang, t, link])
+  }, [setup, racket, computed, lang, t, link, units])
 
   const file = img && setup ? new File([img.blob], `${setup.name.replace(/[^\w-]+/g, '_')}.png`, { type: 'image/png' }) : null
   const canShareFile = !!file && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })
@@ -87,7 +89,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
             </Button>
           ) : (
             img && (
-              <a href={img.url} download={file?.name} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent">
+              <a href={img.url} download={file?.name} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-text px-4 text-sm font-medium text-bg hover:opacity-90">
                 <Download className="size-4" aria-hidden /> {t.share.image}
               </a>
             )

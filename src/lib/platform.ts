@@ -9,3 +9,13 @@ export const IS_NATIVE = __NATIVE__
  *  preview`, served at /preview/): the app's screens, without the native
  *  plugins or the stores. Removed once TestFlight takes over. */
 export const IS_PREVIEW = __PREVIEW__
+
+/** Goes to a page of the app from outside it (a link into the app, a
+ *  notification): the router follows the history. */
+export function openPath(path: string) {
+  history.pushState({}, '', path)
+  dispatchEvent(new PopStateEvent('popstate'))
+}
+
+/** Where a restring reminder opens: the journal, with its sheet. */
+export const reminderPath = (stringingId: string) => `/diario?lembrete=${encodeURIComponent(stringingId)}`

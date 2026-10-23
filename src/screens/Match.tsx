@@ -13,7 +13,7 @@ import { defaultConfig, isPro, useStore } from '../data/store'
 import { diagnose, freePlansLeft, matchPlanKey, targetPlanKey, type Diagnosis } from '../domain/freePlans'
 import { PRO_TARGETS, withStrings, type PlainSpecs } from '../data/pros'
 import { fmt, useT } from '../i18n'
-import { fmtNum, fmtSigned, racketLabel } from '../lib/format'
+import { fmtNum, fmtSigned, LOCALE, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select } from '../ui/basics'
 import { LEAD_MAX, RacketDiagram } from '../ui/lead'
 import { RacketPicker } from '../ui/RacketPicker'
@@ -22,6 +22,8 @@ import { useFreePlans } from './freePlans'
 import { ProGate } from './Pro'
 import { InfoTip } from '../ui/disclosure'
 import { useToast } from '../ui/overlay'
+import { BalanceField, WeightField } from '../ui/unitFields'
+import { useUnits } from '../lib/units'
 
 type Mode = 'smart' | 'batch'
 
@@ -82,8 +84,8 @@ function SpecFields({ v, onChange, required }: { v: Vals; onChange: (v: Vals) =>
   const t = useT()
   return (
     <div className="grid grid-cols-2 gap-3">
-      <NumberField label={t.spec.weight} unit="g" min={150} max={500} required={required} value={v.weightG} onChange={(weightG) => onChange({ ...v, weightG })} />
-      <NumberField label={t.spec.balance} unit="mm" min={250} max={400} required={required} value={v.balanceMm} onChange={(balanceMm) => onChange({ ...v, balanceMm })} />
+      <WeightField label={t.spec.weight} min={150} max={500} required={required} value={v.weightG} onChange={(weightG) => onChange({ ...v, weightG })} />
+      <BalanceField label={t.spec.balance} min={250} max={400} required={required} value={v.balanceMm} onChange={(balanceMm) => onChange({ ...v, balanceMm })} />
       <NumberField label={t.spec.swingweight} min={150} max={450} required={required} value={v.swingweight} onChange={(swingweight) => onChange({ ...v, swingweight })} />
       <NumberField label={t.spec.twistweight} hint={t.common.optional} min={5} max={25} value={v.twistweight} onChange={(twistweight) => onChange({ ...v, twistweight })} />
     </div>
@@ -205,6 +207,7 @@ function Smart() {
   const setLastPro = useStore((s) => s.setLastPro)
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const pro = useStore(isPro)
   const config = useStore((s) => s.config)
   const loadConfig = useStore((s) => s.loadConfig)
@@ -353,7 +356,7 @@ function Smart() {
             <div className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">
               {racket && source !== 'library' && <p className="text-muted">{racketLabel(racket)}</p>}
               <p className="num font-semibold">
-                {fmtNum(from.weightG, 0, lang)} g · {fmtNum(from.balanceMm, 0, lang)} mm · SW {fmtNum(from.swingweight, 0, lang)}
+                {u.weight(from.weightG)} {u.weightUnit} · {u.balance(from.balanceMm === undefined ? undefined : from.balanceMm / 10)} {u.balanceUnit} · SW {fmtNum(from.swingweight, 0, lang)}
               </p>
               <p className="text-muted">{fromStrung ? t.match.asPlayed : t.match.asLibrary}</p>
             </div>
@@ -483,6 +486,7 @@ function Smart() {
 function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult; full: boolean; diag: Diagnosis; onOpen?: () => void; title?: string; action?: ReactNode }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const [sel, setSel] = useState<Position>('tip')
   const label: Record<TargetKey, [string, number, string]> = {
     weightG: [t.spec.weight, 0, 'g'],
@@ -490,17 +494,22 @@ function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult
     swingweight: [t.spec.swingweight, 0, ''],
     twistweight: [t.spec.twistweight, 2, ''],
   }
+  // "the weight and the swingweight are", said as a sentence, in the player's language.
+  const what = new Intl.ListFormat(LOCALE[lang] ?? 'en-GB', { type: 'conjunction' }).format(res.unreachable.map((k) => t.match.unreachableWhat[k]))
+  // Lead that changes nothing has no match to speak of.
+  const noPlan = res.unreachable.length > 0 && res.totalG < 0.5
   const unreachable =
     res.unreachable.length > 0 ? (
-      <p className="mb-3 rounded-md bg-warning/15 px-3 py-2 text-sm text-warning">
-        {fmt(t.match.unreachable, { what: res.unreachable.map((k) => label[k][0]).join(', ') })}
-      </p>
+      <div className="mb-3 space-y-1 rounded-md bg-warning/15 px-3 py-2 text-sm">
+        <p className="text-warning">{fmt(res.unreachable.length > 1 ? t.match.unreachableMany : t.match.unreachable, { what })}</p>
+        {noPlan && <p>{t.match.unreachableHint}</p>}
+      </div>
     ) : null
   if (!full) {
     const m = diag.missing
     const parts = [
-      m.weightG !== undefined && `${t.spec.weight} ${fmtSigned(m.weightG, 0, lang)} g`,
-      m.balanceMm !== undefined && `${t.spec.balance} ${fmtSigned(m.balanceMm, 0, lang)} mm`,
+      m.weightG !== undefined && `${t.spec.weight} ${u.weightDelta(m.weightG, 0)} ${u.weightUnit}`,
+      m.balanceMm !== undefined && `${t.spec.balance} ${u.balanceDelta(m.balanceMm / 10, 0)} ${u.balanceUnit}`,
       m.swingweight !== undefined && `SW ${fmtSigned(m.swingweight, 0, lang)}`,
     ].filter(Boolean)
     return (
@@ -515,7 +524,7 @@ function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult
           <div>
             <dt className="text-muted">{t.match.lands}</dt>
             <dd className="font-semibold">
-              {fmtNum(diag.final.weightG, 0, lang)} g · {fmtNum(diag.final.balanceCm * 10, 0, lang)} mm · SW {fmtNum(diag.final.swingweight, 0, lang)}
+              {u.weight(diag.final.weightG)} {u.weightUnit} · {u.balance(diag.final.balanceCm)} {u.balanceUnit} · SW {fmtNum(diag.final.swingweight, 0, lang)}
             </dd>
           </div>
         </dl>
@@ -530,7 +539,7 @@ function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult
   }
   return (
     <Card label={title ?? t.match.result}>
-      <CardTitle action={<Badge plain tone={res.matchPct >= 95 ? 'accent' : 'neutral'}>{fmt(t.match.match, { pct: fmtNum(res.matchPct, res.matchPct === 100 ? 0 : 1, lang) })}</Badge>}>
+      <CardTitle action={noPlan ? undefined : <Badge plain tone={res.matchPct >= 95 ? 'accent' : 'neutral'}>{fmt(t.match.match, { pct: fmtNum(res.matchPct, res.matchPct === 100 ? 0 : 1, lang) })}</Badge>}>
         {title ?? t.match.result}
       </CardTitle>
       {unreachable}
@@ -553,13 +562,13 @@ function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult
       <dl className="num space-y-1 text-sm">
         {(Object.keys(res.errors) as TargetKey[]).map((k) => {
           const [name, d, unit] = label[k]
-          const e = k === 'balanceCm' ? res.errors[k]! * 10 : res.errors[k]!
+          const e = res.errors[k]!
+          // Weight and balance in the player's units.
+          const shown = k === 'weightG' ? `${u.weightDelta(e, d)} ${u.weightUnit}` : k === 'balanceCm' ? `${u.balanceDelta(e, d)} ${u.balanceUnit}` : `${fmtSigned(e, d, lang)} ${unit}`
           return (
             <div key={k} className="flex justify-between">
               <dt className="text-muted">{name}</dt>
-              <dd className="font-semibold">
-                {fmtSigned(e, d, lang)} {unit}
-              </dd>
+              <dd className="font-semibold">{shown.trim()}</dd>
             </div>
           )
         })}
@@ -592,6 +601,7 @@ function Batch() {
   const toast = useToast()
   const pro = useStore(isPro)
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const rackets = useAllRackets()
   const owned = useOwned()
   const fleet = (useLocation().state as MatchHandoff | null)?.fleet
@@ -694,8 +704,8 @@ function Batch() {
               {res.toFirst ? fmt(t.match.targetIs, { name: nameOf(0) }) : t.match.commonTarget}
             </CardTitle>
             <dl className="num grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-              <Stat label={t.spec.weight} value={`${fmtNum(res.batch.target.weightG, 0, lang)} g`} />
-              <Stat label={t.spec.balance} value={`${fmtNum((res.batch.target.balanceCm ?? 0) * 10, 0, lang)} mm`} />
+              <Stat label={t.spec.weight} value={`${u.weight(res.batch.target.weightG)} ${u.weightUnit}`} />
+              <Stat label={t.spec.balance} value={`${u.balance(res.batch.target.balanceCm ?? 0)} ${u.balanceUnit}`} />
               <Stat label={t.spec.swingweight} value={fmtNum(res.batch.target.swingweight, 0, lang)} />
               {res.batch.target.twistweight !== undefined && <Stat label={t.spec.twistweight} value={fmtNum(res.batch.target.twistweight, 2, lang)} />}
             </dl>

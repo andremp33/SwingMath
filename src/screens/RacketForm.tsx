@@ -7,6 +7,7 @@ import { useCustomRackets } from '../data/hooks'
 import { useT } from '../i18n'
 import { Button, Card, NumberField, PageTitle, Select, TextField } from '../ui/basics'
 import { useToast } from '../ui/overlay'
+import { BalanceField, WeightField } from '../ui/unitFields'
 
 type Draft = {
   brand: string
@@ -108,8 +109,8 @@ function RacketFormInner({ existing }: { existing?: Racket }) {
         <Card className="space-y-4">
           <p className="text-sm text-muted">{t.racketForm.hint}</p>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label={t.spec.weight} unit="g" required forceError={tried} min={150} max={450} value={d.weightG} onChange={(weightG) => set({ weightG })} />
-            <NumberField label={t.spec.balance} unit="mm" required forceError={tried} min={250} max={400} value={d.balanceMm} onChange={(balanceMm) => set({ balanceMm })} />
+            <WeightField label={t.spec.weight} required forceError={tried} min={150} max={450} value={d.weightG} onChange={(weightG) => set({ weightG })} />
+            <BalanceField label={t.spec.balance} required forceError={tried} min={250} max={400} value={d.balanceMm} onChange={(balanceMm) => set({ balanceMm })} />
             <NumberField label={t.spec.swingweight} required forceError={tried} min={150} max={450} value={d.swingweight} onChange={(swingweight) => set({ swingweight })} />
             <NumberField label={t.spec.twistweight} hint={t.common.optional} min={5} max={25} value={d.twistweight} onChange={(twistweight) => set({ twistweight })} />
             <NumberField label={t.spec.headSize} unit="in²" required forceError={tried} min={85} max={120} value={d.headSizeSqIn} onChange={(headSizeSqIn) => set({ headSizeSqIn })} />

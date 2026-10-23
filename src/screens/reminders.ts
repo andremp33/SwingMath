@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useOwned, useSessions, useStringings } from '../data/hooks'
 import { useStore } from '../data/store'
-import { currentStringings, dueForRestring, hoursOn, restringDue } from '../domain/journal'
+import { currentStringings, dueForRestring, hoursOn, isDormant, lifeOf, restringDue } from '../domain/journal'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
-import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
+import { IS_NATIVE, IS_PREVIEW, openPath, reminderPath } from '../lib/platform'
 import { bedLabel } from '../ui/strings'
 
 // The app's preview in a browser has no reminders.
@@ -40,15 +40,21 @@ export function eveningOf(ms: number): Date {
   return d
 }
 
+/** `tag`: the stringing the reminder is about; a tap opens it. */
 async function notify(title: string, body: string, tag: string) {
   if (IS_NATIVE) {
     // A stable number per stringing, so a reminder is not shown twice.
-    return import('../lib/native').then((n) => n.notifyNative(numberFor(tag), title, body))
+    return import('../lib/native').then((n) => n.notifyNative(numberFor(tag), title, body, tag))
   }
   // Android Chrome only allows notifications through the service worker.
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => undefined)
-  if (reg) await reg.showNotification(title, { body, icon: `${import.meta.env.BASE_URL}icon-192.png`, tag })
-  else new Notification(title, { body, tag })
+  if (reg) return reg.showNotification(title, { body, icon: `${import.meta.env.BASE_URL}icon-192.png`, tag })
+  const n = new Notification(title, { body, tag })
+  n.onclick = () => {
+    window.focus()
+    openPath(reminderPath(tag))
+    n.close()
+  }
 }
 
 /**
@@ -69,8 +75,9 @@ export function useRestringReminders(): number {
   const sessions = useSessions()
   const owned = useOwned()
   const ready = !!(stringings && sessions && owned)
-  // Retired rackets are out of the way: no reminders, no dot.
-  const inPlay = (s: { ownedId?: string }) => !s.ownedId || !owned?.some((o) => o.id === s.ownedId && o.retired)
+  // Retired rackets, and those no longer played, are out of the way: no
+  // reminders, no dot.
+  const inPlay = (s: { ownedId?: string }) => !s.ownedId || !(owned?.some((o) => o.id === s.ownedId && o.retired) || isDormant(s.ownedId, stringings!, sessions!))
   const due = ready ? dueForRestring(stringings!, sessions!).filter(inPlay) : []
   const fresh = due.filter((s) => !reminded.includes(s.id))
   const key = fresh.map((s) => s.id).join()
@@ -94,6 +101,7 @@ export function useRestringReminders(): number {
             at,
             title: t.journal.notifyTitle,
             body: fmt(t.journal.notifyDueBody, { label: name(s.ownedId), bed: bedLabel(s.bed, t, lang), date: fmtDate(s.date, lang) }),
+            stringingId: s.id,
           })),
         ),
       )
@@ -107,7 +115,12 @@ export function useRestringReminders(): number {
   useEffect(() => {
     if (!key || !supported() || (!IS_NATIVE && Notification.permission !== 'granted')) return
     for (const s of fresh) {
-      notify(t.journal.notifyTitle, fmt(t.journal.notifyBody, { label: s.label, h: fmtNum(hoursOn(s.id, sessions ?? []), 1, lang), date: fmtDate(s.date, lang) }), s.id).catch(() => {})
+      // Out of hours, the hours played; out of time, the date it was strung.
+      const byTime = lifeOf(s, sessions ?? [], Date.now(), stringings ?? []).limit === 'time'
+      const body = byTime
+        ? fmt(t.journal.notifyDueBody, { label: s.label, bed: bedLabel(s.bed, t, lang), date: fmtDate(s.date, lang) })
+        : fmt(t.journal.notifyBody, { label: s.label, h: fmtNum(hoursOn(s.id, sessions ?? []), 1, lang), date: fmtDate(s.date, lang) })
+      notify(t.journal.notifyTitle, body, s.id).catch(() => {})
     }
     markReminded(fresh.map((s) => s.id))
     // `key` stands for `fresh`.

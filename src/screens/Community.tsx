@@ -37,6 +37,7 @@ import { Badge, Button, Card, CardTitle, ChoiceChips, IconButton, MultiChoiceChi
 import { CollapsibleCard, InfoTip, openCollapsible } from '../ui/disclosure'
 import { useToast } from '../ui/overlay'
 import { bedLabel } from '../lib/bedLabel'
+import { useUnits } from '../lib/units'
 
 /** Visible community setups per frame, for links into the calculator. */
 export function useSetupCounts() {
@@ -75,6 +76,7 @@ const SHOWN = 5
 export function CommunityCard({ racket }: { racket: Racket }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const account = useStore((s) => s.account)
   const loadConfig = useStore((s) => s.loadConfig)
   const masses = useStore((s) => s.masses)
@@ -234,7 +236,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
                       </p>
                     )}
                     <p className="num text-muted">
-                      {fmtNum(p.specs.weightG, 0, lang)} g · {fmtNum(p.specs.balanceCm * 10, 0, lang)} mm · SW {fmtNum(p.specs.swingweight, 0, lang)} ·{' '}
+                      {u.weight(p.specs.weightG)} {u.weightUnit} · {u.balance(p.specs.balanceCm)} {u.balanceUnit} · SW {fmtNum(p.specs.swingweight, 0, lang)} ·{' '}
                       {p.config.baseMode === 'measured' ? t.community.baseMeasured : t.community.baseCatalog}
                     </p>
                     <p className="num text-muted">

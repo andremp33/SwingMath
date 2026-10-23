@@ -6,6 +6,7 @@ import {
   compute,
   geometry,
   hoopPoint,
+  HOOP_MID_CM,
   leadPositions,
   ptsHeadLight,
   recoilWeight,
@@ -75,7 +76,10 @@ describe('physics', () => {
     const two = hoopPoint(g, 2)
     expect(two.x).toBeCloseTo(p.tenTwo.x, 6)
     expect(two.y).toBeCloseTo(p.tenTwo.y, 6)
-    expect(hoopPoint(g, 6).x).toBeCloseTo(g.xc - g.a, 6)
+    // The tape sits on the hoop, half its wall out from the stringbed.
+    expect(hoopPoint(g, 6).x).toBeCloseTo(p.throat.x, 6)
+    expect(hoopPoint(g, 12).x).toBeCloseTo(p.tip.x, 6)
+    expect(p.threeNine.y).toBeCloseTo(g.b + HOOP_MID_CM, 6)
     // 4h and 8h mirror each other.
     expect(hoopPoint(g, 4).x).toBeCloseTo(hoopPoint(g, 8).x, 6)
     expect(hoopPoint(g, 4).y).toBeCloseTo(hoopPoint(g, 8).y, 6)

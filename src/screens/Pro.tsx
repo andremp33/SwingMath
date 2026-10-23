@@ -26,15 +26,18 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
   const [reason, setReason] = useState<PaywallReason | null>(null)
   const toast = useToast()
   const t = useT()
+  const seen = useStore((s) => s.setProNudgeAt)
   const show = useCallback<OpenPaywall>(
     (r, opts) => {
       if (!opts?.asked) {
-        if (unaskedShown) return toast(t.paywall.isPro, { label: t.paywall.seePro, run: () => setReason(r) })
+        if (unaskedShown) return toast(t.paywall.isPro, { label: t.paywall.seePro, run: () => (seen(Date.now()), setReason(r)) })
         unaskedShown = true
       }
+      // Just seen: the reminder of Pro waits another week.
+      seen(Date.now())
       setReason(r)
     },
-    [toast, t],
+    [toast, t, seen],
   )
   return (
     <PaywallCtx.Provider value={show}>
@@ -170,10 +173,14 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
               })}
             </div>
           </fieldset>
-          <Button variant="primary" icon={Sparkles} className="h-12 w-full" loading={busy === 'buy'} disabled={busy !== null} onClick={() => run('buy')}>
-            {copy(chosen).cta}
-          </Button>
-          <p className="text-xs text-muted">{copy(chosen).legal}</p>
+          {/* Stays at the bottom of the sheet while the rest scrolls: the
+              price and the button are always in view. */}
+          <div className="sticky -bottom-4 -mx-5 space-y-2 border-t border-border bg-surface px-5 pb-4 pt-3">
+            <Button variant="primary" icon={Sparkles} className="h-12 w-full" loading={busy === 'buy'} disabled={busy !== null} onClick={() => run('buy')}>
+              {copy(chosen).cta}
+            </Button>
+            <p className="text-xs text-muted">{copy(chosen).legal}</p>
+          </div>
         </>
       )}
       {!IS_PREVIEW && (

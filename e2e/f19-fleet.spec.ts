@@ -129,7 +129,7 @@ test.describe('F19 the fleet', () => {
     await start(page, { path: '/perfil', pro: true })
     await seed(page, FLEET)
     await page.getByRole('button', { name: 'Igualar à #1' }).click()
-    await expect(page.getByRole('heading', { name: 'Igualar' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Planear' })).toBeVisible()
     await expect(page.getByRole('radiogroup', { name: 'Alvo' }).getByRole('radio', { name: 'A raquete 1' })).toHaveAttribute('aria-checked', 'true')
     // Each racket by its name and its measurement, #1 first.
     for (const name of ['Aero B', 'Aero A', 'Aero C']) await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
@@ -138,7 +138,7 @@ test.describe('F19 the fleet', () => {
     await expect(page.getByRole('heading', { name: 'Alvo: Aero B' })).toBeVisible()
     // #1 has nothing to do; Aero C is heavier, and lead cannot take weight off.
     await expect(page.getByRole('region', { name: 'Aero B' })).toHaveCount(0)
-    await expect(page.getByRole('region', { name: 'Aero C' })).toContainText('Peso já está acima do alvo')
+    await expect(page.getByRole('region', { name: 'Aero C' })).toContainText('o peso já está acima do alvo')
     await page.getByRole('button', { name: 'Guardar este chumbo em Aero A' }).click()
     await expect(page.getByText('Chumbo guardado em Aero A. Depois de o pores, mede outra vez.')).toBeVisible()
     await page.goto('/diario')

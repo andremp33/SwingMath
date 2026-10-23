@@ -27,6 +27,14 @@ const norm = (v: number, lo: number, hi: number) => Math.min(1, Math.max(0, (v -
  * more. The frame still weighs most.
  */
 export function feel(s: Specs, frame: FeelFrame, strings: Stringbed = DEFAULT_STRINGBED): Feel {
+  const exact = feelExact(s, frame, strings)
+  const out = {} as Feel
+  for (const k of FEEL_KEYS) out[k] = Math.round(exact[k])
+  return out
+}
+
+/** The feel before rounding: small changes (a few grams) still show. */
+export function feelExact(s: Specs, frame: FeelFrame, strings: Stringbed = DEFAULT_STRINGBED): Feel {
   const sw = norm(s.swingweight, 270, 360)
   const m = norm(s.weightG, 270, 370)
   const tw = norm(s.twistweight ?? 0.135 * frame.headSizeSqIn, 11, 17)
@@ -49,6 +57,6 @@ export function feel(s: Specs, frame: FeelFrame, strings: Stringbed = DEFAULT_ST
     plow: 0.6 * sw + 0.4 * m,
   }
   const out = {} as Feel
-  for (const k of FEEL_KEYS) out[k] = Math.round(5 + 90 * raw[k])
+  for (const k of FEEL_KEYS) out[k] = 5 + 90 * raw[k]
   return out
 }

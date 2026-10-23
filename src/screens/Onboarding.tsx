@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { saveOwned, saveStringing, uid } from '../data/db'
 import { STOCK_RACKETS } from '../data/rackets'
-import { isPro, useStore } from '../data/store'
+import { useComputed } from '../data/hooks'
+import { defaultConfig, isPro, useStore } from '../data/store'
 import { restringDue, type OwnedRacket, type Stringing } from '../domain/journal'
 import { DEFAULT_STRINGBED, type Stringbed, type StringSpec } from '../domain/strings'
 import { freeProEnd } from '../domain/trial'
-import type { Racket } from '../domain/types'
+import type { Racket, Specs } from '../domain/types'
 import { fmt, useT } from '../i18n'
 import { GOALS, LEVELS, STYLES } from '../lib/community'
 import { fmtDate } from '../lib/format'
@@ -14,8 +15,8 @@ import { IS_APP, IS_NATIVE } from '../lib/platform'
 import { Button, ChoiceChips, cx, MultiChoiceChips, Segmented, TextField } from '../ui/basics'
 import { Logo } from '../ui/Logo'
 import { useOpenOwned } from '../ui/MyRackets'
-import { useToast } from '../ui/overlay'
 import { matchesQuery } from '../ui/RacketPicker'
+import { SpecStrip, useSpecRows } from '../ui/specs'
 import { bedLabel, StringSpecFields } from '../ui/strings'
 import { usePaywall } from './Pro'
 import { useReminders } from './reminders'
@@ -51,7 +52,6 @@ export const nthName = (name: string, n: number) => (n === 1 ? name : /#1$/.test
 export function Onboarding() {
   const t = useT()
   const nav = useNavigate()
-  const toast = useToast()
   const lang = useStore((s) => s.lang)
   const profile = useStore((s) => s.profile)
   const setProfile = useStore((s) => s.setProfile)
@@ -86,6 +86,10 @@ export function Onboarding() {
   const [goals, setGoals] = useState(profile.goals ?? [])
   const [level, setLevel] = useState(profile.level)
   const [style, setStyle] = useState(profile.style)
+
+  // The racket as it will play: the frame with these strings, for the last screen.
+  const playConfig = useMemo(() => racket && { ...defaultConfig(racket.id), ...(stringing && { strings: stringing.bed }) }, [racket, stringing])
+  const playing = useComputed(playConfig, racket)?.result
 
   const found = useMemo(() => (q.trim() ? STOCK_RACKETS.filter((r) => matchesQuery(r, q)).slice(0, 8) : popular), [q])
 
@@ -216,6 +220,7 @@ export function Onboarding() {
               </div>
             )}
           </div>
+          {!racket && <p className="text-sm text-muted">{t.onboarding.notListed}</p>}
           {racket && (
             <>
               <TextField label={t.onboarding.name} hint={t.onboarding.nameHint} value={name} onChange={setName} maxLength={40} />
@@ -255,8 +260,8 @@ export function Onboarding() {
           }
         >
           <MultiChoiceChips label={t.community.goal} value={goals} onChange={setGoals} max={2} options={GOALS.map((g) => ({ value: g, label: t.community.goals[g] }))} />
-          <ChoiceChips label={t.community.level} value={level} onChange={setLevel} options={LEVELS.map((l) => ({ value: l, label: t.community.levels[l] }))} />
-          <ChoiceChips label={t.community.style} value={style} onChange={setStyle} options={STYLES.map((s) => ({ value: s, label: t.community.styles[s] }))} />
+          <ChoiceChips label={`${t.community.level} (${t.common.optional})`} value={level} onChange={setLevel} options={LEVELS.map((l) => ({ value: l, label: t.community.levels[l] }))} />
+          <ChoiceChips label={`${t.community.style} (${t.common.optional})`} value={style} onChange={setStyle} options={STYLES.map((s) => ({ value: s, label: t.community.styles[s] }))} />
         </Page>
       )}
 
@@ -296,8 +301,8 @@ export function Onboarding() {
                 className="w-full"
                 onClick={() => {
                   if (owned[0]) openOwned(owned[0])
-                  toast(t.onboarding.tips[goals[0] ?? 'none'])
-                  finish('/')
+                  // The calculator shows the goal's tip, with the lead to try.
+                  finish(`/?dica=${goals[0] ?? 'none'}`)
                 }}
               >
                 {t.onboarding.openCalc}
@@ -309,13 +314,17 @@ export function Onboarding() {
           }
         >
           {owned[0] && (
-            <div className="rounded-lg border border-border bg-surface p-4">
-              <p className="font-semibold">{owned[0].name}</p>
-              <p className="num text-sm text-muted">
-                {[stringing && bedLabel(stringing.bed, t, lang), stringing && dueLine(stringing, profile.hoursPerWeek, t)].filter(Boolean).join(' · ')}
-              </p>
+            <div className="space-y-4 rounded-lg border border-border bg-surface p-4">
+              <div>
+                <p className="font-semibold">{owned[0].name}</p>
+                <p className="num text-sm text-muted">
+                  {[stringing && bedLabel(stringing.bed, t, lang), stringing && dueLine(stringing, profile.hoursPerWeek, t)].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              {playing && <PlayingSpecs specs={playing} />}
             </div>
           )}
+          {goals[0] && <p className="text-sm">{t.onboarding.tips[goals[0]]}</p>}
           {gives ? (
             <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm font-medium" data-testid="free-pro">
               {fmt(t.onboarding.freeProUntil, { date: fmtDate(trialEnd(), lang) })}
@@ -325,6 +334,17 @@ export function Onboarding() {
           )}
         </Page>
       )}
+    </div>
+  )
+}
+
+/** The four numbers of the racket as it will play. */
+function PlayingSpecs({ specs }: { specs: Specs }) {
+  const t = useT()
+  return (
+    <div>
+      <span className="mb-1 block text-xs text-muted">{t.calc.playing}</span>
+      <SpecStrip rows={useSpecRows(specs, undefined, { recoil: false })} />
     </div>
   )
 }

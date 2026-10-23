@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { compute } from '../domain/physics'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead } from '../domain/types'
 import { STOCK_RACKETS } from './rackets'
-import { racketFeel, reviewOf } from './racketFeel'
+import { goalAdvice } from '../domain/goals'
+import { DEFAULT_STRINGBED } from '../domain/strings'
+import { feelOffset, racketFeel, reviewOf } from './racketFeel'
 
 const find = (model: string, year?: number) => STOCK_RACKETS.find((r) => r.model === model && (year === undefined || r.year === year))!
 const stock = (model: string, year?: number) => {
@@ -42,5 +44,14 @@ describe('feel from the playtests', () => {
     const b = racketFeel(r, compute({ ...base, leadG: { ...emptyLead(), tip: 8 } }).result)
     expect(b.power).toBeGreaterThan(a.power)
     expect(b.manoeuvrability).toBeLessThan(a.manoeuvrability)
+  })
+
+  it('the goals read the same numbers as the feel, with lead or without', () => {
+    const r = find('Pure Aero 98', 2026)
+    const base = { spec: r, baseMode: 'reference' as const, measured: {}, accessories: { strings: true, overgrip: true, leatherGrip: false, dampener: false }, masses: DEFAULT_ACCESSORY_MASSES, strings: DEFAULT_STRINGBED }
+    for (const leadG of [emptyLead(), { ...emptyLead(), tip: 2, threeNine: 4, handle: 3 }]) {
+      const f = racketFeel(r, compute({ ...base, leadG }).result)
+      for (const a of goalAdvice({ ...base, leadG, feelOffset: feelOffset(r) }, ['spin', 'power', 'control', 'stability', 'manoeuvrability'])) expect(Math.round(a.now), a.goal).toBe(f[a.goal as keyof typeof f])
+    }
   })
 })

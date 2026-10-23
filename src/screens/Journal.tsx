@@ -1,10 +1,10 @@
 import { ArrowRight, Check, Plus, RotateCw, Timer } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { uid } from '../data/db'
+import { Link, useSearchParams } from 'react-router-dom'
+import { saveOwned, uid } from '../data/db'
 import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hooks'
 import { useStore } from '../data/store'
-import { hoursOn, insights, latestOf, lifeOf, ownerKey, SESSION_KINDS, weeklyHours, type OwnedRacket, type Session, type SessionKind, type Stringing } from '../domain/journal'
+import { hoursOn, insights, isFinished, latestOf, lifeOf, ownerKey, SESSION_KINDS, weeklyHours, type OwnedRacket, type Session, type SessionKind, type Stringing } from '../domain/journal'
 import { DEFAULT_STRINGBED } from '../domain/strings'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
@@ -12,7 +12,7 @@ import { Button, Card, CardTitle, ChoiceChips, cx, PageTitle } from '../ui/basic
 import { InfoTip } from '../ui/disclosure'
 import { bedLabel } from '../ui/strings'
 import { LifeBar, OwnedSheet, RacketSheet, SessionList, SessionSheet, StringingSheet } from './JournalSheets'
-import { StringingReportSheet } from './JournalReport'
+import { RestringReminderSheet, StringingReportSheet } from './JournalReport'
 import { MeasurementSheet } from './MeasurementSheet'
 import { ProGate } from './Pro'
 
@@ -44,6 +44,12 @@ export function Journal() {
 
   const loading = owned === undefined || stringings === undefined || sessions === undefined
   const active = useMemo(() => (owned ?? []).filter((o) => !o.retired), [owned])
+  // A restring reminder the player tapped (lib/platform.ts, reminderPath).
+  const [params, setParams] = useSearchParams()
+  const reminderId = params.get('lembrete')
+  const reminder = reminderId ? stringings?.find((s) => s.id === reminderId) : undefined
+  const reminderOwned = reminder && active.find((o) => o.id === reminder.ownedId)
+  const closeReminder = () => setParams({}, { replace: true })
 
   // Built when a button is pressed, so they take the time of the click.
   const newOwned = (at = Date.now()): OwnedRacket => ({ id: uid(), name: '', racketId: config.racketId, createdAt: at, updatedAt: at })
@@ -82,6 +88,22 @@ export function Journal() {
         />
       )}
       {measuring && <MeasurementSheet owned={[measuring]} ownedId={measuring.id} value={{}} onClose={() => setMeasuring(null)} />}
+      {reminder &&
+        // An old reminder of strings since replaced: how they went.
+        (isFinished(reminder, stringings ?? []) ? (
+          <StringingReportSheet value={reminder} stringings={stringings ?? []} sessions={sessions ?? []} owned={owned ?? []} onClose={closeReminder} />
+        ) : (
+          <RestringReminderSheet
+            value={reminder}
+            stringings={stringings ?? []}
+            sessions={sessions ?? []}
+            owned={owned ?? []}
+            onRestring={reminderOwned ? () => (closeReminder(), setStringing(restring(reminderOwned))) : undefined}
+            onRetire={reminderOwned ? () => void saveOwned({ ...reminderOwned, retired: true, updatedAt: Date.now() }).then(closeReminder) : undefined}
+            onReport={() => (closeReminder(), setReport(reminder))}
+            onClose={closeReminder}
+          />
+        ))}
       {report && <StringingReportSheet value={report} stringings={stringings ?? []} sessions={sessions ?? []} owned={owned ?? []} onClose={() => setReport(null)} />}
       {logging && <SessionSheet value={logging} stringings={stringings ?? []} owned={owned ?? []} onClose={() => setLogging(null)} />}
       {viewing && (
@@ -155,14 +177,16 @@ export function Journal() {
           {/* Swipe through them on a phone; a grid on wider screens. */}
           <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-3">
             {active.map((o) => (
-              <li key={o.id} className="w-[82%] min-w-0 shrink-0 snap-start md:w-auto">
+              // One racket takes the width; more peek out, to swipe.
+              <li key={o.id} className={cx('min-w-0 shrink-0 snap-start md:w-auto', active.length === 1 ? 'w-full' : 'w-[82%]')}>
                 <RacketCard owned={o} stringings={stringings} sessions={sessions} now={now} onOpen={() => setViewing(o)} onRestring={() => setStringing(restring(o))} />
               </li>
             ))}
           </ul>
         </section>
 
-        <Summary sessions={sessions} stringings={stringings} owned={owned} now={now} />
+        {/* Numbers once there is a session to count: zeros would look broken. */}
+        {sessions.length > 0 && <Summary sessions={sessions} stringings={stringings} owned={owned} now={now} />}
 
         <section aria-label={t.journal.recent}>
           <h2 className="mb-1 text-md font-semibold tracking-tight">{t.journal.recent}</h2>

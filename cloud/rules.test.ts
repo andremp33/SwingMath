@@ -164,6 +164,29 @@ describe('public setups', () => {
     // The author still sees it.
     expect((await free.db.from('public_setups').select('hidden').eq('id', data!.id).single()).data?.hidden).toBe(true)
   })
+
+  it('a copy counts once per player; without an account, at most 20 a day', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'Contada' }).select('id').single()
+    const copies = async () => (await anon.from('public_setups').select('copies').eq('id', data!.id).single()).data?.copies
+    const p = await user('c1')
+    await p.db.rpc('count_copy', { setup_id: data!.id })
+    await p.db.rpc('count_copy', { setup_id: data!.id })
+    expect(await copies()).toBe(1)
+    for (let i = 0; i < 25; i++) await anon.rpc('count_copy', { setup_id: data!.id })
+    expect(await copies()).toBe(21)
+  })
+
+  it('a setup many copied needs reports from a tenth of them, not three', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'Popular' }).select('id').single()
+    await admin.from('public_setups').update({ copies: 50 }).eq('id', data!.id)
+    for (const n of ['p1', 'p2', 'p3']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id })
+    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data).toHaveLength(1)
+    for (const n of ['p4', 'p5']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id })
+    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data).toEqual([])
+    // Only the service role sees the queue.
+    expect((await anon.from('moderation_queue').select('id')).data ?? []).toEqual([])
+    expect((await admin.from('moderation_queue').select('reports').eq('id', data!.id).single()).data?.reports).toBe(5)
+  })
 })
 
 describe('community recipes', () => {

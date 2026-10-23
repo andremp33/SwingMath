@@ -3,6 +3,7 @@ import type { Specs } from '../domain/types'
 import { useStore } from '../data/store'
 import { useT } from '../i18n'
 import { fmtNum, fmtSigned } from '../lib/format'
+import { G_PER_OZ, MM_PER_IN, useUnits } from '../lib/units'
 import { cx } from './basics'
 
 export interface SpecRow {
@@ -19,16 +20,26 @@ export interface SpecRow {
 export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } = {}): SpecRow[] {
   const t = useT()
   const lang = useStore((x) => x.lang)
+  const u = useUnits()
   const pts = (p: number) => `${fmtNum(Math.abs(p), 1, lang)} ${p >= 0 ? t.units.pts : t.units.ptsHH}`
   const rows: SpecRow[] = [
-    { key: 'w', label: t.spec.weight, value: fmtNum(s.weightG, 0, lang), unit: t.units.g, delta: from && s.weightG - from.weightG },
+    // Weight and balance in the player's units; deltas too (oz and in to hundredths).
+    {
+      key: 'w',
+      label: t.spec.weight,
+      value: u.weight(s.weightG),
+      unit: u.weightUnit,
+      delta: from && (s.weightG - from.weightG) / (u.imperial ? G_PER_OZ : 1),
+      deltaDigits: u.imperial ? 2 : undefined,
+    },
     {
       key: 'b',
       label: t.spec.balance,
-      value: fmtNum(s.balanceCm * 10, 0, lang),
-      unit: t.units.mm,
+      value: u.balance(s.balanceCm),
+      unit: u.balanceUnit,
       sub: pts(s.ptsHL),
-      delta: from && (s.balanceCm - from.balanceCm) * 10,
+      delta: from && ((s.balanceCm - from.balanceCm) * 10) / (u.imperial ? MM_PER_IN : 1),
+      deltaDigits: u.imperial ? 2 : undefined,
     },
     { key: 'sw', label: t.spec.swingweight, value: fmtNum(s.swingweight, 0, lang), unit: t.units.kgcm2, delta: from && s.swingweight - from.swingweight },
     {
@@ -47,10 +58,10 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
     rows.push({
       key: 'ss',
       label: t.spec.sweetSpot,
-      value: fmtNum(s.sweetSpotCm, 1, lang),
-      unit: t.units.cm,
+      value: u.length(s.sweetSpotCm),
+      unit: u.imperial ? u.lengthUnit : t.units.cm,
       sub: t.spec.sweetSpotUnit,
-      delta: from && s.sweetSpotCm - from.sweetSpotCm,
+      delta: from && (s.sweetSpotCm - from.sweetSpotCm) / (u.imperial ? 2.54 : 1),
     })
   }
   return rows
@@ -99,7 +110,7 @@ export function SpecTable({ rows, showDelta = true }: { rows: SpecRow[]; showDel
 
 /** One ring: a full circle filled to the value, starting at 12 o'clock. An
  *  optional inner ring shows a second setup for comparison. */
-export function Ring({ value, compare, label, small, color = 'var(--c-bar)' }: { value: number; compare?: number; label: string; small?: boolean; color?: string }) {
+export function Ring({ value, compare, label, small, color = 'var(--c-bar)', mark }: { value: number; compare?: number; label: string; small?: boolean; color?: string; mark?: boolean }) {
   const R = 34
   const C = 2 * Math.PI * R
   const r2 = 25
@@ -146,14 +157,16 @@ export function Ring({ value, compare, label, small, color = 'var(--c-bar)' }: {
           </span>
         </span>
       </div>
-      <span className="text-center text-xs leading-tight text-muted">{label}</span>
+      <span className={cx('text-center text-xs leading-tight', mark ? 'font-semibold text-text' : 'text-muted')}>{label}</span>
     </div>
   )
 }
 
-/** The six feel estimates as rings, like a recovery dashboard. */
+/** The six feel estimates as rings, like a recovery dashboard; the
+ *  player's goals have their names in bold. */
 export function FeelRings({ feel, compare, labels }: { feel: Feel; compare?: Feel; labels?: [string, string] }) {
   const t = useT()
+  const goals = useStore((s) => s.profile.goals) ?? []
   return (
     <div>
       {labels && compare && (
@@ -168,7 +181,7 @@ export function FeelRings({ feel, compare, labels }: { feel: Feel; compare?: Fee
       )}
       <div className="grid grid-cols-3 gap-x-2 gap-y-4">
         {FEEL_KEYS.map((k) => (
-          <Ring key={k} value={feel[k]} compare={compare?.[k]} label={t.feel[k]} color={`var(--c-${k})`} />
+          <Ring key={k} value={feel[k]} compare={compare?.[k]} label={t.feel[k]} color={`var(--c-${k})`} mark={(goals as string[]).includes(k)} />
         ))}
       </div>
     </div>

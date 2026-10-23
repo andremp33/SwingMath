@@ -16,7 +16,7 @@ export function Avatar({ className }: { className?: string }) {
   const pro = useStore(isPro)
   return (
     <span aria-hidden className={cx('relative inline-grid size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-semibold text-text ring-1 ring-border', className)}>
-      {account ? initialsOf(account.email) : <UserRound className="size-[18px] text-muted" strokeWidth={1.75} />}
+      {account ? initialsOf(account.email) : <UserRound className="size-[55%] text-muted" strokeWidth={1.75} />}
       {pro && <span className="absolute -bottom-1 -right-2 rounded-full bg-accent px-1 text-[9px] font-bold leading-[14px] text-on-accent ring-2 ring-bg">Pro</span>}
     </span>
   )

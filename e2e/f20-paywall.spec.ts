@@ -54,7 +54,7 @@ test.describe('F20 the paywall with the player’s racket', () => {
     await to.getByRole('radio', { name: 'Profissional' }).click()
     await to.getByRole('radio', { name: /Jannik Sinner/ }).click()
     const d = await openPlans(page)
-    await expect(d.getByTestId('preview-title')).toHaveText(/^A tua Aero de jogo a \d+ tiras? da do Jannik Sinner$/)
+    await expect(d.getByTestId('preview-title')).toHaveText(/^A tua Aero de jogo a \d+ tiras? de uma raquete do circuito ATP$/)
     // Less motion: the final state straight away, the swingweight up to Sinner's.
     await expect(d.getByTestId('preview-sw')).toHaveAttribute('data-done', 'true')
     const sw = Number((await d.getByTestId('preview-sw').textContent())!.replace(/\D/g, ''))
@@ -68,7 +68,7 @@ test.describe('F20 the paywall with the player’s racket', () => {
     await start(page)
     await seedRacket(page, { measured: [318, 32.5, 322] })
     const d = await openPlans(page)
-    await expect(d.getByTestId('preview-title')).toHaveText(/^A tua Aero de jogo a \d+ tiras? da (do|da) .+$/)
+    await expect(d.getByTestId('preview-title')).toHaveText(/^A tua Aero de jogo a \d+ tiras? de uma raquete do circuito (ATP|WTA)$/)
     // It climbs, then stops at the target.
     const sw = d.getByTestId('preview-sw')
     await expect(sw).not.toHaveAttribute('data-done', 'true')

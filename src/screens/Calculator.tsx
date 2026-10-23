@@ -1,5 +1,5 @@
-import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Info, Plus, RotateCcw, Ruler, Save, Scale } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ChevronDown, ChevronUp, CircleAlert, CircleCheck, Gauge, Info, Plus, RotateCcw, Ruler, Save, Scale, X } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { geometry } from '../domain/physics'
 import { DEFAULT_STRINGBED } from '../domain/strings'
@@ -7,22 +7,24 @@ import { emptyLead, POSITIONS, type Position, type Racket, type Setup, type Spec
 import { saveOwned, saveSetup, saveStringing, uid } from '../data/db'
 import { useComputed, useOwned, useRacket, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
-import { fmt, useT } from '../i18n'
+import { fmt, useT, type Dict } from '../i18n'
 import { fmtNum, fmtSigned, LOCALE } from '../lib/format'
-import { Badge, Button, Card, CardTitle, ChoiceChips, cx, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
+import { Badge, Button, Card, CardTitle, ChoiceChips, cx, IconButton, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
-import { MyRacketsRow } from '../ui/MyRackets'
+import { MyRacketsRow, useActiveOwned } from '../ui/MyRackets'
+import { useUnits } from '../lib/units'
 import { RacketPicker } from '../ui/RacketPicker'
 import { FeelRings, SpecStrip, SpecTable, useSpecRows } from '../ui/specs'
-import { ComfortCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
+import { ComfortCard, GoalsCard, GripCard, StringsCard, SweetSpotCard } from './CalcExtras'
 import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
-import { InfoTip } from '../ui/disclosure'
+import { CollapsibleCard, InfoTip } from '../ui/disclosure'
 import { RacketSources } from './RacketSources'
 import { racketFeel, reviewOf } from '../data/racketFeel'
 import { FEEL_KEYS, type Feel } from '../domain/feel'
 import { suggestSetupName } from '../lib/setupName'
+import { BalanceField, WeightField } from '../ui/unitFields'
 
 export function Calculator() {
   const t = useT()
@@ -33,6 +35,7 @@ export function Calculator() {
   const setLead = useStore((s) => s.setLead)
   const resetConfig = useStore((s) => s.resetConfig)
   const loadedSetupId = useStore((s) => s.loadedSetupId)
+  const units = useUnits()
   const racket = useRacket(config.racketId)
   const computed = useComputed(config, racket)
   // The same setup without lead: what the feel bar compares against.
@@ -47,6 +50,11 @@ export function Calculator() {
   const addExtra = useStore((s) => s.addExtra)
   const [infoOpen, setInfoOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
+  const mine = useActiveOwned()
+  // The first launch's tip, by the player's goal, until they try it or close it.
+  const [params, setParams] = useSearchParams()
+  const tip = params.get('dica')
+  const closeTip = () => setParams({}, { replace: true })
 
   const [accOpen, setAccOpen] = useState(false)
   const playing = noLead?.result ?? computed?.base
@@ -102,15 +110,16 @@ export function Calculator() {
       </PageTitle>
 
 
-      <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
-        <div className="contents xl:block xl:space-y-4">
-          <Card className="order-1 border-t-0 pt-0 xl:order-none">
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_300px] md:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="contents md:block md:space-y-4">
+          <Card className="order-1 border-t-0 pt-0 md:order-none">
             <div className="space-y-4">
+              {/* The player's own rackets first; the picker then names their model. */}
+              <MyRacketsRow />
               <div>
-                <RacketPicker label={t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
+                <RacketPicker label={mine ? fmt(t.calc.modelOf, { name: mine.name }) : t.calc.racket} value={racket} onChange={(r) => setConfig({ racketId: r.id })} />
                 <CommunityLink racket={racket} />
               </div>
-              <MyRacketsRow />
               {config.baseMode === 'reference' ? (
                 <div>
                   <div className="mb-1 flex items-center justify-between">
@@ -118,7 +127,7 @@ export function Calculator() {
                       {t.calc.playing}
                       <InfoTip title={t.calc.playing}>
                         <p>{t.calc.playingHint}</p>
-                        <p className="num mt-2 font-medium">{fmt(t.calc.factory, { w: fmtNum(base.weightG, 0, lang), b: fmtNum(base.balanceCm * 10, 0, lang), sw: fmtNum(base.swingweight, 0, lang) })}</p>
+                        <p className="num mt-2 font-medium">{fmt(t.calc.factory, { w: `${units.weight(base.weightG)} ${units.weightUnit}`, b: `${units.balance(base.balanceCm)} ${units.balanceUnit}`, sw: fmtNum(base.swingweight, 0, lang) })}</p>
                         {racket.isStock && <div className="mt-3"><RacketSources racket={racket} /></div>}
                       </InfoTip>
                     </span>
@@ -139,21 +148,19 @@ export function Calculator() {
                     <Ruler className="size-4" aria-hidden /> {t.measure.open}
                   </Link>
                   <div className="grid grid-cols-2 gap-3">
-                    <NumberField
+                    <WeightField
                       label={t.spec.weight}
-                      unit="g"
                       min={150}
                       max={450}
-                      placeholder={fmtNum(racket.weightG, 1, lang)}
+                      placeholder={racket.weightG}
                       value={config.measured.weightG}
                       onChange={(v) => setConfig({ measured: { ...config.measured, weightG: v } })}
                     />
-                    <NumberField
+                    <BalanceField
                       label={t.spec.balance}
-                      unit="mm"
                       min={250}
                       max={400}
-                      placeholder={fmtNum(racket.balanceCm * 10, 1, lang)}
+                      placeholder={racket.balanceCm * 10}
                       value={config.measured.balanceCm === undefined ? undefined : config.measured.balanceCm * 10}
                       onChange={(v) => setConfig({ measured: { ...config.measured, balanceCm: v === undefined ? undefined : v / 10 } })}
                     />
@@ -215,11 +222,23 @@ export function Calculator() {
             </div>
           </Card>
 
-          <Card className="order-2 xl:order-none">
+          <Card className="order-2 md:order-none">
             <CardTitle action={<span className="text-sm text-muted">{t.calc.totalLead}: <span className="readout text-text">{fmtNum(totalLead, 1, lang)} g</span></span>}>
               {t.calc.lead}
             </CardTitle>
-            <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
+            {tip && tip in t.onboarding.tips ? (
+              <TipCard
+                goal={tip as keyof typeof t.onboarding.tips}
+                onTry={(p, g) => {
+                  setLead(p, Math.max(config.leadG[p], g))
+                  closeTip()
+                  focusSlider(p)
+                }}
+                onClose={closeTip}
+              />
+            ) : (
+              <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
+            )}
             <div className="@container"><div className="grid grid-cols-1 items-center gap-4 @lg:grid-cols-[150px_minmax(0,1fr)]">
               <RacketDiagram
                 sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
@@ -265,7 +284,7 @@ export function Calculator() {
               )}
             </div>
           </Card>
-          <div className="order-2 xl:order-none">
+          <div className="order-2 md:order-none">
             <SweetSpotCard
               racket={racket}
               result={result}
@@ -277,32 +296,41 @@ export function Calculator() {
               }}
             />
           </div>
-          <div className="order-6 xl:order-none"><StringsCard racket={racket} /></div>
-          <div className="order-7 xl:order-none"><GripCard /></div>
-          <div className="order-11 xl:order-none"><CommunityCard racket={racket} /></div>
+          <div className="order-6 md:order-none"><StringsCard racket={racket} /></div>
+          <div className="order-7 md:order-none"><GripCard /></div>
+          <div className="order-11 md:order-none"><CommunityCard racket={racket} /></div>
         </div>
 
-        <div className="contents xl:sticky xl:top-8 xl:block xl:space-y-4">
-          <Card label={t.calc.result} className="order-3 xl:order-none">
-            <CardTitle>{t.calc.result}</CardTitle>
-            <SpecTable rows={resultRows} />
-            {catalog && <p className="mt-2 text-xs text-muted">{t.calc.catalogNote}</p>}
-          </Card>
+        <div className="contents md:sticky md:top-20 md:block lg:top-8 md:space-y-4">
+          {/* Phones have the main numbers in the bar: the full table folds, with
+              what the bar leaves out as its summary. */}
+          <div className="order-3 md:order-none">
+            <CollapsibleCard
+              id="result"
+              title={t.calc.result}
+              openFrom={768}
+              summary={`${t.spec.recoil} ${fmtNum(result.recoilWeight, 0, lang)} · ${t.spec.sweetSpot} ${fmtNum(result.sweetSpotCm, 1, lang)} cm`}
+            >
+              <SpecTable rows={resultRows} />
+              {catalog && <p className="mt-2 text-xs text-muted">{t.calc.catalogNote}</p>}
+            </CollapsibleCard>
+          </div>
           {/* Phones have the feel in the result bar, larger and always at hand. */}
-          <Card className="order-4 hidden lg:block xl:order-none">
+          <Card className="order-4 hidden md:block md:order-none">
             <CardTitle info={<InfoTip title={t.calc.feel}>{t.calc.feelHint}</InfoTip>}>{t.calc.feel}</CardTitle>
             <FeelRings feel={f} />
             <FeelSource racket={racket} />
           </Card>
-          <div className="order-8 xl:order-none"><ComfortCard racket={racket} specs={result} /></div>
-          <div className="order-9 xl:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
-          <div className="order-10 xl:order-none"><VerifyCard predicted={result} catalog={catalog} /></div>
+          <div className="order-5 md:order-none"><GoalsCard racket={racket} result={result} /></div>
+          <div className="order-8 md:order-none"><ComfortCard racket={racket} specs={result} /></div>
+          <div className="order-9 md:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
+          <div className="order-10 md:order-none"><VerifyCard predicted={result} catalog={catalog} /></div>
         </div>
       </div>
 
       {/* Phones: the result (and, opened, the feel) follows you while you move the sliders. */}
       <ResultBar racket={racket} result={result} base={play} feel={f} feelBase={racketFeel(racket, noLead?.result ?? result, config.strings, masses)} open={barOpen} onToggle={toggleBar} />
-      <div className={cx('lg:hidden', barOpen ? 'h-44' : 'h-12')} />
+      <div className={cx('md:hidden', barOpen ? 'h-52' : 'h-20')} />
 
       <InfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
       <AddPositionSheet
@@ -312,6 +340,36 @@ export function Calculator() {
       />
       <SaveSetupSheet open={saveOpen} onClose={() => setSaveOpen(false)} count={setups?.length ?? 0} />
     </>
+  )
+}
+
+/** What each goal's tip has the player try: grams (all of them, both sides
+ *  where there are two) at one position. Spin and comfort are the strings'. */
+const TRY_LEAD: Partial<Record<string, [Position, number]>> = {
+  stability: ['threeNine', 4],
+  control: ['threeNine', 4],
+  power: ['tip', 2],
+  manoeuvrability: ['handle', 5],
+}
+
+/** The first launch's tip, by the player's first goal, with the lead to try
+ *  in one tap: the numbers below then show what it did. */
+function TipCard({ goal, onTry, onClose }: { goal: keyof Dict['onboarding']['tips']; onTry: (p: Position, g: number) => void; onClose: () => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const lead = TRY_LEAD[goal]
+  return (
+    <div role="note" className="mb-3 flex items-start gap-2 rounded-md bg-surface-2 py-2.5 pl-3 pr-1.5 text-sm">
+      <div className="min-w-0 flex-1 space-y-2">
+        <p>{t.onboarding.tips[goal]}</p>
+        {lead && (
+          <Button size="sm" variant="primary" onClick={() => onTry(lead[0], lead[1])}>
+            {fmt(t.calc.tryLead, { g: fmtNum(lead[1], 0, lang), pos: t.pos[lead[0]] })}
+          </Button>
+        )}
+      </div>
+      <IconButton icon={X} label={t.common.close} onClick={onClose} />
+    </div>
   )
 }
 
@@ -412,13 +470,17 @@ const writeOpen = (k: string, v: boolean) => {
   }
 }
 
-/** The bar above the tabs: the four numbers; a tap opens the feel above
- *  them, with how much the lead moved each one. */
+/** The bar above the tabs: the four numbers, and under them the feel the
+ *  player cares about (their goals, else power, control and spin); a tap
+ *  there opens all six above, with how much the lead moved each one. */
 function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: { racket: Racket; result: Specs; base: Specs; feel: Feel; feelBase: Feel; open: boolean; onToggle: () => void }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const goals = useStore((s) => s.profile.goals) ?? []
+  const units = useUnits()
+  const keys = [...new Set([...FEEL_KEYS.filter((k) => (goals as string[]).includes(k)), 'power', 'control', 'spin'] as const)].slice(0, 3)
   return (
-    <div className="result-bar fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 backdrop-blur lg:hidden">
+    <div className="result-bar fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 backdrop-blur md:hidden">
       {open && (
         <div id="result-bar-feel" className="mx-auto max-w-lg border-b border-border pb-2">
           <div className="flex items-center justify-between pt-1">
@@ -430,30 +492,51 @@ function ResultBar({ racket, result, base, feel: f, feelBase, open, onToggle }: 
           </div>
           <ul aria-label={t.calc.feel} className="grid grid-cols-3 gap-x-2 gap-y-2">
             {FEEL_KEYS.map((k) => (
-              <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} />
+              <MiniRing key={k} label={t.feel[k]} value={f[k]} delta={f[k] - feelBase[k]} color={`var(--c-${k})`} lang={lang} mark={(goals as string[]).includes(k)} />
             ))}
           </ul>
         </div>
       )}
+      <div className="num mx-auto flex w-full max-w-lg items-center pt-2 text-center text-xs">
+        <Mini label={t.spec.weight} unit={units.weightUnit} value={units.weight(result.weightG)} delta={units.toWeight(result.weightG - base.weightG)} digits={units.imperial ? 2 : 1} lang={lang} />
+        <Mini label={t.spec.balance} unit={units.balanceUnit} value={units.balance(result.balanceCm)} delta={units.toBalanceMm((result.balanceCm - base.balanceCm) * 10)} digits={units.imperial ? 2 : 1} lang={lang} />
+        <Mini label="SW" unit={t.units.kgcm2} value={fmtNum(result.swingweight, 0, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
+        <Mini label="TW" unit={t.units.kgcm2} value={fmtNum(result.twistweight, 1, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} lang={lang} />
+      </div>
       <button
         type="button"
         aria-expanded={open}
         aria-controls="result-bar-feel"
         aria-label={t.calc.feel}
         onClick={onToggle}
-        className="num mx-auto flex w-full max-w-lg items-center py-2 text-center text-xs"
+        className="@container mx-auto mt-1 flex w-full max-w-lg items-center gap-2 border-t border-border/60 py-1.5 text-xs"
       >
-        <Mini label={t.spec.weight} unit={t.units.g} value={fmtNum(result.weightG, 0, lang)} delta={result.weightG - base.weightG} lang={lang} />
-        <Mini label={t.spec.balance} unit={t.units.mm} value={fmtNum(result.balanceCm * 10, 0, lang)} delta={(result.balanceCm - base.balanceCm) * 10} lang={lang} />
-        <Mini label="SW" unit={t.units.kgcm2} value={fmtNum(result.swingweight, 0, lang)} delta={result.swingweight - base.swingweight} lang={lang} />
-        <Mini label="TW" unit={t.units.kgcm2} value={fmtNum(result.twistweight, 1, lang)} delta={(result.twistweight ?? 0) - (base.twistweight ?? 0)} lang={lang} />
+        <Gauge className="size-4 shrink-0 text-muted" aria-hidden />
+        <span className="flex min-w-0 flex-1 justify-around gap-2">
+          {open ? (
+            <span className="font-medium text-muted">{t.calc.feel}</span>
+          ) : (
+            keys.map((k, i) => {
+              const d = Math.round(f[k] - feelBase[k])
+              return (
+                // With large text (rem grows) only the first fits whole: the
+                // others wait for the room, rather than show cut.
+                <span key={k} className={cx('num min-w-0 truncate', i > 0 && 'hidden @[20rem]:inline')}>
+                  <span className="text-muted">{t.feel[k]} </span>
+                  <span className="font-semibold">{Math.round(f[k])}</span>
+                  {d !== 0 && <span className="ml-0.5 font-semibold text-accent-text">{fmtSigned(d, 0, lang)}</span>}
+                </span>
+              )
+            })
+          )}
+        </span>
         <ChevronUp className={cx('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
     </div>
   )
 }
 
-function MiniRing({ label, value, delta, color, lang }: { label: string; value: number; delta: number; color: string; lang: string }) {
+function MiniRing({ label, value, delta, color, lang, mark }: { label: string; value: number; delta: number; color: string; lang: string; mark?: boolean }) {
   const R = 15
   const C = 2 * Math.PI * R
   const d = Math.round(delta)
@@ -481,7 +564,7 @@ function MiniRing({ label, value, delta, color, lang }: { label: string; value: 
         </div>
         <span className={cx('num w-7 pl-1 text-[11px]', d === 0 ? 'text-muted' : 'font-semibold text-text')}>{d === 0 ? '·' : fmtSigned(d, 0, lang)}</span>
       </div>
-      <span className="max-w-full truncate text-[11px] text-muted">{label}</span>
+      <span className={cx('max-w-full truncate text-[11px]', mark ? 'font-semibold text-text' : 'text-muted')}>{label}</span>
     </li>
   )
 }

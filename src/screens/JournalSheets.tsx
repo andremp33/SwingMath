@@ -24,6 +24,7 @@ import { Button, ChoiceChips, cx, Label, NumberField, RatingInput, Select, TextF
 import { Sheet, useToast } from '../ui/overlay'
 import { RacketPicker } from '../ui/RacketPicker'
 import { bedLabel, StringbedEditor } from '../ui/strings'
+import { useUnits } from '../lib/units'
 
 const DAY = 86_400_000
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -79,7 +80,8 @@ function Notes({ value, onChange }: { value?: string; onChange: (v: string) => v
 /** Today, yesterday or another day, the last opening a date field. */
 function WhenField({ value, onChange }: { value: number; onChange: (ms: number) => void }) {
   const t = useT()
-  const now = Date.now()
+  // Today as the field opened.
+  const [now] = useState(Date.now)
   const preset = sameDay(value, now) ? 'today' : sameDay(value, now - DAY) ? 'yesterday' : 'other'
   const [other, setOther] = useState(preset === 'other')
   return (
@@ -233,7 +235,12 @@ export function StringingSheet({
   const t = useT()
   const toast = useToast()
   const [draft, setDraft] = useState<Stringing | null>(value)
-  useEffect(() => setDraft(value), [value])
+  // A new stringing to edit starts a new draft.
+  const [shown, setShown] = useState(value)
+  if (shown !== value) {
+    setShown(value)
+    setDraft(value)
+  }
   const o = owned.find((x) => x.id === draft?.ownedId)
   const racket = useRacket(o?.racketId ?? draft?.racketId)
   if (!draft) return <Sheet open={false} onClose={onClose} title="">{null}</Sheet>
@@ -310,12 +317,15 @@ export function SessionSheet({ value, stringings, owned, onClose }: { value: Ses
   const [draft, setDraft] = useState<Session | null>(value)
   const [more, setMore] = useState(false)
   const [otherLength, setOtherLength] = useState(false)
-  useEffect(() => {
+  // A new session to edit starts a new draft, with "More details" open if it has any.
+  const [shown, setShown] = useState<Session | null>(null)
+  if (shown !== value) {
+    setShown(value)
     setDraft(value)
     const r = value?.ratings ?? {}
     setMore(!!(value && (r.power || r.control || r.spin || r.comfort || value.armPain || value.notes)))
     setOtherLength(!!value && !DURATIONS.includes(value.minutes as (typeof DURATIONS)[number]))
-  }, [value])
+  }
   if (!draft) return <Sheet open={false} onClose={onClose} title="">{null}</Sheet>
 
   const isEdit = value !== null && value.updatedAt !== value.createdAt
@@ -385,7 +395,7 @@ export function SessionSheet({ value, stringings, owned, onClose }: { value: Ses
           {otherLength && <NumberField label={t.journal.minutes} unit="min" min={5} max={600} value={draft.minutes} onChange={(v) => v !== undefined && set({ minutes: Math.round(v) })} />}
         </div>
         <ChoiceChips label={t.journal.kind} value={draft.kind} onChange={(kind) => set({ kind })} options={SESSION_KINDS.map((k) => ({ value: k, label: t.journal.kinds[k] }))} />
-        <RatingInput label={t.journal.howWasIt} value={draft.ratings.overall} onChange={(v) => set({ ratings: { ...draft.ratings, overall: v } })} />
+        <RatingInput label={t.journal.howWasIt} value={draft.ratings.overall} onChange={(v) => set({ ratings: { ...draft.ratings, overall: v } })} ends={t.journal.ratingEnds} />
 
         <div className="border-t border-border pt-3">
           <button type="button" aria-expanded={more} onClick={() => setMore(!more)} className="flex w-full items-center justify-between py-1 text-sm font-semibold">
@@ -607,6 +617,7 @@ export function SessionList({ sessions, stringings, owned, onOpen }: { sessions:
  *  and to delete, like all the player's data. */
 function Measurements({ owned, latest, onAdd }: { owned: OwnedRacket; latest?: Stringing; onAdd: () => void }) {
   const t = useT()
+  const units = useUnits()
   const lang = useStore((s) => s.lang)
   const list = owned.measurements ?? []
   const lead = owned.lead && Object.values(owned.lead.leadG).reduce((a, b) => a + b, 0) + (owned.lead.extra ?? []).reduce((a, e) => a + e.grams, 0)
@@ -635,7 +646,7 @@ function Measurements({ owned, latest, onAdd }: { owned: OwnedRacket; latest?: S
           {list.map((m) => (
             <li key={m.id} className="flex items-center gap-2 py-2 text-sm">
               <span className="min-w-0 flex-1">
-                <span className="num block font-medium">{specLine(m, t, lang)}</span>
+                <span className="num block font-medium">{specLine(m, t, lang, units)}</span>
                 <span className="num block text-muted">
                   {fmtDate(m.date, lang)} · {t.measurements.origins[m.origin]} · {m.strung ? t.fleet.strung : t.fleet.unstrung}
                 </span>

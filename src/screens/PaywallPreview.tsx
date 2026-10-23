@@ -43,9 +43,12 @@ export function PaywallTop({ reason }: { reason: PaywallReason }) {
   return preview ? <RacketTeaser reason={reason} name={mine.name} frame={frame} {...preview} /> : <ReasonHeader reason={reason} />
 }
 
+/** A target a few strips away is a goal in reach; ten strips put people off. */
+const FEW_STRIPS = 3
+
 /** The player's racket as last measured (else its model's numbers), with
- *  strings, against the pro they opened last, else the nearest one lead can
- *  reach. */
+ *  strings, against the pro they opened last, else the nearest one lead
+ *  reaches in a few strips, else the one it reaches in the fewest. */
 function previewFor(o: OwnedRacket, frame: Racket, lastProId: string | null) {
   const m = latestMeasurement(o)
   const [specs, strung] = m ? [m, m.strung] : frame.strung ? [frame.strung, true] : [frame, false]
@@ -53,12 +56,14 @@ function previewFor(o: OwnedRacket, frame: Racket, lastProId: string | null) {
   const base = { lengthCm: frame.lengthCm, headSizeSqIn: frame.headSizeSqIn, ...me }
   const targets = PRO_TARGETS.map((pro) => ({ id: pro.id, pro, specs: withStrings(pro, pro, pro.strung, true) }))
   const last = targets.find((x) => x.id === lastProId)
-  for (const target of [last, nearestTarget(me, targets)]) {
-    if (!target) continue
-    const preview = racketPreview(base, target.specs, LEAD_MAX)
-    if (preview && preview.strips.length) return { ...preview, pro: target.pro }
-  }
-  return null
+  const lastPreview = last && racketPreview(base, last.specs, LEAD_MAX)
+  if (last && lastPreview?.strips.length) return { ...lastPreview, pro: last.pro }
+  const reachable = targets.flatMap((x) => {
+    const preview = racketPreview(base, x.specs, LEAD_MAX)
+    return preview?.strips.length ? [{ ...x, preview }] : []
+  })
+  const near = nearestTarget(me, reachable.filter((x) => x.preview.strips.length <= FEW_STRIPS)) ?? [...reachable].sort((a, b) => a.preview.strips.length - b.preview.strips.length)[0]
+  return near ? { ...near.preview, pro: near.pro } : null
 }
 
 /** One more strip at a time, the swingweight climbing with them; all at
@@ -87,15 +92,15 @@ function RacketTeaser({
   const lang = useStore((s) => s.lang)
   const shown = useStripsShown(strips.length)
   const n = strips.length
-  const wta = pro.tour === 'WTA'
-  const title = n === 1 ? (wta ? t.paywall.previewTitleOneWta : t.paywall.previewTitleOne) : wta ? t.paywall.previewTitleWta : t.paywall.previewTitle
+  // The tour, not the player: a name stays out of a screen that sells.
+  const title = n === 1 ? t.paywall.previewTitleOne : t.paywall.previewTitle
   const sw = fromSw + ((toSw - fromSw) * shown) / n
   const sub = reason === 'profile' ? '' : t.paywall.subs[reason]
   return (
     <div className="space-y-3">
       <div>
         <h3 className="text-lg font-semibold tracking-tight" data-testid="preview-title">
-          {fmt(title, { racket: name, n, pro: pro.player })}
+          {fmt(title, { racket: name, n, tour: pro.tour })}
         </h3>
         {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
       </div>

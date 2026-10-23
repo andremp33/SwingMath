@@ -5,6 +5,7 @@ import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum, LOCALE } from '../lib/format'
 import { Badge, Button, cx, TextField } from './basics'
+import { useUnits } from '../lib/units'
 
 /** "junho de 2023" from "2023-06". */
 export const monthYear = (ym: string, lang: string) =>
@@ -23,6 +24,7 @@ const fold = (s: string) =>
 export function ProList({ selected, fromStrung, onPick, onStock }: { selected: string; fromStrung: boolean; onPick: (p: ProTarget) => void; onStock?: (p: ProTarget) => void }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const [q, setQ] = useState('')
   const picked = PRO_TARGETS.find((p) => p.id === selected)
   const shown = PRO_TARGETS.filter((p) => fold(`${p.player} ${p.racket}`).includes(fold(q.trim())))
@@ -55,7 +57,7 @@ export function ProList({ selected, fromStrung, onPick, onStock }: { selected: s
                     <span className="block truncate text-muted">{p.racket}</span>
                   </span>
                   <span className="num shrink-0 text-right text-xs text-muted">
-                    {fmtNum(p.weightG, 0, lang)} g · SW {fmtNum(p.swingweight, 0, lang)}
+                    {u.weight(p.weightG)} {u.weightUnit} · SW {fmtNum(p.swingweight, 0, lang)}
                     <span className="block">{p.strung ? t.match.strungShort : t.match.unstrungShort}</span>
                   </span>
                 </button>

@@ -71,16 +71,21 @@ export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
 export interface Profile {
   /** Playing hours a week, for the restring date until sessions are logged. */
   hoursPerWeek?: number
-  /** What they want to improve (up to 2): picks the community's recipes. */
+  /** What they want to improve (up to 2): the calculator's goal advice and
+   *  the community's default filter. */
   goals?: Goal[]
+  /** Places their swingweight against what is usual (domain/goals.ts). */
   level?: Level
   style?: Style
-  hand?: 'right' | 'left'
 }
+
+/** Grams and millimetres, or ounces and inches (as players in the US read them). */
+export type UnitSystem = 'metric' | 'imperial'
 
 interface State {
   lang: Lang
   theme: Theme
+  units: UnitSystem
   masses: AccessoryMasses
   /** Mass of 10 cm of the player's lead tape, to show how much to cut. */
   tapeGPer10cm?: number
@@ -105,6 +110,9 @@ interface State {
   freeProUntil: number | null
   /** The player was shown that the free Pro ended. */
   freeProEndTold: boolean
+  /** Last time the paywall was open, asked or not (ms): Pro is brought up
+   *  again a while after (lib/paywall.ts); null until the first launch. */
+  proNudgeAt: number | null
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
@@ -120,6 +128,7 @@ interface State {
 
   setLang: (l: Lang) => void
   setTheme: (t: Theme) => void
+  setUnits: (u: UnitSystem) => void
   setMasses: (m: Partial<AccessoryMasses>) => void
   setTape: (g: number | undefined) => void
   setLicense: (l: License | null) => void
@@ -138,6 +147,7 @@ interface State {
   setLastPro: (id: string) => void
   setFreeProUntil: (until: number | null) => void
   markFreeProEndTold: () => void
+  setProNudgeAt: (at: number) => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
   setOnboarded: (v: boolean) => void
@@ -150,6 +160,9 @@ interface State {
   setSync: (s: Partial<SyncState>) => void
 }
 
+/** Ounces and inches where the device says the US; grams and mm elsewhere. */
+const browserUnits = (): UnitSystem => (typeof navigator !== 'undefined' && /^en-us$/i.test(navigator.language ?? '') ? 'imperial' : 'metric')
+
 const browserLang = (): Lang => {
   const l = typeof navigator === 'undefined' ? '' : navigator.language?.toLowerCase() ?? ''
   return l.startsWith('pt') ? 'pt' : l.startsWith('es') ? 'es' : 'en'
@@ -160,6 +173,7 @@ export const useStore = create<State>()(
     (set) => ({
       lang: browserLang(),
       theme: 'system',
+      units: browserUnits(),
       masses: DEFAULT_ACCESSORY_MASSES,
       license: null,
       config: defaultConfig(),
@@ -171,6 +185,7 @@ export const useStore = create<State>()(
       lastProId: null,
       freeProUntil: null,
       freeProEndTold: false,
+      proNudgeAt: null,
       reminded: [],
       profile: {},
       onboarded: false,
@@ -182,6 +197,7 @@ export const useStore = create<State>()(
 
       setLang: (lang) => set({ lang }),
       setTheme: (theme) => set({ theme }),
+      setUnits: (units) => set({ units }),
       setMasses: (m) => set((s) => ({ masses: { ...s.masses, ...m } })),
       setTape: (tapeGPer10cm) => set({ tapeGPer10cm }),
       setLicense: (license) => set({ license }),
@@ -205,6 +221,7 @@ export const useStore = create<State>()(
       setLastPro: (lastProId) => set({ lastProId }),
       setFreeProUntil: (freeProUntil) => set({ freeProUntil }),
       markFreeProEndTold: () => set({ freeProEndTold: true }),
+      setProNudgeAt: (proNudgeAt) => set({ proNudgeAt }),
       setAccount: (account) => set({ account }),
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),

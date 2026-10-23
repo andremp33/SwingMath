@@ -12,6 +12,7 @@ import { Button, cx, Select, SettingsGroup, SettingsRow } from '../ui/basics'
 import { InfoTip } from '../ui/disclosure'
 import type { MatchHandoff } from './Match'
 import { ProGate } from './Pro'
+import { useUnits } from '../lib/units'
 
 const LIGHT_COLOR: Record<Light, string> = { green: 'var(--c-success)', yellow: 'var(--c-warning)', red: 'var(--c-danger)' }
 
@@ -28,6 +29,7 @@ const SAMPLE: { deviation: Deviation; lights: Partial<Record<TargetKey, Light>> 
  */
 export function FleetGroup() {
   const t = useT()
+  const units = useUnits()
   const lang = useStore((s) => s.lang)
   const fleetRef = useStore((s) => s.fleetRef)
   const setFleetRef = useStore((s) => s.setFleetRef)
@@ -50,7 +52,7 @@ export function FleetGroup() {
             label={o.name}
             hint={
               <>
-                <span className="num">{m ? `${specLine(m, t, lang)} · ${fmtDate(m.date, lang)}` : t.fleet.noMeasure}</span>
+                <span className="num">{m ? `${specLine(m, t, lang, units)} · ${fmtDate(m.date, lang)}` : t.fleet.noMeasure}</span>
                 {again && <span className="block text-warning">{t.fleet.remeasure}</span>}
               </>
             }
@@ -124,9 +126,10 @@ export function FleetTeaser({ names }: { names: string[] }) {
 function Row({ name, deviation, lights, blurred }: { name: string; deviation: Deviation; lights: Partial<Record<TargetKey, Light>>; blurred?: boolean }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const u = useUnits()
   const shown: [TargetKey, string, string][] = [
-    ['weightG', t.spec.weight, `${fmtSigned(deviation.weightG ?? 0, 0, lang)} g`],
-    ['balanceCm', t.spec.balance, `${fmtSigned((deviation.balanceCm ?? 0) * 10, 0, lang)} mm`],
+    ['weightG', t.spec.weight, u.imperial ? `${u.weightDelta(deviation.weightG ?? 0)} ${u.weightUnit}` : `${fmtSigned(deviation.weightG ?? 0, 0, lang)} g`],
+    ['balanceCm', t.spec.balance, u.imperial ? `${u.balanceDelta(deviation.balanceCm ?? 0)} ${u.balanceUnit}` : `${fmtSigned((deviation.balanceCm ?? 0) * 10, 0, lang)} mm`],
     ['swingweight', 'SW', fmtSigned(deviation.swingweight ?? 0, 0, lang)],
     ['twistweight', 'TW', fmtSigned(deviation.twistweight ?? 0, 1, lang)],
   ]

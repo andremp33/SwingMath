@@ -4,6 +4,7 @@ import {
   dueForRestring,
   hoursOn,
   insights,
+  isDormant,
   isFinished,
   latestOf,
   lifeOf,
@@ -192,6 +193,26 @@ describe('restring date', () => {
 /** Hour-long sessions on one stringing, oldest first, rated in turn. */
 const played = (id: string, scores: (number | undefined)[], pain: number[] = []) =>
   scores.map((overall, i) => ({ ...session(id, 60, 40 - i, overall, pain.includes(i)), id: `${id}-${i}`, createdAt: i }))
+
+describe('rackets no longer played', () => {
+  const a = { ...stringing('a', 'A', 120), ownedId: 'oa' }
+  const b = { ...stringing('b', 'B', 30), ownedId: 'ob' }
+
+  it('one left aside while another is played is dormant; the one played is not', () => {
+    const sessions = [session('b', 90, 10), session('b', 60, 3)]
+    expect(isDormant('oa', [a, b], sessions, NOW)).toBe(true)
+    expect(isDormant('ob', [a, b], sessions, NOW)).toBe(false)
+  })
+
+  it('without sessions logged lately, nothing is dormant: the calendar still reminds', () => {
+    expect(isDormant('oa', [a, b], [session('a', 60, 100)], NOW)).toBe(false)
+  })
+
+  it('a racket strung lately is in play, sessions or not', () => {
+    const fresh = { ...stringing('c', 'A', 5), ownedId: 'oa' }
+    expect(isDormant('oa', [a, fresh, b], [session('b', 90, 10)], NOW)).toBe(false)
+  })
+})
 
 describe('stringing report', () => {
   it('scores a session by its overall rating, else power, control and spin', () => {

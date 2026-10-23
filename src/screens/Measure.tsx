@@ -10,6 +10,7 @@ import { Button, Card, CardTitle, cx, NumberField, PageTitle } from '../ui/basic
 import { useToast } from '../ui/overlay'
 import { ShareMeasurement } from './Community'
 import { MeasurementSheet } from './MeasurementSheet'
+import { BalanceField, WeightField } from '../ui/unitFields'
 
 interface Trial {
   totalS: number
@@ -99,7 +100,7 @@ export function Measure() {
             <CardTitle>{t.measure.step1}</CardTitle>
             <p className="mb-3 text-sm text-muted">{t.measure.step1Hint}</p>
             <div className="max-w-[220px]">
-              <NumberField label={t.spec.weight} unit="g" min={150} max={500} value={weightG} onChange={setWeight} />
+              <WeightField label={t.spec.weight} min={150} max={500} value={weightG} onChange={setWeight} />
             </div>
           </Card>
 
@@ -107,7 +108,7 @@ export function Measure() {
             <CardTitle>{t.measure.step2}</CardTitle>
             <p className="mb-3 text-sm text-muted">{t.measure.step2Hint}</p>
             <div className="max-w-[220px]">
-              <NumberField label={t.spec.balance} unit="mm" min={250} max={400} value={balanceMm} onChange={setBalance} />
+              <BalanceField label={t.spec.balance} min={250} max={400} value={balanceMm} onChange={setBalance} />
             </div>
           </Card>
 

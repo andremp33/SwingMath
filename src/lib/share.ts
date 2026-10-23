@@ -4,7 +4,8 @@ import { racketSchema, setupSchema } from '../data/db'
 import type { Feel } from '../domain/feel'
 import type { Racket, Setup, Specs } from '../domain/types'
 import { fmtNum } from './format'
-import { IS_PREVIEW } from './platform'
+import type { Units } from './units'
+import { IS_NATIVE, IS_PREVIEW } from './platform'
 
 /** What travels in a share link: the setup and the frame it is built on. */
 const payloadSchema = z.object({
@@ -32,8 +33,20 @@ export function decodeShare(data: string): SharePayload | null {
   }
 }
 
-export const shareUrl = (data: string) =>
-  `${location.origin}${IS_PREVIEW ? import.meta.env.BASE_URL.replace(/preview\/$/, '') : import.meta.env.BASE_URL}s/${data}`
+/**
+ * The website, where shared links lead. The store apps cannot use their own
+ * address: it is the device's (https://localhost), which nobody else can
+ * open, so they use VITE_SITE_URL (the GitHub Pages site until a domain).
+ * The app's dev server keeps its own, so its links open on it.
+ */
+export const SITE_URL = IS_NATIVE && !import.meta.env.DEV
+  ? ((import.meta.env.VITE_SITE_URL as string | undefined) || 'https://andremp33.github.io/SwingMath/').replace(/\/?$/, '/')
+  : `${location.origin}${IS_PREVIEW ? import.meta.env.BASE_URL.replace(/preview\/$/, '') : import.meta.env.BASE_URL}`
+
+/** The site's host, as printed on shared images and sheets. */
+export const siteHost = () => new URL(SITE_URL).host
+
+export const shareUrl = (data: string) => `${SITE_URL}s/${data}`
 
 /** Feel colours in FEEL_KEYS order, dark-theme steps (the card is dark). */
 const FEEL_COLORS = ['#d95926', '#3987e5', '#199e70', '#9085e9', '#d55181', '#c98500']
@@ -89,7 +102,8 @@ export async function renderShareImage(text: ImageText, url: string): Promise<Bl
     g.fillText(v, W - 72 - w, y)
     g.fillStyle = LINE
     g.fillRect(72, y + 24, W - 144, 2)
-    y += 70
+    // Four rows fill the space down to the rings.
+    y += 84
   }
 
   // Feel rings, three per row.
@@ -166,13 +180,15 @@ function wrap(g: CanvasRenderingContext2D, s: string, x: number, y: number, maxW
   if (line) g.fillText(line, x, y)
 }
 
-export function specRowsText(s: Specs, lang: string, labels: { w: string; b: string; sw: string; tw: string; rw: string; pts: string }): [string, string][] {
+/** The image's rows, as the app shows them: whole grams, millimetres and
+ *  swingweight, the twistweight to a tenth, with their units. The recoil
+ *  weight stays in the app, so the racket and its lead have the room. */
+export function specRowsText(s: Specs, lang: string, labels: { w: string; b: string; sw: string; tw: string; pts: string; kgcm2: string }, u: Units): [string, string][] {
   return [
-    [labels.w, `${fmtNum(s.weightG, 1, lang)} g`],
-    [labels.b, `${fmtNum(s.balanceCm * 10, 1, lang)} mm · ${fmtNum(s.ptsHL, 1, lang)} ${labels.pts}`],
-    [labels.sw, fmtNum(s.swingweight, 1, lang)],
-    [labels.tw, fmtNum(s.twistweight, 2, lang)],
-    [labels.rw, fmtNum(s.recoilWeight, 1, lang)],
+    [labels.w, `${u.weight(s.weightG)} ${u.weightUnit}`],
+    [labels.b, `${u.balance(s.balanceCm)} ${u.balanceUnit} · ${fmtNum(s.ptsHL, 1, lang)} ${labels.pts}`],
+    [labels.sw, `${fmtNum(s.swingweight, 0, lang)} ${labels.kgcm2}`],
+    [labels.tw, `${fmtNum(s.twistweight, 1, lang)} ${labels.kgcm2}`],
   ]
 }
 
