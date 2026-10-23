@@ -78,7 +78,7 @@ test.describe('A02 profile', () => {
     await expect(rackets).toContainText('Aero #1')
     await expect(rackets).toContainText(/Poli 23 kg · encordar a \d/)
     await rackets.getByRole('button', { name: 'Encordei hoje: Aero #1' }).click()
-    await expect(page.getByText('Aero #1: encordamento registado')).toBeVisible()
+    await expect(page.getByText('Aero #1: encordoamento registado')).toBeVisible()
   })
 
   test('A02-H4 settings are a subpage, with a way back', async ({ page }) => {

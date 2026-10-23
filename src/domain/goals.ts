@@ -24,18 +24,24 @@ export interface GoalAdvice {
 export interface GoalInput extends ComputeInput {
   spec: ComputeInput['spec'] & FeelFrame
   strings?: Stringbed
+  /** Where the frame's playtest moves the feel (data/racketFeel's
+   *  feelOffset), so the goals read as the feel does. */
+  feelOffset?: Partial<Record<GoalKey, number>>
 }
 
+const within = (v: number) => Math.max(5, Math.min(95, v))
+
 /** Each goal for these specs and strings, 5-95, unrounded. */
-export function goalScores(s: Specs, frame: FeelFrame, bed: Stringbed): Record<GoalKey, number> {
+export function goalScores(s: Specs, frame: FeelFrame, bed: Stringbed, offset: Partial<Record<GoalKey, number>> = {}): Record<GoalKey, number> {
   const f = feelExact(s, frame, bed)
   const c = armComfort(s, frame, bed)
+  const at = (k: Exclude<GoalKey, 'comfort'>) => within(f[k] + (offset[k] ?? 0))
   return {
-    stability: f.stability,
-    power: f.power,
-    manoeuvrability: f.manoeuvrability,
-    spin: f.spin,
-    control: f.control,
+    stability: at('stability'),
+    power: at('power'),
+    manoeuvrability: at('manoeuvrability'),
+    spin: at('spin'),
+    control: at('control'),
     comfort: 5 + 90 * c.factors.reduce((sum, x) => sum + x.weight * x.value, 0),
   }
 }
@@ -61,18 +67,19 @@ const withTension = (bed: Stringbed, kg: number): Stringbed => ({
 export function goalAdvice(input: GoalInput, goals: readonly GoalKey[]): GoalAdvice[] {
   const bed = input.strings ?? DEFAULT_STRINGBED
   const frame = input.spec
+  const offset = input.feelOffset ?? {}
   const specs = compute(input).result
-  const now = goalScores(specs, frame, bed)
+  const now = goalScores(specs, frame, bed, offset)
 
   const moves: { move: GoalMove; scores: Record<GoalKey, number> }[] = (Object.keys(PROBES) as ProbeKey[]).map((probe) => {
     const lead = { id: 'probe', grams: GOAL_GRAMS, ...PROBES[probe] }
     const r = compute({ ...input, extra: [...(input.extra ?? []), lead] }).result
-    return { move: { kind: 'lead', probe, grams: GOAL_GRAMS }, scores: goalScores(r, frame, bed) }
+    return { move: { kind: 'lead', probe, grams: GOAL_GRAMS }, scores: goalScores(r, frame, bed, offset) }
   })
   for (const kg of [-GOAL_KG, GOAL_KG]) {
     const tension = bed.mains.tensionKg + kg
     if (tension < TENSION_RANGE[0] || tension > TENSION_RANGE[1]) continue
-    moves.push({ move: { kind: 'tension', kg }, scores: goalScores(specs, frame, withTension(bed, kg)) })
+    moves.push({ move: { kind: 'tension', kg }, scores: goalScores(specs, frame, withTension(bed, kg), offset) })
   }
 
   return goals.map((goal) => {

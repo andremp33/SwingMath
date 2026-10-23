@@ -6,7 +6,7 @@ import { useComputed, useRacket } from '../data/hooks'
 import { useStore } from '../data/store'
 import { useT } from '../i18n'
 import { leadParts, racketLabel } from '../lib/format'
-import { encodeShare, renderShareImage, shareUrl, specRowsText } from '../lib/share'
+import { encodeShare, renderShareImage, shareUrl, siteHost, specRowsText } from '../lib/share'
 import { Button } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { PublishSetup } from './Community'
@@ -36,8 +36,8 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
           b: t.spec.balance,
           sw: t.spec.swingweight,
           tw: t.spec.twistweight,
-          rw: t.spec.recoil,
           pts: t.units.pts,
+          kgcm2: t.units.kgcm2,
         }),
         feel: FEEL_KEYS.map((k) => [t.feel[k], f[k]]),
         lead:
@@ -56,7 +56,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
           .join(' · '),
         scan: t.share.scan,
         appName: t.appName,
-        domain: location.host,
+        domain: siteHost(),
       },
       link,
     ).then((blob) => {
@@ -87,7 +87,7 @@ export function ShareSheet({ setup, onClose }: { setup: Setup | null; onClose: (
             </Button>
           ) : (
             img && (
-              <a href={img.url} download={file?.name} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent">
+              <a href={img.url} download={file?.name} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-text px-4 text-sm font-medium text-bg hover:opacity-90">
                 <Download className="size-4" aria-hidden /> {t.share.image}
               </a>
             )

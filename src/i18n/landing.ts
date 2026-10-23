@@ -28,7 +28,7 @@ const pt = {
     ['Conta só se quiseres', 'Sem conta, tudo fica no telemóvel e funciona sem internet. Com conta, sincronizas e partilhas com a comunidade.'],
   ],
   alsoTitle: 'E ainda',
-  also: ['Receitas da comunidade, com o que funcionou no diário de quem as publicou', 'Sensação estimada de potência, controlo, estabilidade e efeito', 'Comparar dois setups lado a lado', 'Partilhar com imagem e código QR', 'Rigidez do encordoamento e tensão equivalente', 'Conforto do braço e tamanho do punho', 'Atingir um alvo e igualar raquetes', 'Exportar uma cópia dos teus dados'],
+  also: ['Receitas da comunidade, com o que funcionou no diário de quem as publicou', 'Sensação estimada de potência, controlo, estabilidade e spin', 'Comparar dois setups lado a lado', 'Partilhar com imagem e código QR', 'Rigidez do encordoamento e tensão equivalente', 'Conforto do braço e tamanho do punho', 'Atingir um alvo e igualar raquetes', 'Exportar uma cópia dos teus dados'],
   plansTitle: 'Grátis e Pro',
   free: 'Grátis',
   freeFor: 'Para todos os jogadores',

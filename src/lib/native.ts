@@ -92,6 +92,12 @@ export async function shareFile(name: string, text: string, title: string) {
   await Share.share({ title, files: [uri] }).catch(() => {})
 }
 
+/** Opens the share sheet with a message: text and a link. */
+export async function shareText(title: string, text: string, url: string) {
+  // Closing the sheet without choosing rejects; that is not an error.
+  await Share.share({ title, text, url, dialogTitle: title }).catch(() => {})
+}
+
 /** The restring reminders, at their dates: whatever was scheduled before is
  *  replaced, so a new stringing or a retired racket drops its old date. */
 export async function scheduleRestrings(items: { id: number; at: Date; title: string; body: string; stringingId: string }[]) {

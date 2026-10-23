@@ -1,7 +1,7 @@
 import { ArrowRight, Check, Plus, RotateCw, Timer } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { uid } from '../data/db'
+import { saveOwned, uid } from '../data/db'
 import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hooks'
 import { useStore } from '../data/store'
 import { hoursOn, insights, isFinished, latestOf, lifeOf, ownerKey, SESSION_KINDS, weeklyHours, type OwnedRacket, type Session, type SessionKind, type Stringing } from '../domain/journal'
@@ -99,6 +99,7 @@ export function Journal() {
             sessions={sessions ?? []}
             owned={owned ?? []}
             onRestring={reminderOwned ? () => (closeReminder(), setStringing(restring(reminderOwned))) : undefined}
+            onRetire={reminderOwned ? () => void saveOwned({ ...reminderOwned, retired: true, updatedAt: Date.now() }).then(closeReminder) : undefined}
             onReport={() => (closeReminder(), setReport(reminder))}
             onClose={closeReminder}
           />

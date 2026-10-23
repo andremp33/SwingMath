@@ -161,6 +161,25 @@ export function restringDue(st: Stringing, sessions: Session[], hoursPerWeek?: n
   return Math.min(byTime, byHours)
 }
 
+/** Days without a session on a racket, while others are played, before
+ *  it counts as put away for now. */
+export const DORMANT_DAYS = 60
+
+/**
+ * A racket the player has stopped playing: they log sessions, but none on
+ * it (nor a new stringing) in DORMANT_DAYS. Its strings still age on the
+ * calendar, but reminding them to restring it is noise.
+ */
+export function isDormant(ownedId: string, all: Stringing[], sessions: Session[], now = Date.now()): boolean {
+  const since = now - DORMANT_DAYS * DAY
+  const recent = sessions.filter((s) => s.date >= since)
+  if (!recent.length) return false
+  const mine = all.filter((s) => s.ownedId === ownedId)
+  if (mine.some((s) => s.date >= since)) return false
+  const ids = new Set(mine.map((s) => s.id))
+  return !recent.some((s) => s.stringingId && ids.has(s.stringingId))
+}
+
 /** Rackets whose strings are at or past the end of their life. */
 export function dueForRestring(all: Stringing[], sessions: Session[], now = Date.now()) {
   return currentStringings(all).filter((s) => lifeOf(s, sessions, now, all).used >= 1)

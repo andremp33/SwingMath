@@ -13,7 +13,7 @@ import { defaultConfig, isPro, useStore } from '../data/store'
 import { diagnose, freePlansLeft, matchPlanKey, targetPlanKey, type Diagnosis } from '../domain/freePlans'
 import { PRO_TARGETS, withStrings, type PlainSpecs } from '../data/pros'
 import { fmt, useT } from '../i18n'
-import { fmtNum, fmtSigned, racketLabel } from '../lib/format'
+import { fmtNum, fmtSigned, LOCALE, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select } from '../ui/basics'
 import { LEAD_MAX, RacketDiagram } from '../ui/lead'
 import { RacketPicker } from '../ui/RacketPicker'
@@ -490,11 +490,16 @@ function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult
     swingweight: [t.spec.swingweight, 0, ''],
     twistweight: [t.spec.twistweight, 2, ''],
   }
+  // "the weight and the swingweight are", said as a sentence, in the player's language.
+  const what = new Intl.ListFormat(LOCALE[lang] ?? 'en-GB', { type: 'conjunction' }).format(res.unreachable.map((k) => t.match.unreachableWhat[k]))
+  // Lead that changes nothing has no match to speak of.
+  const noPlan = res.unreachable.length > 0 && res.totalG < 0.5
   const unreachable =
     res.unreachable.length > 0 ? (
-      <p className="mb-3 rounded-md bg-warning/15 px-3 py-2 text-sm text-warning">
-        {fmt(t.match.unreachable, { what: res.unreachable.map((k) => label[k][0]).join(', ') })}
-      </p>
+      <div className="mb-3 space-y-1 rounded-md bg-warning/15 px-3 py-2 text-sm">
+        <p className="text-warning">{fmt(res.unreachable.length > 1 ? t.match.unreachableMany : t.match.unreachable, { what })}</p>
+        {noPlan && <p>{t.match.unreachableHint}</p>}
+      </div>
     ) : null
   if (!full) {
     const m = diag.missing
@@ -530,7 +535,7 @@ function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult
   }
   return (
     <Card label={title ?? t.match.result}>
-      <CardTitle action={<Badge plain tone={res.matchPct >= 95 ? 'accent' : 'neutral'}>{fmt(t.match.match, { pct: fmtNum(res.matchPct, res.matchPct === 100 ? 0 : 1, lang) })}</Badge>}>
+      <CardTitle action={noPlan ? undefined : <Badge plain tone={res.matchPct >= 95 ? 'accent' : 'neutral'}>{fmt(t.match.match, { pct: fmtNum(res.matchPct, res.matchPct === 100 ? 0 : 1, lang) })}</Badge>}>
         {title ?? t.match.result}
       </CardTitle>
       {unreachable}

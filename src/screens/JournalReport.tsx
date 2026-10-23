@@ -1,6 +1,6 @@
-import { RotateCw, Sparkles } from 'lucide-react'
+import { Archive, RotateCw, Sparkles } from 'lucide-react'
 import { isPro, useStore } from '../data/store'
-import { isFinished, nextStringing, REPORT_BLOCK_HOURS, SESSION_RATINGS, stringingReport, type NextStringing, type OwnedRacket, type Session, type Stringing, type StringingReport } from '../domain/journal'
+import { isFinished, lifeOf, nextStringing, REPORT_BLOCK_HOURS, SESSION_RATINGS, stringingReport, type NextStringing, type OwnedRacket, type Session, type Stringing, type StringingReport } from '../domain/journal'
 import { fmt, useT, type Dict } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
 import { Button } from '../ui/basics'
@@ -110,6 +110,7 @@ export function RestringReminderSheet({
   sessions,
   owned,
   onRestring,
+  onRetire,
   onReport,
   onClose,
 }: {
@@ -118,6 +119,8 @@ export function RestringReminderSheet({
   sessions: Session[]
   owned: OwnedRacket[]
   onRestring?: () => void
+  /** Puts the racket away: a reminder for one no longer played. */
+  onRetire?: () => void
   onReport: () => void
   onClose: () => void
 }) {
@@ -136,7 +139,7 @@ export function RestringReminderSheet({
           </p>
         </div>
         <p className="text-lg font-semibold" data-testid="reminder-headline">
-          {headlineOf(value, stringings, stringingReport(value, sessions), t, lang)}
+          {timeHeadline(value, stringings, sessions, t) ?? headlineOf(value, stringings, stringingReport(value, sessions), t, lang)}
         </p>
         {onRestring && (
           <Button variant={pro ? 'primary' : 'secondary'} icon={RotateCw} className="w-full" onClick={onRestring}>
@@ -158,9 +161,23 @@ export function RestringReminderSheet({
             </Button>
           </div>
         )}
+        {onRetire && (
+          <Button variant="ghost" icon={Archive} className="w-full" onClick={onRetire}>
+            {t.journal.retire}
+          </Button>
+        )}
       </div>
     </Sheet>
   )
+}
+
+/** Strings out of time rather than hours: why, in the player's words. */
+function timeHeadline(st: Stringing, all: Stringing[], sessions: Session[], t: Dict): string | undefined {
+  if (isFinished(st, all)) return
+  const life = lifeOf(st, sessions, Date.now(), all)
+  if (life.used < 1 || life.limit !== 'time') return
+  const when = life.days >= 60 ? fmt(t.journal.monthsN, { n: Math.floor(life.days / 30) }) : fmt(t.journal.weeksN, { n: Math.floor(life.days / 7) })
+  return fmt(t.journal.dueByTime, { when })
 }
 
 function ReportDetails({ report, next }: { report: StringingReport; next: NextStringing }) {

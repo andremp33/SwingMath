@@ -20,12 +20,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- The sign-in email's link (app.swingmath://auth) opens the app. -->
+            <!-- The app's own links open the app: the sign-in email's
+                 (app.swingmath://auth), and shared setups and stringer's
+                 sheets from the website (app.swingmath://s/..., ://ficha/...). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="app.swingmath" android:host="auth" />
+                <data android:scheme="app.swingmath" />
+                <data android:host="auth" />
+                <data android:host="s" />
+                <data android:host="ficha" />
             </intent-filter>
         </activity>
 

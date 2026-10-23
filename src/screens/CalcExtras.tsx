@@ -8,6 +8,7 @@ import { bedBand, DEFAULT_STRINGBED, stringbedIndex } from '../domain/strings'
 import type { Geometry } from '../domain/physics'
 import { PROBES, sweetSpotEffects, type ProbeKey } from '../domain/sweetSpot'
 import { POSITIONS, type ExtraLead, type GripConfig, type Position, type Racket, type Specs } from '../domain/types'
+import { feelOffset } from '../data/racketFeel'
 import { useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { fmtNum, fmtSigned, gripLabel } from '../lib/format'
@@ -219,7 +220,7 @@ export function GoalsCard({ racket, result }: { racket: Racket; result: Specs })
   const setConfig = useStore((s) => s.setConfig)
   const setLead = useStore((s) => s.setLead)
   const addExtra = useStore((s) => s.addExtra)
-  const advice = useMemo(() => (goals?.length ? goalAdvice({ spec: racket, ...config, masses }, goals) : []), [racket, config, masses, goals])
+  const advice = useMemo(() => (goals?.length ? goalAdvice({ spec: racket, ...config, masses, feelOffset: feelOffset(racket, masses) }, goals) : []), [racket, config, masses, goals])
   const bed = config.strings ?? DEFAULT_STRINGBED
 
   const describe = (m: GoalMove) =>

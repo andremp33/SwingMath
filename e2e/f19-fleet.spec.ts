@@ -138,7 +138,7 @@ test.describe('F19 the fleet', () => {
     await expect(page.getByRole('heading', { name: 'Alvo: Aero B' })).toBeVisible()
     // #1 has nothing to do; Aero C is heavier, and lead cannot take weight off.
     await expect(page.getByRole('region', { name: 'Aero B' })).toHaveCount(0)
-    await expect(page.getByRole('region', { name: 'Aero C' })).toContainText('Peso já está acima do alvo')
+    await expect(page.getByRole('region', { name: 'Aero C' })).toContainText('o peso já está acima do alvo')
     await page.getByRole('button', { name: 'Guardar este chumbo em Aero A' }).click()
     await expect(page.getByText('Chumbo guardado em Aero A. Depois de o pores, mede outra vez.')).toBeVisible()
     await page.goto('/diario')

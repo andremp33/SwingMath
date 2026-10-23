@@ -1,4 +1,4 @@
-import { feel, type Feel } from '../domain/feel'
+import { FEEL_KEYS, feelExact, type Feel } from '../domain/feel'
 import { compute } from '../domain/physics'
 import { DEFAULT_STRINGBED, type Stringbed } from '../domain/strings'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead, type AccessoryMasses, type Racket, type Specs } from '../domain/types'
@@ -96,18 +96,26 @@ function stockSpecs(r: Racket, masses: AccessoryMasses): Specs {
 const clamp = (v: number) => Math.max(5, Math.min(95, Math.round(v)))
 
 /**
+ * How far the playtest moves this frame's power, control and spin from what
+ * the physics alone gives its stock setup; nothing without a review. The
+ * same for any lead or strings on it, so whatever adds it (the feel, the
+ * goals) shows the same numbers and the physics still moves them.
+ */
+export function feelOffset(r: Racket, masses: AccessoryMasses = DEFAULT_ACCESSORY_MASSES): Partial<Record<'power' | 'control' | 'spin', number>> {
+  const target = feelTarget(r)
+  if (!target) return {}
+  const stock = feelExact(stockSpecs(r, masses), r, DEFAULT_STRINGBED)
+  return { power: target.power - stock.power, control: target.control - stock.control, spin: target.spin - stock.spin }
+}
+
+/**
  * The feel of `r` set up as `now` (lead, accessories) with `strings`: the
  * physics, moved so the stock frame lands where its playtest puts it.
  */
 export function racketFeel(r: Racket, now: Specs, strings: Stringbed = DEFAULT_STRINGBED, masses: AccessoryMasses = DEFAULT_ACCESSORY_MASSES): Feel {
-  const phys = feel(now, r, strings)
-  const target = feelTarget(r)
-  if (!target) return phys
-  const stock = feel(stockSpecs(r, masses), r, DEFAULT_STRINGBED)
-  return {
-    ...phys,
-    power: clamp(phys.power + target.power - stock.power),
-    control: clamp(phys.control + target.control - stock.control),
-    spin: clamp(phys.spin + target.spin - stock.spin),
-  }
+  const phys = feelExact(now, r, strings)
+  const o = feelOffset(r, masses)
+  const out = {} as Feel
+  for (const k of FEEL_KEYS) out[k] = clamp(phys[k] + (o[k as keyof typeof o] ?? 0))
+  return out
 }

@@ -104,7 +104,11 @@ test.describe('F12 practical helpers', () => {
     await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toBeVisible()
   })
 
-  test('F12-H3 printable sheet for the stringer', async ({ page }) => {
+  test('F12-H3 the sheet for the stringer, sent from the app as a message', async ({ page }) => {
+    // What the share sheet would send.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'share', { configurable: true, value: async (d: ShareData) => void ((window as unknown as { shared: ShareData }).shared = d) })
+    })
     await start(page)
     await page.getByRole('button', { name: '+ 0,5 g Garganta' }).click()
     await saveSetup(page, 'Para o Rui')
@@ -112,8 +116,13 @@ test.describe('F12 practical helpers', () => {
     await setupAction(page, 'Para o Rui', 'Ficha para o encordoador')
     await expect(page.getByRole('heading', { name: 'Para o Rui' })).toBeVisible()
     await expect(page.getByRole('table').first()).toContainText('Garganta')
-    await expect(page.getByRole('button', { name: 'Imprimir' })).toBeVisible()
     await a11y(page)
+    // The store apps cannot print: the sheet goes as text, with the setup's link.
+    await page.getByRole('button', { name: 'Enviar ao encordoador' }).click()
+    const shared = await page.waitForFunction(() => (window as unknown as { shared?: ShareData }).shared).then((h) => h.jsonValue())
+    expect(shared.text).toContain('Para o Rui')
+    expect(shared.text).toContain('Garganta: 0,5 g')
+    expect(shared.url).toMatch(/\/s\/[\w-]+$/)
   })
 
   test('F12-E1 light theme passes the accessibility scan', async ({ page }) => {
