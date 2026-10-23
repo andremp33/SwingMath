@@ -6,7 +6,7 @@ import { deleteAll, exportAll, importAll } from '../data/db'
 import { accountProActive, isPro, useStore, type Theme } from '../data/store'
 import { freeProActive } from '../domain/trial'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
-import { fmt, useT, type Lang } from '../i18n'
+import { fmt, loadLang, useT, type Lang } from '../i18n'
 import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { IS_APP, IS_NATIVE } from '../lib/platform'
@@ -34,7 +34,7 @@ export function Settings() {
             <Segmented<Lang>
               label={t.settings.language}
               value={s.lang}
-              onChange={s.setLang}
+              onChange={(l) => void loadLang(l).then(() => s.setLang(l))}
               options={[
                 { value: 'pt', label: 'Português' },
                 { value: 'en', label: 'English' },

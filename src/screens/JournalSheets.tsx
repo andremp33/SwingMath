@@ -79,7 +79,8 @@ function Notes({ value, onChange }: { value?: string; onChange: (v: string) => v
 /** Today, yesterday or another day, the last opening a date field. */
 function WhenField({ value, onChange }: { value: number; onChange: (ms: number) => void }) {
   const t = useT()
-  const now = Date.now()
+  // Today as the field opened.
+  const [now] = useState(Date.now)
   const preset = sameDay(value, now) ? 'today' : sameDay(value, now - DAY) ? 'yesterday' : 'other'
   const [other, setOther] = useState(preset === 'other')
   return (
@@ -233,7 +234,12 @@ export function StringingSheet({
   const t = useT()
   const toast = useToast()
   const [draft, setDraft] = useState<Stringing | null>(value)
-  useEffect(() => setDraft(value), [value])
+  // A new stringing to edit starts a new draft.
+  const [shown, setShown] = useState(value)
+  if (shown !== value) {
+    setShown(value)
+    setDraft(value)
+  }
   const o = owned.find((x) => x.id === draft?.ownedId)
   const racket = useRacket(o?.racketId ?? draft?.racketId)
   if (!draft) return <Sheet open={false} onClose={onClose} title="">{null}</Sheet>
@@ -310,12 +316,15 @@ export function SessionSheet({ value, stringings, owned, onClose }: { value: Ses
   const [draft, setDraft] = useState<Session | null>(value)
   const [more, setMore] = useState(false)
   const [otherLength, setOtherLength] = useState(false)
-  useEffect(() => {
+  // A new session to edit starts a new draft, with "More details" open if it has any.
+  const [shown, setShown] = useState<Session | null>(null)
+  if (shown !== value) {
+    setShown(value)
     setDraft(value)
     const r = value?.ratings ?? {}
     setMore(!!(value && (r.power || r.control || r.spin || r.comfort || value.armPain || value.notes)))
     setOtherLength(!!value && !DURATIONS.includes(value.minutes as (typeof DURATIONS)[number]))
-  }, [value])
+  }
   if (!draft) return <Sheet open={false} onClose={onClose} title="">{null}</Sheet>
 
   const isEdit = value !== null && value.updatedAt !== value.createdAt

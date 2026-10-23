@@ -35,6 +35,9 @@ export async function start(page: Page, opts: { pro?: boolean; lang?: 'pt' | 'en
     [opts.pro ?? false, opts.lang ?? 'pt'] as const,
   )
   await page.goto(opts.path ?? '/')
+  // Up once it has saved its first state (the launch starts the Pro
+  // reminder's clock): what a test writes after that is not overwritten.
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('swingmath') ?? '{}').state?.proNudgeAt ?? null)).not.toBeNull()
 }
 
 export async function a11y(page: Page) {
@@ -59,7 +62,10 @@ export async function saveSetup(page: Page, name: string) {
 
 /** Opens a collapsible section (closed by default on phones). */
 export async function expand(page: Page, name: string) {
-  const closed = page.getByRole('region', { name }).locator('button[aria-expanded="false"]')
+  // On the page first: the app renders once its language has loaded.
+  const region = page.getByRole('region', { name })
+  await region.first().waitFor()
+  const closed = region.locator('button[aria-expanded="false"]')
   if (await closed.count()) await closed.first().click()
 }
 

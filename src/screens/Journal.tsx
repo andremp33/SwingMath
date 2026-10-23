@@ -176,14 +176,16 @@ export function Journal() {
           {/* Swipe through them on a phone; a grid on wider screens. */}
           <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-3">
             {active.map((o) => (
-              <li key={o.id} className="w-[82%] min-w-0 shrink-0 snap-start md:w-auto">
+              // One racket takes the width; more peek out, to swipe.
+              <li key={o.id} className={cx('min-w-0 shrink-0 snap-start md:w-auto', active.length === 1 ? 'w-full' : 'w-[82%]')}>
                 <RacketCard owned={o} stringings={stringings} sessions={sessions} now={now} onOpen={() => setViewing(o)} onRestring={() => setStringing(restring(o))} />
               </li>
             ))}
           </ul>
         </section>
 
-        <Summary sessions={sessions} stringings={stringings} owned={owned} now={now} />
+        {/* Numbers once there is a session to count: zeros would look broken. */}
+        {sessions.length > 0 && <Summary sessions={sessions} stringings={stringings} owned={owned} now={now} />}
 
         <section aria-label={t.journal.recent}>
           <h2 className="mb-1 text-md font-semibold tracking-tight">{t.journal.recent}</h2>

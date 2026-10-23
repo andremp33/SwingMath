@@ -19,7 +19,18 @@ export async function initNative() {
   }
   paintStatusBar()
   new MutationObserver(paintStatusBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-  SplashScreen.hide().catch(() => {})
+  // The splash stays until the first screen has something on it (a screen
+  // still loading shows nothing), or 3 s at the most.
+  const root = document.getElementById('root')!
+  const hide = () => {
+    painted.disconnect()
+    clearTimeout(late)
+    SplashScreen.hide().catch(() => {})
+  }
+  const painted = new MutationObserver(() => root.innerText.trim() && hide())
+  const late = setTimeout(hide, 3000)
+  if (root.innerText.trim()) hide()
+  else painted.observe(root, { childList: true, subtree: true, characterData: true })
   void import('./purchases')
     .then((m) => m.initPurchases())
     .catch(() => {})

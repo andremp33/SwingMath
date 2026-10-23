@@ -129,7 +129,7 @@ test.describe('F19 the fleet', () => {
     await start(page, { path: '/perfil', pro: true })
     await seed(page, FLEET)
     await page.getByRole('button', { name: 'Igualar à #1' }).click()
-    await expect(page.getByRole('heading', { name: 'Igualar' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Planear' })).toBeVisible()
     await expect(page.getByRole('radiogroup', { name: 'Alvo' }).getByRole('radio', { name: 'A raquete 1' })).toHaveAttribute('aria-checked', 'true')
     // Each racket by its name and its measurement, #1 first.
     for (const name of ['Aero B', 'Aero A', 'Aero C']) await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()

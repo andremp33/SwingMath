@@ -24,7 +24,17 @@ export function useOpenOwned() {
   }
 }
 
-/** Calculator: the player's rackets as chips under the frame picker. */
+/** The player's racket the calculator has open, if it is one of theirs. */
+export function useActiveOwned(): OwnedRacket | undefined {
+  const owned = useOwned()
+  const config = useStore((s) => s.config)
+  const loadedSetupId = useStore((s) => s.loadedSetupId)
+  return owned?.find((o) => !o.retired && isOn(o, config.racketId, loadedSetupId))
+}
+
+const isOn = (o: OwnedRacket, racketId: string, loadedSetupId: string | null) => racketId === o.racketId && (o.setupId ? loadedSetupId === o.setupId : !loadedSetupId)
+
+/** Calculator: the player's rackets as chips above the frame picker. */
 export function MyRacketsRow() {
   const t = useT()
   const owned = useOwned()
@@ -38,7 +48,7 @@ export function MyRacketsRow() {
       <span className="mb-1.5 block text-sm font-medium text-muted">{t.journal.myRackets}</span>
       <div className="flex flex-wrap gap-2">
         {active.map((o) => {
-          const on = config.racketId === o.racketId && (o.setupId ? loadedSetupId === o.setupId : !loadedSetupId)
+          const on = isOn(o, config.racketId, loadedSetupId)
           return (
             <button
               key={o.id}
