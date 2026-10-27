@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Mail, Minus, Smartphone } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Mail, Minus, Pause, Play, Smartphone, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { STOCK_RACKETS } from '../data/rackets'
@@ -339,14 +339,14 @@ function HowItWorks() {
   ]
   return (
     <section id="como" aria-labelledby="como-title" className="site-wrap site-grid site-section">
-      <figure className="col-span-12 mt-16 max-w-[480px] lg:sticky lg:max-w-none lg:top-24 lg:col-span-4 lg:mt-0 lg:self-start" data-reveal>
-        <img src={img('garsault-1767.jpg')} alt={t.garsault} width={1290} height={1947} loading="lazy" className="site-photo aspect-[4/5] w-full object-cover object-[50%_20%] lg:aspect-auto" />
-        <figcaption className="mt-3 text-[15px] text-muted">{t.garsault}</figcaption>
-      </figure>
-      <div className="order-first col-span-12 lg:order-none lg:col-span-6 lg:col-start-6">
-        <h2 id="como-title" className="site-h2" data-reveal>
-          {t.howTitle}
-        </h2>
+      <h2 id="como-title" className="site-h2 col-span-12 lg:col-span-6 lg:col-start-6 lg:row-start-1" data-reveal>
+        {t.howTitle}
+      </h2>
+      {/* The film of the app: beside the steps it tells, held in view while they scroll by. */}
+      <div className="col-span-12 mt-10 lg:col-span-4 lg:row-span-2 lg:row-start-1 lg:mt-0">
+        <AppFilm />
+      </div>
+      <div className="col-span-12 lg:col-span-6 lg:col-start-6">
         <div className="mt-12 space-y-[72px] max-lg:space-y-14">
           {t.how.map(([lead, rest], i) => (
             <div key={lead}>
@@ -359,6 +359,82 @@ function HowItWorks() {
         </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * Thirty seconds of the app, filmed from the app itself: a muted loop that
+ * plays while it is on screen, with pause and sound beside it. With reduced
+ * motion it waits on its poster for a press.
+ */
+function AppFilm() {
+  const t = useLanding()
+  const video = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [muted, setMuted] = useState(true)
+  // Paused by the visitor (or reduced motion): it stays paused, on screen or off.
+  const held = useRef(false)
+  useEffect(() => {
+    const v = video.current
+    if (!v || !('IntersectionObserver' in window)) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) held.current = true
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && !held.current) void v.play().catch(() => {})
+        else if (!e.isIntersecting) v.pause()
+      },
+      { threshold: 0.4 },
+    )
+    io.observe(v)
+    return () => io.disconnect()
+  }, [])
+  const toggle = () => {
+    const v = video.current
+    if (!v) return
+    if (v.paused) {
+      held.current = false
+      void v.play().catch(() => {})
+    } else {
+      held.current = true
+      v.pause()
+    }
+  }
+  const sound = () => {
+    const v = video.current
+    if (!v) return
+    v.muted = !v.muted
+    setMuted(v.muted)
+    if (!v.muted && v.paused) toggle()
+  }
+  return (
+    <figure className="site-film lg:sticky lg:top-24" data-reveal>
+      <video
+        ref={video}
+        src={img('swingmath.mp4')}
+        poster={img('swingmath-poster.jpg')}
+        width={1080}
+        height={1920}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-label={t.filmLabel}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        className="block aspect-[9/16] w-full rounded-lg bg-[#141312] object-cover"
+      />
+      <figcaption className="mt-3 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={toggle} className="site-press site-chip">
+          {playing ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
+          {playing ? t.filmPause : t.filmPlay}
+        </button>
+        <button type="button" onClick={sound} aria-pressed={!muted} className="site-press site-chip">
+          {muted ? <VolumeX className="size-4" aria-hidden /> : <Volume2 className="size-4" aria-hidden />}
+          {t.filmSound}
+        </button>
+        <span className="text-[15px] text-muted">{t.filmCaption}</span>
+      </figcaption>
+    </figure>
   )
 }
 
@@ -534,8 +610,8 @@ function Close() {
         </div>
       </div>
       <figure className="col-span-12 mt-14 lg:col-span-6 lg:col-start-7 lg:mt-0" data-reveal style={stagger(1)}>
-        <img src={img('ballmacher-1768.jpg')} alt={t.ballmacher} width={1920} height={1272} loading="lazy" className="site-photo aspect-[16/10] w-full object-cover object-[25%_35%]" />
-        <figcaption className="mt-3 text-[15px] text-muted">{t.ballmacher}</figcaption>
+        <img src={img('garsault-1767.jpg')} alt={t.garsault} width={1290} height={1947} loading="lazy" className="site-photo aspect-[4/3] w-full object-cover object-[50%_18%]" />
+        <figcaption className="mt-3 text-[15px] text-muted">{t.garsault}</figcaption>
       </figure>
     </section>
   )

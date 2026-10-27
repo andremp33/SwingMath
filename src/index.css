@@ -363,6 +363,34 @@ input[type='range'].range:disabled {
     text-decoration-color: var(--c-accent);
   }
 }
+/* The film: as wide as its column, and never taller than the screen. */
+.site-film {
+  max-width: min(100%, 360px);
+}
+@media (min-width: 1024px) {
+  .site-film {
+    max-width: min(100%, calc((100svh - 160px) * 9 / 16));
+  }
+}
+.site-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding-inline: 14px;
+  border-radius: 6px;
+  background: var(--c-surface-2);
+  font-size: 15px;
+}
+@media (hover: hover) {
+  .site-chip:hover {
+    background: var(--c-border);
+  }
+}
+.site-chip[aria-pressed='true'] {
+  background: var(--c-text);
+  color: var(--c-bg);
+}
 .site-photo {
   border-radius: 2px;
   background: var(--c-surface-2);
