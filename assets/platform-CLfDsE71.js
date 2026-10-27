@@ -1,0 +1,1 @@
+function e(e){history.pushState({},``,e),dispatchEvent(new PopStateEvent(`popstate`))}var t=e=>`/diario?lembrete=${encodeURIComponent(e)}`;export{t as n,e as t};
