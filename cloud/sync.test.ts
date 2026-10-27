@@ -10,14 +10,23 @@ const admin = createClient(env.url, env.serviceKey, { auth: { persistSession: fa
 const stamp = Date.now()
 const made: string[] = []
 
-async function account(name: string, pro: boolean) {
+/** A signed-in client on one device (the header the app sends). */
+async function device(email: string, id: string) {
+  const client = createClient(env.url, env.anonKey, { auth: { persistSession: false }, global: { headers: { 'x-swing-device': id } } })
+  await client.auth.signInWithPassword({ email, password: 'test-password-1' })
+  return client
+}
+
+async function user(name: string, pro: boolean) {
   const email = `${name}-${stamp}@example.test`
   const { data } = await admin.auth.admin.createUser({ email, password: 'test-password-1', email_confirm: true })
   made.push(data.user!.id)
   if (pro) await admin.from('subscriptions').insert({ email, status: 'active' })
-  const client = createClient(env.url, env.anonKey, { auth: { persistSession: false } })
-  await client.auth.signInWithPassword({ email, password: 'test-password-1' })
-  return supabaseRemote(client)
+  return email
+}
+
+async function account(name: string, pro: boolean) {
+  return supabaseRemote(await device(await user(name, pro), `device-${name}-${stamp}`))
 }
 
 const setup = (id: string, name: string, updatedAt: number): Setup => ({
@@ -83,5 +92,54 @@ describe('sync with the real server', () => {
     await enqueueAll(a)
     await expect(syncOnce(a, remote, null)).rejects.toBeInstanceOf(SyncError)
     expect(await a.outbox.count()).toBe(1)
+  })
+
+  it('without Pro, one device at a time: signing in elsewhere moves the sync there', async () => {
+    const email = await user('onedevice', false)
+    const a = await device(email, `device-a-${stamp}`)
+    const b = await device(email, `device-b-${stamp}`)
+    const db = openDb(`cloud-one-${stamp}`)
+    trackChanges(db)
+    await db.setups.put(setup('s1', 'Base', 1000))
+    await enqueueAll(db)
+    // A claims the sync and sends its setup.
+    expect((await a.rpc('claim_sync_device')).error).toBeNull()
+    expect((await a.rpc('sync_here')).data).toBe(true)
+    expect((await syncOnce(db, supabaseRemote(a), null)).pushed).toBe(1)
+    // B signs in: it takes the sync and gets A's setup.
+    expect((await b.rpc('sync_here')).data).toBe(false)
+    await b.rpc('claim_sync_device')
+    const dbB = openDb(`cloud-one-b-${stamp}`)
+    await syncOnce(dbB, supabaseRemote(b), null)
+    expect((await dbB.setups.get('s1'))?.name).toBe('Base')
+    // A is refused now, reading and writing, and keeps its queue.
+    expect((await a.rpc('sync_here')).data).toBe(false)
+    expect((await a.from('items').select('id')).data).toEqual([])
+    await db.setups.put(setup('s1', 'Renamed on A', 2000))
+    await settle()
+    const err = await syncOnce(db, supabaseRemote(a), null).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(SyncError)
+    expect((err as SyncError).code).toBe('42501')
+    expect(await db.outbox.count()).toBe(1)
+    // Taking it back works.
+    await a.rpc('claim_sync_device')
+    expect((await syncOnce(db, supabaseRemote(a), null)).pushed).toBe(1)
+  })
+
+  it('with Pro, every device syncs', async () => {
+    const email = await user('manydevices', true)
+    const a = await device(email, `device-pa-${stamp}`)
+    const b = await device(email, `device-pb-${stamp}`)
+    await a.rpc('claim_sync_device')
+    await b.rpc('claim_sync_device')
+    expect((await a.rpc('sync_here')).data).toBe(true)
+    expect((await b.rpc('sync_here')).data).toBe(true)
+  })
+
+  it('a device without its header cannot claim the sync', async () => {
+    const email = await user('noheader', false)
+    const c = createClient(env.url, env.anonKey, { auth: { persistSession: false } })
+    await c.auth.signInWithPassword({ email, password: 'test-password-1' })
+    expect((await c.rpc('claim_sync_device')).error?.code).toBe('22023')
   })
 })

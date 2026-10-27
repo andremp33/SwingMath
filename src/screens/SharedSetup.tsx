@@ -14,6 +14,8 @@ import { useToast } from '../ui/overlay'
 import { FeelRings, SpecTable, useSpecRows } from '../ui/specs'
 import { racketFeel } from '../data/racketFeel'
 import { bedLabel } from '../lib/bedLabel'
+import { useSetupRoom } from './freePlans'
+import { usePaywall } from './Pro'
 
 export function SharedSetup() {
   const { data = '' } = useParams()
@@ -30,6 +32,8 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
   const lang = useStore((s) => s.lang)
   const masses = useStore((s) => s.masses)
   const loadConfig = useStore((s) => s.loadConfig)
+  const room = useSetupRoom()
+  const paywall = usePaywall()
   const racket: Racket = { ...payload.racket, createdAt: 0, updatedAt: 0 } as Racket
   const { base, result } = compute({ spec: racket, ...payload.setup, masses })
   const rows = useSpecRows(result, base)
@@ -74,6 +78,7 @@ function SharedView({ payload }: { payload: NonNullable<ReturnType<typeof decode
           variant="primary"
           icon={Save}
           onClick={async () => {
+            if (!room) return paywall('setups', { asked: true })
             const racketId = await ensureRacket()
             const now = Date.now()
             const id = uid()

@@ -2,14 +2,14 @@ import type { Session } from '@supabase/supabase-js'
 import { useEffect } from 'react'
 import { db, ensureOwned } from '../data/db'
 import { useStore, type AccountPro } from '../data/store'
-import { enqueueAll, supabaseRemote, syncOnce, trackChanges } from '../data/sync'
+import { enqueueAll, supabaseRemote, SyncError, syncOnce, trackChanges } from '../data/sync'
 import { cloudConfigured, getCloud, sessionLikely, whenCloud } from '../lib/cloud'
 import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
 
 /**
  * Optional account: sign-in with a code by email, the subscription the
- * server knows about, and sync (Pro). Nothing here runs unless the cloud is
- * configured.
+ * server knows about, and sync (one device at a time without Pro). Nothing
+ * here runs unless the cloud is configured.
  */
 const store = () => useStore.getState()
 
@@ -95,26 +95,53 @@ export async function refreshSubscription(): Promise<AccountPro | null> {
 
 let running: Promise<void> | null = null
 
-/** One sync, if signed in with Pro. Concurrent calls share the same run. */
+/** A server from before the one-device rule has no such function. */
+const missing = (e: { code?: string } | null) => e?.code === 'PGRST202'
+
+/** Without Pro, one device syncs at a time: this one, from now on. */
+async function claim() {
+  const c = await client()
+  const { error } = await c.rpc('claim_sync_device')
+  if (error && !missing(error)) throw new SyncError(error.message, error.code)
+}
+
+/** Takes the sync back from the account's other device, and syncs. */
+export async function syncHere() {
+  try {
+    await claim()
+  } catch {
+    store().setSync({ error: navigator.onLine ? 'other' : 'offline' })
+    return
+  }
+  await syncNow()
+}
+
+/** One sync, if signed in. Concurrent calls share the same run. */
 export function syncNow(): Promise<void> {
   running ??= (async () => {
     const { account, sync, setSync } = store()
     if (!account) return
     const c = await client()
-    // First sync for this account: send everything already on the device.
-    let cursor = sync.cursor
-    if (sync.userId !== account.userId) {
-      await enqueueAll(db)
-      cursor = null
-      setSync({ userId: account.userId, cursor: null })
-    }
     try {
+      // First sync for this account here: signing in moves the sync to this
+      // device, and everything already on it is sent.
+      let cursor = sync.cursor
+      if (sync.userId !== account.userId) {
+        await claim()
+        await enqueueAll(db)
+        cursor = null
+        setSync({ userId: account.userId, cursor: null })
+      }
+      // Asked first: without the sync, the server would answer with nothing.
+      const here = await c.rpc('sync_here')
+      if (!here.error && here.data === false) return setSync({ error: 'elsewhere' })
       const r = await syncOnce(db, supabaseRemote(c), cursor)
       // Another device on an older version may have sent unlinked stringings.
       if (r.pulled) await ensureOwned()
       setSync({ cursor: r.cursor, lastAt: Date.now(), error: undefined })
-    } catch {
-      setSync({ error: navigator.onLine ? 'other' : 'offline' })
+    } catch (e) {
+      // Refused by the rules: another device took the sync meanwhile.
+      setSync({ error: e instanceof SyncError && e.code === '42501' ? 'elsewhere' : navigator.onLine ? 'other' : 'offline' })
     }
   })().finally(() => {
     running = null

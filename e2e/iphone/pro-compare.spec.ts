@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test'
 // A saved setup next to a pro, on an iPhone (WebKit, 390 px).
 
 async function setupAndPro(page: Page, player: RegExp) {
-  await start(page)
+  await start(page, { pro: true })
   await tapLead(page, '3h e 9h')
   await saveSetup(page, 'Torneio')
   await page.goto('/setups')
@@ -72,7 +72,7 @@ test('PC03 in compare mode, the second place can be a pro', async ({ page }) => 
   await expect(page.getByText('Para comparar com Clube.')).toBeVisible()
 })
 
-test('PC04 “How to get there” opens Igualar with both sides filled in; Igualar counts the plan', async ({ page }) => {
+test('PC04 “How to get there” opens Igualar with both sides filled in, solved once', async ({ page }) => {
   await setupAndPro(page, /Novak Djokovic/)
   await page.getByRole('button', { name: 'Como chegar lá' }).click()
   await expect(page.getByRole('heading', { name: 'Planear' })).toBeVisible()
@@ -81,11 +81,25 @@ test('PC04 “How to get there” opens Igualar with both sides filled in; Igual
   const to = page.getByRole('region', { name: 'Onde queres chegar' })
   await expect(to.getByRole('button', { name: /^Igualar a/ })).toContainText('Novak Djokovic')
   await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('353')
-  // Solved straight away; a new plan, so one of the three free ones.
+  // Solved straight away.
   await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toBeVisible()
-  await expect(page.getByText('2 planos grátis')).toBeVisible()
-  // A reload does not solve (or count) again.
+  // A reload does not solve again.
   await page.reload()
-  await expect(page.getByText('2 planos grátis')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toHaveCount(0)
+})
+
+test('PC05 without Pro: whose racket it is, not its numbers; picking one opens Pro on that pro', async ({ page }) => {
+  await start(page)
+  await saveSetup(page, 'Torneio')
+  await page.goto('/setups')
+  await page.getByRole('button', { name: 'Mais ações: Torneio' }).click()
+  await page.getByRole('menuitem', { name: 'Comparar com um profissional' }).click()
+  const sinner = page.getByRole('radio', { name: /Jannik Sinner/ })
+  await expect(sinner).toContainText('Head Speed')
+  await expect(sinner).toContainText('Pro')
+  await expect(sinner).not.toContainText('SW')
+  await sinner.click()
+  const sheet = page.getByRole('dialog', { name: 'SwingMath Pro' })
+  await expect(sheet).toBeVisible()
+  await expect(page.getByRole('table')).toHaveCount(0)
 })

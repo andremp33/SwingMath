@@ -9,7 +9,7 @@ import { useComputed, useRacket, useSetups } from '../data/hooks'
 import { racketFeel } from '../data/racketFeel'
 import { shortName } from '../data/stringCatalog'
 import { PRO_TARGETS, withStrings, type ProTarget } from '../data/pros'
-import { defaultConfig, useStore } from '../data/store'
+import { defaultConfig, isPro, useStore } from '../data/store'
 import { compute, ptsHeadLight, recoilWeight } from '../domain/physics'
 import { fmt, useT, type Dict } from '../i18n'
 import { bedLabel } from '../lib/bedLabel'
@@ -19,6 +19,7 @@ import { monthYear, ProList } from '../ui/ProPicker'
 import type { MatchHandoff } from './Match'
 import { useUnits } from '../lib/units'
 import { InfoTip } from '../ui/disclosure'
+import { usePaywall } from './Pro'
 
 export function Compare() {
   const t = useT()
@@ -316,11 +317,15 @@ export function ProCompare() {
   const t = useT()
   const nav = useNavigate()
   const setLastPro = useStore((s) => s.setLastPro)
+  const paid = useStore(isPro)
+  const paywall = usePaywall()
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
   const setups = useSetups()
   const setup = setups?.find((s) => s.id === id)
-  const pro = PRO_TARGETS.find((p) => p.id === params.get('pro'))
+  // A pro's numbers are Pro: everyone else picks from the list, and the
+  // paywall opens on the pro they picked.
+  const pro = paid ? PRO_TARGETS.find((p) => p.id === params.get('pro')) : undefined
 
   return (
     <>
@@ -338,7 +343,7 @@ export function ProCompare() {
         <Card label={t.compare.pickPro}>
           <CardTitle>{t.compare.pickPro}</CardTitle>
           <p className="mb-3 text-sm text-muted">{fmt(t.compare.pickProFor, { name: setup.name })}</p>
-          <ProList selected="" fromStrung onPick={(p) => (setLastPro(p.id), setParams({ pro: p.id }))} />
+          <ProList selected="" fromStrung onPick={(p) => (setLastPro(p.id), paid ? setParams({ pro: p.id }) : paywall('pros', { asked: true }))} />
         </Card>
       ) : (
         <SetupVsPro setup={setup} pro={pro} onOther={() => setParams({})} />

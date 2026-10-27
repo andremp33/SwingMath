@@ -1,4 +1,4 @@
-import { a11y, expect, pickTarget, start, test } from './fixtures'
+import { a11y, expect, pickTarget, saveSetup, start, test } from './fixtures'
 import type { Page } from '@playwright/test'
 
 const DAY = 86_400_000
@@ -36,12 +36,14 @@ async function openPlans(page: Page) {
 }
 
 test.describe('F20 the paywall with the player’s racket', () => {
-  test('F20-N1 without a racket of theirs: no preview, the three benefits', async ({ page }) => {
+  test('F20-N1 without a racket of theirs: no preview, the four benefits, and what stays free', async ({ page }) => {
     await start(page)
     const d = await openPlans(page)
     await expect(d.getByText('As tuas raquetes iguais, sempre: a app avisa quando uma se afasta e diz como corrigir.')).toBeVisible()
-    await expect(d.getByText('O teu Diário diz-te que corda e que tensão pôr, e quando trocar.')).toBeVisible()
-    await expect(d.getByText('Chumbo certo à primeira, até chegares à raquete de um pro.')).toBeVisible()
+    await expect(d.getByText(/^O teu Diário diz-te que corda e que tensão pôr, e quando trocar; a calculadora de cordas/)).toBeVisible()
+    await expect(d.getByText(/^Chumbo certo à primeira, até à raquete de um pro/)).toBeVisible()
+    await expect(d.getByText('Setups sem limite, em todos os teus aparelhos.')).toBeVisible()
+    await expect(d.getByText(/^Continua grátis: .*até 5 setups/)).toBeVisible()
     await expect(d.getByTestId('preview-title')).toHaveCount(0)
   })
 
@@ -49,9 +51,10 @@ test.describe('F20 the paywall with the player’s racket', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await start(page, { path: '/match' })
     await seedRacket(page, { measured: [300, 32, 300] })
-    // Opening a pro in Igualar remembers them.
+    // Without Pro, picking a pro in Igualar opens Pro on them (and remembers them).
     await pickTarget(page, /Jannik Sinner/)
-    const d = await openPlans(page)
+    const d = page.getByRole('dialog', { name: 'SwingMath Pro' })
+    await expect(page.getByRole('region', { name: 'Onde queres chegar' }).getByRole('button', { name: /^Igualar a/ })).not.toContainText('Jannik Sinner')
     await expect(d.getByTestId('preview-title')).toHaveText(/^A tua Aero de jogo a \d+ tiras? de uma raquete do circuito ATP$/)
     // Less motion: the final state straight away, the swingweight up to Sinner's.
     await expect(d.getByTestId('preview-sw')).toHaveAttribute('data-done', 'true')
@@ -92,5 +95,47 @@ test.describe('F20 the paywall with the player’s racket', () => {
     await expect(d.getByRole('heading', { name: 'Iguala a tua frota' })).toBeVisible()
     await expect(d.getByRole('listitem').filter({ hasText: 'Aero de jogo' })).toBeVisible()
     await expect(d.getByRole('listitem', { name: /: (igual|perto|longe)$/ })).toHaveCount(0)
+  })
+
+  test('F20-H5 five setups free: the sixth opens Pro, the five stay', async ({ page }) => {
+    await start(page)
+    await page.evaluate(async () => {
+      const dbUrl = '/src/data/db.ts'
+      const { db } = await import(/* @vite-ignore */ dbUrl)
+      const now = Date.now()
+      const base = { racketId: 'stock-babolat-pure-aero-98-2026', favourite: false, baseMode: 'reference', measured: {}, accessories: { strings: true, leatherGrip: false, overgrip: true, dampener: false }, leadG: { tip: 0, tenTwo: 0, threeNine: 0, throat: 0, handle: 0 }, ratings: {}, createdAt: now, updatedAt: now }
+      await db.setups.bulkPut([1, 2, 3, 4, 5].map((n) => ({ ...base, id: `s${n}`, name: `Setup ${n}` })))
+    })
+    await page.getByRole('button', { name: 'Guardar setup' }).first().click()
+    const d = page.getByRole('dialog', { name: 'SwingMath Pro' })
+    await expect(d.getByRole('heading', { name: 'Setups sem limite' })).toBeVisible()
+    await expect(d).toContainText('O grátis guarda 5 setups. Os que tens ficam todos.')
+    await expect(page.getByRole('dialog', { name: 'Guardar setup' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await page.goto('/setups')
+    await expect(page.getByRole('heading', { name: 'Setups' }).locator('..')).toContainText('Pro')
+    await expect(page.getByText('Setup 5')).toBeVisible()
+  })
+
+  test('F20-H6 below the limit, the setups say how many of the free ones are used', async ({ page }) => {
+    await start(page)
+    await saveSetup(page, 'Clube')
+    await page.goto('/setups')
+    await expect(page.getByText('1 de 5 grátis')).toBeVisible()
+  })
+
+  test('F20-H7 with Pro, no count and a sixth setup saves', async ({ page }) => {
+    await start(page, { pro: true })
+    await page.evaluate(async () => {
+      const dbUrl = '/src/data/db.ts'
+      const { db } = await import(/* @vite-ignore */ dbUrl)
+      const now = Date.now()
+      const base = { racketId: 'stock-babolat-pure-aero-98-2026', favourite: false, baseMode: 'reference', measured: {}, accessories: { strings: true, leatherGrip: false, overgrip: true, dampener: false }, leadG: { tip: 0, tenTwo: 0, threeNine: 0, throat: 0, handle: 0 }, ratings: {}, createdAt: now, updatedAt: now }
+      await db.setups.bulkPut([1, 2, 3, 4, 5].map((n) => ({ ...base, id: `s${n}`, name: `Setup ${n}` })))
+    })
+    await saveSetup(page, 'Sexto')
+    await page.goto('/setups')
+    await expect(page.getByText(/de 5 grátis/)).toHaveCount(0)
+    await expect(page.getByText('Sexto')).toBeVisible()
   })
 })

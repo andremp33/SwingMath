@@ -21,6 +21,8 @@ import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { CollapsibleCard, InfoTip } from '../ui/disclosure'
 import { RacketSources } from './RacketSources'
+import { useSetupRoom } from './freePlans'
+import { usePaywall } from './Pro'
 import { racketFeel, reviewOf } from '../data/racketFeel'
 import { FEEL_KEYS, type Feel } from '../domain/feel'
 import { suggestSetupName } from '../lib/setupName'
@@ -42,6 +44,8 @@ export function Calculator() {
   const noLeadConfig = useMemo(() => ({ ...config, leadG: emptyLead(), extra: [] }), [config])
   const noLead = useComputed(noLeadConfig, racket)
   const setups = useSetups()
+  const room = useSetupRoom()
+  const paywall = usePaywall()
   const loaded = setups?.find((s) => s.id === loadedSetupId)
   const [selected, setSelected] = useState<Position | string>('tip')
   const [addOpen, setAddOpen] = useState(false)
@@ -311,7 +315,7 @@ export function Calculator() {
           </Card>
           <div className="order-5 md:order-none"><GoalsCard racket={racket} result={result} /></div>
           <div className="order-8 md:order-none"><ComfortCard racket={racket} specs={result} /></div>
-          <div className="order-9 md:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
+          <div className="order-9 md:order-none"><SaveButtons loaded={loaded} onSaveNew={() => (room ? setSaveOpen(true) : paywall('setups', { asked: true }))} /></div>
           <div className="order-10 md:order-none"><VerifyCard predicted={result} catalog={catalog} /></div>
         </div>
       </div>
