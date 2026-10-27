@@ -78,7 +78,7 @@ export async function setupAction(page: Page, setupName: string, action: string)
 }
 
 /** Lead at a position the way a player adds it: pick its spot on the racket,
- *  then tap + (or − for a negative n) beside it. */
+ *  then tap + (or − for a negative n) at the ends of the ruler under it. */
 export async function tapLead(page: Page, name: string, n = 1) {
   await page.getByRole('slider', { name, exact: true }).click()
   const button = page.getByRole('button', { name: `${n < 0 ? '−' : '+'} 0,5 g ${name}`, exact: true })

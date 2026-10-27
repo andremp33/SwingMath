@@ -49,12 +49,33 @@ test.describe('F01 see the effect of adding lead', () => {
     await expect(page.getByRole('switch', { name: /Antivibrador/ })).toHaveAttribute('aria-checked', 'false')
   })
 
-  test('F01-E5 tapping the racket picks a position, with − and + beside it', async ({ page }) => {
+  test('F01-E5 tapping the racket picks a position for the ruler and its − and +', async ({ page }) => {
     await start(page)
     await page.getByRole('slider', { name: 'Cabo' }).click()
     await expect(page.getByRole('slider', { name: 'Cabo' })).toBeFocused()
     await expect(page.getByRole('button', { name: '+ 0,5 g Cabo' })).toBeVisible()
     await expect(page.getByRole('button', { name: '+ 0,5 g Garganta' })).toHaveCount(0)
+  })
+
+  test('F01-E8 dragging the ruler sets the grams, half a gram a tick', async ({ page }) => {
+    await start(page)
+    await page.getByRole('slider', { name: 'Garganta' }).click()
+    const ruler = page.locator('[data-ruler]')
+    await ruler.scrollIntoViewIfNeeded()
+    const box = (await ruler.boundingBox())!
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    // Left for more, four ticks of 12 px; then back past 0, which stops there.
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x - 48, y, { steps: 6 })
+    await page.mouse.up()
+    await expect(page.getByRole('slider', { name: 'Garganta' })).toHaveAttribute('aria-valuetext', '2,0 g')
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + 120, y, { steps: 6 })
+    await page.mouse.up()
+    await expect(page.getByRole('slider', { name: 'Garganta' })).toHaveAttribute('aria-valuetext', '0,0 g')
   })
 
   test('F01-E6 changing racket recalculates', async ({ page }) => {

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { Minus, Plus, X } from 'lucide-react'
 import { geometry as frameGeometry, leadPositions, type Geometry } from '../domain/physics'
 import type { Strip } from '../domain/preview'
@@ -296,12 +296,13 @@ export function RacketDiagram({
 export type LeadKey = Position | string
 
 /**
- * The lead, edited on the racket itself: tap a spot to pick it, and − and +
- * sit either side of it. Each spot is its position's slider for the keyboard
- * and screen readers (arrows step 0.5 g, Home and End go to 0 and the most).
- * Under the frame, one line: the position, its grams (each side's where the
- * lead is split) and the player's tape to cut. No list of sliders: the page
- * stays short and quiet.
+ * The lead, picked on the racket and weighed under it. Each spot on the frame
+ * is a small mark with its grams, there only to pick it; under the frame, the
+ * picked spot's name and grams over one ruler to drag, with − and + at its
+ * ends, and then each side's share and the tape to cut. Each spot is also its
+ * position's slider for the keyboard and screen readers (arrows step 0.5 g,
+ * Home and End go to 0 and the most). No list of sliders: the page stays short
+ * and quiet.
  */
 export function LeadEditor({
   lead,
@@ -360,8 +361,6 @@ export function LeadEditor({
   }
   const sel = spots.find((s) => s.key === selected) ?? spots[0]
   const split = sel.dots.length > 1
-  // The steppers flank one dot: the right-hand one where the lead is split.
-  const anchor = [...sel.dots].sort((a, b) => b.x - a.x)[0]
   const keys = (k: LeadKey, grams: number) => (e: KeyboardEvent) => {
     const by: Record<string, number> = { ArrowRight: STEP, ArrowUp: STEP, ArrowLeft: -STEP, ArrowDown: -STEP, PageUp: 2, PageDown: -2 }
     if (e.key in by) set(k, grams + by[e.key])
@@ -370,6 +369,17 @@ export function LeadEditor({
     else return
     e.preventDefault()
   }
+  const step = (dir: -1 | 1) => (
+    <button
+      type="button"
+      aria-label={`${dir < 0 ? '−' : '+'} 0,5 g ${sel.name}`}
+      onClick={() => set(sel.key, sel.grams + dir * STEP)}
+      disabled={dir < 0 ? sel.grams <= 0 : sel.grams >= LEAD_MAX}
+      className="flex size-11 shrink-0 items-center justify-center rounded-full text-text transition hover:bg-surface-2 active:scale-95 disabled:opacity-30"
+    >
+      {dir < 0 ? <Minus className="size-5" aria-hidden /> : <Plus className="size-5" aria-hidden />}
+    </button>
+  )
 
   return (
     <div>
@@ -396,7 +406,8 @@ export function LeadEditor({
                 key={`${s.key}${i}`}
                 type="button"
                 // The first dot is the position's slider; a second one (the
-                // other side) only picks it.
+                // other side) only picks it. Each is a 44 px target around a
+                // small mark, so the frame stays in view.
                 role={first ? 'slider' : undefined}
                 aria-label={first ? s.name : undefined}
                 aria-hidden={first ? undefined : true}
@@ -409,51 +420,122 @@ export function LeadEditor({
                 onClick={() => onSelect(s.key)}
                 onFocus={() => onSelect(s.key)}
                 onKeyDown={keys(s.key, s.grams)}
-                className={cx(
-                  'num absolute flex min-h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center px-1.5 text-[11px] font-bold shadow-sm transition',
-                  s.custom ? 'rounded-md' : 'rounded-full',
-                  on ? (s.custom ? 'bg-bar text-bg' : 'bg-accent text-on-accent') : 'bg-surface text-muted ring-1 ring-border-input',
-                  picked && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
-                )}
+                className="group absolute flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
                 style={{ left: `${pctX(d)}%`, top: `${pctY(d)}%` }}
               >
-                {on ? dotLabel(s.grams / s.dots.length, lang) : '+'}
+                <span
+                  className={cx(
+                    'num flex items-center justify-center text-[11px] font-bold shadow-sm transition-[transform,background-color] duration-150 group-active:scale-90',
+                    s.custom ? 'rounded-[5px]' : 'rounded-full',
+                    on ? cx('h-5 min-w-6 px-1.5', s.custom ? 'bg-bar text-bg' : 'bg-accent text-on-accent') : 'size-3.5 bg-surface ring-[1.5px] ring-border-input',
+                    picked && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
+                  )}
+                >
+                  {on && dotLabel(s.grams / s.dots.length, lang)}
+                </span>
               </button>
             )
           }),
         )}
-        {/* − and + either side of the picked spot. */}
-        {([-1, 1] as const).map((dir) => (
-          <button
-            key={dir}
-            type="button"
-            aria-label={`${dir < 0 ? '−' : '+'} 0,5 g ${sel.name}`}
-            onClick={() => set(sel.key, sel.grams + dir * STEP)}
-            disabled={dir < 0 ? sel.grams <= 0 : sel.grams >= LEAD_MAX}
-            className="absolute z-10 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-text shadow-pop hover:bg-surface-2 disabled:opacity-30"
-            style={{ left: `calc(${pctX(anchor)}% ${dir < 0 ? '-' : '+'} 2.6rem)`, top: `${pctY(anchor)}%` }}
-          >
-            {dir < 0 ? <Minus className="size-4" aria-hidden /> : <Plus className="size-4" aria-hidden />}
-          </button>
-        ))}
       </div>
-      {/* The picked spot, in words. */}
-      <p className="num mt-3 flex min-h-9 flex-wrap items-center justify-center gap-x-2 text-sm" aria-live="polite">
-        <span className="font-medium">{sel.name}</span>
-        <span className="readout">{fmtNum(sel.grams, 1, lang)} g</span>
-        {split && sel.grams > 0 && <span className="text-muted">{fmtNum(sel.grams / 2, 2, lang)} g × 2</span>}
-        {tape && sel.grams > 0 && (
-          <span className="text-muted">
-            {fmt(t.calc.tapeCm, { cm: fmtNum(tapeCm(split ? sel.grams / 2 : sel.grams, tape), 1, lang) })}
-            {split && ' × 2'}
-          </span>
-        )}
-        {sel.custom && (
-          <button type="button" onClick={() => onRemoveExtra(sel.key)} aria-label={fmt(t.custom.remove, { name: sel.name })} className="rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-text">
-            <X className="size-4" aria-hidden />
-          </button>
-        )}
+      {/* The picked spot, in words, over its ruler. */}
+      <p className="num mt-4 flex flex-wrap items-baseline justify-center gap-x-2" aria-live="polite">
+        <span className="text-sm text-muted">{sel.name}</span>
+        <span className="readout text-xl">{fmtNum(sel.grams, 1, lang)} g</span>
       </p>
+      <div className="mx-auto mt-1 flex max-w-80 items-center rounded-full border border-border bg-surface p-0.5">
+        {step(-1)}
+        <GramRuler grams={sel.grams} onChange={(v) => set(sel.key, v)} />
+        {step(1)}
+      </div>
+      {((sel.grams > 0 && (split || tape)) || sel.custom) && (
+        <p className="num mt-1 flex min-h-11 flex-wrap items-center justify-center gap-x-2 text-sm text-muted">
+          {split && sel.grams > 0 && <span>{fmtNum(sel.grams / 2, 2, lang)} g × 2</span>}
+          {tape && sel.grams > 0 && (
+            <span>
+              {fmt(t.calc.tapeCm, { cm: fmtNum(tapeCm(split ? sel.grams / 2 : sel.grams, tape), 1, lang) })}
+              {split && ' × 2'}
+            </span>
+          )}
+          {sel.custom && (
+            <button
+              type="button"
+              onClick={() => onRemoveExtra(sel.key)}
+              aria-label={fmt(t.custom.remove, { name: sel.name })}
+              className="flex size-11 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-text"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          )}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Pixels between two half-gram ticks on the ruler, and how many are drawn
+ *  either side of the value (the rest fade out under its edges). */
+const TICK = 12
+const NEAR = 12
+
+/**
+ * The grams as a ruler: a tape of half-gram ticks under a fixed mark. Drag it
+ * sideways, left for more as when tape is pulled off the roll, and it snaps to
+ * the half gram. For the pointer only: the keyboard and screen readers set the
+ * same grams with the spot's slider and the − and + either side.
+ */
+function GramRuler({ grams, onChange }: { grams: number; onChange: (g: number) => void }) {
+  const drag = useRef<{ x: number; g: number } | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const ticks = LEAD_MAX / STEP
+  const end = () => {
+    drag.current = null
+    setDragging(false)
+  }
+  const fade = 'linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent)'
+  return (
+    <div
+      data-ruler
+      aria-hidden
+      className="relative h-11 min-w-0 flex-1 cursor-grab touch-pan-y select-none overflow-hidden active:cursor-grabbing"
+      style={{ maskImage: fade, WebkitMaskImage: fade }}
+      onPointerDown={(e) => {
+        drag.current = { x: e.clientX, g: grams }
+        setDragging(true)
+        e.currentTarget.setPointerCapture(e.pointerId)
+      }}
+      onPointerMove={(e) => {
+        if (!drag.current) return
+        const v = Math.min(LEAD_MAX, Math.max(0, Math.round(drag.current.g / STEP - (e.clientX - drag.current.x) / TICK) * STEP))
+        if (v !== grams) onChange(v)
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+    >
+      {/* A tape one pixel wide at the centre (none and it isn't painted),
+          slid along; only the ticks near the value are drawn, so none
+          reaches past the screen's edge. */}
+      <svg width="1" height="44" className="absolute top-0 left-1/2 overflow-visible">
+        <g style={{ transform: `translateX(${-(grams / STEP) * TICK}px)`, transition: dragging ? 'none' : 'transform 160ms ease-out' }}>
+          {Array.from({ length: 2 * NEAR + 1 }, (_, n) => {
+            const i = Math.round(grams / STEP) - NEAR + n
+            if (i < 0 || i > ticks) return null
+            const x = i * TICK
+            const label = i % 10 === 0
+            return (
+              <g key={i}>
+                <line x1={x} x2={x} y1={6} y2={label ? 22 : i % 2 === 0 ? 17 : 12} stroke={label ? 'var(--c-text-muted)' : 'var(--c-border-input)'} strokeWidth="1" />
+                {label && (
+                  <text x={x} y={36} textAnchor="middle" fontSize="11" fill="var(--c-text-muted)" className="num">
+                    {i * STEP}
+                  </text>
+                )}
+              </g>
+            )
+          })}
+        </g>
+      </svg>
+      <span className="absolute top-1 left-1/2 h-6 w-0.5 -translate-x-1/2 rounded-full bg-accent" />
     </div>
   )
 }
