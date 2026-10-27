@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core'
 import { useRef, useState } from 'react'
 import { signOut } from '../app/account'
 import { deleteAll, exportAll, importAll } from '../data/db'
-import { accountProActive, isPro, useStore, type Theme, type UnitSystem } from '../data/store'
+import { accountProActive, isPro, useStore, type Court, type Theme, type UnitSystem } from '../data/store'
 import { freeProActive } from '../domain/trial'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, loadLang, useT, type Lang } from '../i18n'
@@ -59,6 +59,14 @@ export function Settings() {
               value={s.theme}
               onChange={s.setTheme}
               options={(['system', 'dark', 'light'] as const).map((v) => ({ value: v, label: t.settings.themes[v] }))}
+            />
+          </SettingsRow>
+          <SettingsRow label={t.settings.court} stack>
+            <Segmented<Court>
+              label={t.settings.court}
+              value={s.court}
+              onChange={s.setCourt}
+              options={(['clay', 'hard', 'grass'] as const).map((v) => ({ value: v, label: t.settings.courts[v] }))}
             />
           </SettingsRow>
         </SettingsGroup>

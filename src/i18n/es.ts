@@ -351,6 +351,8 @@ export const es: Dict = {
     unitOptions: { metric: 'Métricas (g, mm)', imperial: 'Imperiales (oz, in)' },
     theme: 'Tema',
     themes: { system: 'Automático', dark: 'Oscuro', light: 'Claro' },
+    court: 'Pista',
+    courts: { clay: 'Tierra batida', hard: 'Rápida', grass: 'Hierba' },
     masses: 'Masas de los accesorios',
     massesHint: 'Ajústalas a lo que usas. El grip de cuero es la diferencia respecto a un grip sintético.',
     tape: 'Tu cinta de plomo',

@@ -351,6 +351,8 @@ export const en: Dict = {
     unitOptions: { metric: 'Metric (g, mm)', imperial: 'Imperial (oz, in)' },
     theme: 'Theme',
     themes: { system: 'Automatic', dark: 'Dark', light: 'Light' },
+    court: 'Court',
+    courts: { clay: 'Clay', hard: 'Hard court', grass: 'Grass' },
     masses: 'Accessory masses',
     massesHint: 'Adjust to what you use. Leather grip is the difference over a synthetic grip.',
     tape: 'Your lead tape',

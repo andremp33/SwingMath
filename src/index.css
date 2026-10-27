@@ -17,6 +17,8 @@
   --c-text: #ece9e3;
   --c-text-muted: #a39e94;
   --c-accent: #d9764a;
+  /* The logo's clay: the brand, whichever court the player picks. */
+  --c-brand: #d9764a;
   --c-accent-text: #e8895f;
   --c-on-accent: #1a110c;
   --c-danger: #ef7b6f;
@@ -58,6 +60,7 @@
   --c-text: #1c1a17;
   --c-text-muted: #625e56;
   --c-accent: #b4532e;
+  --c-brand: #b4532e;
   --c-accent-text: #a4492a;
   --c-on-accent: #ffffff;
   --c-danger: #b3261e;
@@ -83,6 +86,68 @@
   --shadow-card: 0 1px 2px rgba(40, 30, 20, 0.04);
   --shadow-raised: 0 1px 2px rgba(40, 30, 20, 0.12), 0 0 0 0.5px rgba(40, 30, 20, 0.06);
   color-scheme: light;
+}
+
+/* The player's court (Settings), over the clay above. Only the ground, the
+   ink and the accent move; data and area colours stay as they are.
+   Hard court: the blue of a fast court. Grass: lawn green with the purple of
+   the oldest grass tournament. Contrast checked like clay's: text 15:1,
+   muted 5:1 or more on every surface, field edges 3:1. */
+:root[data-court='hard']:not([data-theme='light']) {
+  --c-bg: #0e131a;
+  --c-surface: #151c26;
+  --c-surface-2: #1f2835;
+  --c-raised: #2d3847;
+  --c-border: #263142;
+  --c-border-input: #5f6c80;
+  --c-text: #e8ecf2;
+  --c-text-muted: #9ba6b6;
+  --c-accent: #46a6dc;
+  --c-accent-text: #68b8e6;
+  --c-on-accent: #04131d;
+  --c-bar: #46a6dc;
+}
+:root[data-court='hard'][data-theme='light'] {
+  --c-bg: #eef2f6;
+  --c-surface: #fbfcfe;
+  --c-surface-2: #e1e7ef;
+  --c-raised: #ffffff;
+  --c-border: #d7dee8;
+  --c-border-input: #7a8597;
+  --c-text: #131a23;
+  --c-text-muted: #526070;
+  --c-accent: #1468a6;
+  --c-accent-text: #11609a;
+  --c-on-accent: #ffffff;
+  --c-bar: #1468a6;
+}
+:root[data-court='grass']:not([data-theme='light']) {
+  --c-bg: #0f1410;
+  --c-surface: #161d17;
+  --c-surface-2: #202a21;
+  --c-raised: #2d382e;
+  --c-border: #27312a;
+  --c-border-input: #647163;
+  --c-text: #e8ede5;
+  --c-text-muted: #9fa99b;
+  --c-accent: #b08be6;
+  --c-accent-text: #bf9ef0;
+  --c-on-accent: #170b27;
+  --c-bar: #b08be6;
+}
+:root[data-court='grass'][data-theme='light'] {
+  --c-bg: #f1f4ec;
+  --c-surface: #fcfdf9;
+  --c-surface-2: #e4e9dc;
+  --c-raised: #ffffff;
+  --c-border: #d8dfd0;
+  --c-border-input: #7c8676;
+  --c-text: #17201a;
+  --c-text-muted: #556052;
+  --c-accent: #5a2d8f;
+  --c-accent-text: #5a2d8f;
+  --c-on-accent: #ffffff;
+  --c-bar: #5a2d8f;
 }
 
 @theme inline {
@@ -269,17 +334,31 @@ textarea {
   transform: scale(0.97);
 }
 
-/* The calculator's racket keeps the tones it was drawn in, whatever the
-   panels around it do. */
+/* The calculator's racket keeps the tones it was drawn in (clay's), whatever
+   the panels and the player's court around it do. */
 .racket-tones {
+  --c-bg: #141312;
   --c-surface: #1b1a18;
   --c-surface-2: #242220;
   --c-border: #2f2d2a;
+  --c-border-input: #6e6960;
+  --c-text: #ece9e3;
+  --c-text-muted: #a39e94;
+  --c-accent: #d9764a;
+  --c-on-accent: #1a110c;
+  --c-bar: #d9764a;
 }
 :root[data-theme='light'] .racket-tones {
+  --c-bg: #f5f3ee;
   --c-surface: #fdfcf9;
   --c-surface-2: #ebe8e1;
   --c-border: #ddd9d0;
+  --c-border-input: #868178;
+  --c-text: #1c1a17;
+  --c-text-muted: #625e56;
+  --c-accent: #b4532e;
+  --c-on-accent: #ffffff;
+  --c-bar: #b4532e;
 }
 
 /* Numbers line up in columns (tabular figures); readouts are a touch heavier. */
