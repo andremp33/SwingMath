@@ -3,6 +3,7 @@ import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hoo
 import { PRO_TARGETS, withStrings } from '../data/pros'
 import { useStore } from '../data/store'
 import { latestMeasurement } from '../domain/fleet'
+import { FREE_SETUPS } from '../domain/freePlans'
 import { hoursOn, type OwnedRacket } from '../domain/journal'
 import { geometry } from '../domain/physics'
 import { nearestTarget, racketPreview, type RacketPreview } from '../domain/preview'
@@ -28,6 +29,8 @@ export function PaywallTop({ reason }: { reason: PaywallReason }) {
   const lastProId = useStore((s) => s.lastProId)
   const mine = owned?.find((o) => !o.retired)
   const frame = mine && rackets.find((r) => r.id === mine.racketId)
+  // Strings, setups and sync say what the limit was; the racket is beside the point.
+  if (reason === 'strings' || reason === 'setups' || reason === 'sync') return <ReasonHeader reason={reason} />
   if (!mine || !frame || !stringings || !sessions) return <ReasonHeader reason={reason} />
 
   if (reason === 'journal') {
@@ -132,7 +135,7 @@ function WithTeaser({ reason, teaser }: { reason: PaywallReason; teaser: ReactNo
 function ReasonHeader({ reason }: { reason: PaywallReason }) {
   const t = useT()
   if (reason === 'profile') return null
-  const sub = t.paywall.subs[reason]
+  const sub = fmt(t.paywall.subs[reason], { n: FREE_SETUPS })
   return (
     <div>
       <h3 className="text-lg font-semibold tracking-tight">{t.paywall.titles[reason]}</h3>

@@ -46,7 +46,7 @@ test.describe('F03 save, name and rate a setup', () => {
     await expect(page.getByRole('article')).toContainText('Cabo 0,5 g')
   })
 
-  test('F03-N1 setups have no limit', async ({ page }) => {
+  test('F03-N1 up to five setups free, with no paywall', async ({ page }) => {
     await start(page)
     for (let i = 1; i <= 4; i++) await saveSetup(page, `S${i}`)
     await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toHaveCount(0)

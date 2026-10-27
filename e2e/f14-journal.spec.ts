@@ -168,11 +168,13 @@ test.describe('F15 strings, grip and arm comfort', () => {
     await expect(async () => expect(await weight()).toBeCloseTo(before + 7, 1)).toPass()
   })
 
-  test('F15-H3 equivalent tension is free: everyone sees the answer', async ({ page }) => {
+  test('F15-H3 equivalent tension is Pro: without it, the inputs and a lock over a made-up answer', async ({ page }) => {
     await start(page, { path: '/cordas' })
     const result = page.getByRole('region', { name: 'Encorda a' })
-    await expect(result).toContainText('23 kg')
-    await expect(result.getByRole('button', { name: 'Experimentar o Pro' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Para onde vais' }).getByLabel('Material')).toBeVisible()
+    await expect(result.getByText('A mesma sensação noutra corda')).toBeVisible()
+    await result.getByRole('button', { name: 'Experimentar o Pro' }).click()
+    await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toContainText('A tensão que dá a mesma rigidez')
     await a11y(page)
   })
 

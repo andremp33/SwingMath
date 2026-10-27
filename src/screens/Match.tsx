@@ -19,7 +19,7 @@ import { LEAD_MAX, RacketDiagram } from '../ui/lead'
 import { RacketPicker } from '../ui/RacketPicker'
 import { ProDetails, ProRow } from '../ui/ProPicker'
 import { useFreePlans } from './freePlans'
-import { ProGate } from './Pro'
+import { ProGate, usePaywall } from './Pro'
 import { InfoTip } from '../ui/disclosure'
 import { Sheet, useToast } from '../ui/overlay'
 import { BalanceField, WeightField } from '../ui/unitFields'
@@ -224,6 +224,7 @@ function Smart() {
   const lang = useStore((s) => s.lang)
   const u = useUnits()
   const pro = useStore(isPro)
+  const paywall = usePaywall()
   const config = useStore((s) => s.config)
   const loadConfig = useStore((s) => s.loadConfig)
   const masses = useStore((s) => s.masses)
@@ -233,7 +234,8 @@ function Smart() {
   // the start, the pro as the target, solved once (the use was counted).
   const loc = useLocation()
   const handoff = loc.state as MatchHandoff | null
-  const handoffPro = PRO_TARGETS.find((p) => p.id === handoff?.pro)
+  // Pros are Pro: the handoff only comes from Compare, which is too.
+  const handoffPro = pro ? PRO_TARGETS.find((p) => p.id === handoff?.pro) : undefined
 
   const [libraryId, setLibraryId] = useState(config.racketId)
   const starts = useStarts(libraryId)
@@ -430,6 +432,7 @@ function Smart() {
                   row: <ProRow p={p} />,
                   pick: () => {
                     setLastPro(p.id)
+                    if (!pro) return paywall('pros', { asked: true })
                     pickTarget({ frame: p, specs: p, strung: p.strung, origin: `pro:${p.id}`, name: p.player })
                   },
                 })),
@@ -558,7 +561,7 @@ function TargetPicker({ value, groups, selected }: { value?: { name: string; adj
         aria-haspopup="dialog"
         aria-labelledby={`${id}-l ${id}-v`}
         onClick={() => setOpen(true)}
-        className="flex h-12 w-full items-center justify-between gap-2 rounded-md border border-border-input bg-bg px-3 text-left"
+        className="flex h-12 w-full items-center justify-between gap-2 rounded-md border border-border-input bg-field px-3 text-left"
       >
         <span id={`${id}-v`} className={cx('truncate', value ? 'font-semibold' : 'text-muted')}>
           {value ? value.name : t.match.pickTarget}
@@ -576,7 +579,7 @@ function TargetPicker({ value, groups, selected }: { value?: { name: string; adj
             onChange={(e) => setQ(e.target.value)}
             placeholder={t.match.targetSearch}
             aria-label={t.match.targetSearch}
-            className="h-11 w-full rounded-md border border-border-input bg-bg pl-9 pr-3"
+            className="h-11 w-full rounded-md border border-border-input bg-field pl-9 pr-3"
           />
         </div>
         <div className="-mx-2 max-h-[55dvh] space-y-4 overflow-y-auto">

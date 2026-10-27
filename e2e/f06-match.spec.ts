@@ -63,14 +63,15 @@ test.describe('F06 hit a target', () => {
     await start(page, { path: '/match' })
     const plan = page.getByRole('region', { name: 'Plano de chumbo' })
     const run = page.getByRole('button', { name: 'Calcular', exact: true })
-    for (const player of ['Novak Djokovic', 'Rafael Nadal', 'Roger Federer']) {
-      await pickTarget(page, new RegExp(player))
+    // Rackets from the catalogue (the pros are Pro).
+    for (const model of ['Prestige Pro', 'Percept 97H', 'VCORE Pro 97D']) {
+      await pickTarget(page, new RegExp(`^${model}`), model)
       await run.click()
       await expect(plan).toContainText('Chumbo total')
     }
     await expect(page.getByText('Pro', { exact: true })).toBeVisible()
     // A fourth: what is missing, whether lead gets there, where it lands.
-    await pickTarget(page, /Thiago Seyboth Wild/)
+    await pickTarget(page, /^Percept 97D/, 'Percept 97D')
     await run.click()
     await expect(plan).toContainText('Falta')
     await expect(plan).toContainText(/Peso \+\d+ g/)
@@ -83,7 +84,7 @@ test.describe('F06 hit a target', () => {
     await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toContainText('Usaste os 3 planos grátis do Planear.')
     await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click()
     // One of the three again: whole.
-    await pickTarget(page, /Rafael Nadal/)
+    await pickTarget(page, /^Percept 97H/, 'Percept 97H')
     await run.click()
     await expect(plan).toContainText('Chumbo total')
     await a11y(page)
@@ -124,8 +125,23 @@ test.describe('F07 match rackets', () => {
 })
 
 test.describe('Pro targets', () => {
-  test('F06-H5 a pro target, converted to the state of the starting point, with its source', async ({ page }) => {
+  test('F06-N2 without Pro: whose racquet each pro plays, not its numbers; picking one opens Pro', async ({ page }) => {
     await start(page, { path: '/match' })
+    const to = page.getByRole('region', { name: 'Onde queres chegar' })
+    await to.getByRole('button', { name: /^Igualar a/ }).click()
+    const nadal = page.getByRole('dialog', { name: 'Igualar a' }).getByRole('button', { name: /Rafael Nadal/ })
+    await expect(nadal).toContainText('Babolat')
+    await expect(nadal).not.toContainText('SW')
+    await nadal.click()
+    const d = page.getByRole('dialog', { name: 'SwingMath Pro' })
+    await expect(d.getByRole('heading', { name: 'A raquete de um pro, ao lado da tua' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(to.getByRole('button', { name: /^Igualar a/ })).not.toContainText('Rafael Nadal')
+    await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('')
+  })
+
+  test('F06-H5 a pro target, converted to the state of the starting point, with its source', async ({ page }) => {
+    await start(page, { path: '/match', pro: true })
     const to = page.getByRole('region', { name: 'Onde queres chegar' })
     // Measured or reported, in the list already.
     await to.getByRole('button', { name: /^Igualar a/ }).click()
@@ -144,7 +160,7 @@ test.describe('Pro targets', () => {
   })
 
   test('F06-H7 search, ATP and WTA apart, and the stock racquet to start from', async ({ page }) => {
-    await start(page, { path: '/match' })
+    await start(page, { path: '/match', pro: true })
     const to = page.getByRole('region', { name: 'Onde queres chegar' })
     await to.getByRole('button', { name: /^Igualar a/ }).click()
     const sheet = page.getByRole('dialog', { name: 'Igualar a' })
@@ -176,7 +192,7 @@ test.describe('Pro targets', () => {
   })
 
   test('F06-H6 from the calculator with strings on, the target stays strung', async ({ page }) => {
-    await start(page, { path: '/match' })
+    await start(page, { path: '/match', pro: true })
     await page.getByLabel('Ponto de partida').selectOption({ label: 'Da calculadora' })
     const to = page.getByRole('region', { name: 'Onde queres chegar' })
     await pickTarget(page, /Roger Federer/)

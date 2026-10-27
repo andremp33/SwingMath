@@ -44,13 +44,17 @@ async function open(browser: Browser) {
 /** The account sits at the top of the profile; the form opens on request. */
 async function accountCard(page: Page) {
   await page.goto('/perfil')
-  const card = page.getByRole('region', { name: 'Conta' })
+  const card = page.getByRole('region', { name: 'Conta', exact: true })
   const create = card.getByRole('button', { name: 'Criar conta' })
+  // Drawn once the page has loaded: the form, the button, or the account.
+  await expect(create.or(card.getByLabel('Email')).or(card.getByText('Entraste como'))).toBeVisible()
   if (await create.isVisible()) await create.click()
   return card
 }
 
-async function signIn(page: Page, email: string) {
+/** Signs in; a new account then asks for a name and photo, put off here
+ *  unless `keepWelcome`. */
+async function signIn(page: Page, email: string, { keepWelcome = false } = {}) {
   const card = await accountCard(page)
   await card.getByLabel('Email').fill(email)
   const sentAt = Date.now()
@@ -59,8 +63,28 @@ async function signIn(page: Page, email: string) {
   await card.getByLabel('Código').fill(await codeFor(email, sentAt))
   await card.getByRole('button', { name: 'Entrar' }).click()
   await expect(card.getByText(`Entraste como ${email}`)).toBeVisible()
+  const welcome = page.getByRole('dialog', { name: 'Como te chamamos?' })
+  if (!keepWelcome && (await welcome.isVisible())) await welcome.getByRole('button', { name: 'Cancelar' }).click()
   return card
 }
+
+/** A photo drawn by the browser, picked in the open profile sheet. */
+async function pickPhoto(page: Page) {
+  const url = await page.evaluate(() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 500
+    const g = c.getContext('2d')!
+    g.fillStyle = '#2a64b8'
+    g.fillRect(0, 0, 500, 500)
+    return c.toDataURL('image/png')
+  })
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('dialog').getByRole('button', { name: /^(Escolher|Mudar) foto$/ }).click()
+  await (await chooser).setFiles({ name: 'eu.png', mimeType: 'image/png', buffer: Buffer.from(url.split(',')[1], 'base64') })
+  await expect(page.getByRole('dialog').locator('[data-avatar="photo"]')).toBeVisible()
+}
+
+const userByEmail = async (email: string) => (await admin.auth.admin.listUsers({ perPage: 1000 })).data.users.find((u) => u.email === email)!
 
 async function saveSetup(page: Page, name: string) {
   await page.goto('/')
@@ -318,7 +342,77 @@ test('measurements: the median shows from 3 players, then account deletion', asy
   await page.getByRole('button', { name: 'Apagar conta' }).click()
   await page.getByRole('button', { name: 'Apagar conta para sempre' }).click()
   await expect(page.getByText('Conta apagada')).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Conta' }).getByRole('button', { name: 'Criar conta' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Conta', exact: true }).getByRole('button', { name: 'Criar conta' })).toBeVisible()
   const left = await admin.from('measurements').select('id').eq('racket_id', rid).eq('weight_g', 323)
   expect(left.data).toEqual([])
+})
+
+test('a new account asks for a name and photo; a second device gets them, and a removal travels back', async ({ browser }) => {
+  const email = emailOf('me')
+  const a = await open(browser)
+  await signIn(a, email, { keepWelcome: true })
+  const welcome = a.getByRole('dialog', { name: 'Como te chamamos?' })
+  await welcome.getByLabel('Nome a mostrar').fill('Ana Silva')
+  await pickPhoto(a)
+  await expect(welcome).toContainText('Fica na tua conta, em todos os teus aparelhos.')
+  await welcome.getByRole('button', { name: 'Guardar' }).click()
+  await expect(a.getByRole('heading', { level: 1 })).toHaveText('Ana Silva')
+
+  // On the account: the name and the photo's stamp, and the photo in Storage.
+  const id = (await userByEmail(email)).id
+  await expect.poll(async () => (await admin.auth.admin.getUserById(id)).data.user?.user_metadata.display_name, { timeout: 15_000 }).toBe('Ana Silva')
+  expect(typeof (await admin.auth.admin.getUserById(id)).data.user?.user_metadata.avatar.photo).toBe('number')
+  expect((await admin.storage.from('avatars').list(id)).data?.map((f) => f.name)).toEqual(['avatar.jpg'])
+
+  // A second device: not asked again, and shows them.
+  const b = await open(browser)
+  await signIn(b, email, { keepWelcome: true })
+  await expect(b.getByRole('dialog', { name: 'Como te chamamos?' })).toHaveCount(0)
+  await expect(b.getByRole('heading', { level: 1 })).toHaveText('Ana Silva')
+  await expect(b.locator('main [data-avatar="photo"]')).toBeVisible()
+
+  // The photo removed there: gone from Storage, and from the first device.
+  await b.getByRole('button', { name: 'Editar perfil' }).click()
+  await b.getByRole('dialog').getByRole('button', { name: 'Remover foto' }).click()
+  await b.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await expect.poll(async () => (await admin.storage.from('avatars').list(id)).data?.length, { timeout: 15_000 }).toBe(0)
+  await a.goto('/perfil')
+  await expect(a.locator('main [data-avatar="initials"]')).toHaveText(/^AS/)
+
+  // Deleting the account deletes the photo too.
+  await a.getByRole('button', { name: 'Editar perfil' }).click()
+  await pickPhoto(a)
+  await a.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await expect.poll(async () => (await admin.storage.from('avatars').list(id)).data?.length, { timeout: 15_000 }).toBe(1)
+  await a.getByRole('button', { name: 'Apagar conta' }).click()
+  await a.getByRole('button', { name: 'Apagar conta para sempre' }).click()
+  await expect(a.getByText('Conta apagada')).toBeVisible()
+  expect((await admin.storage.from('avatars').list(id)).data).toEqual([])
+  // This device keeps its own copy.
+  await expect(a.getByRole('heading', { level: 1 })).toHaveText('Ana Silva')
+})
+
+test('the account’s email changes with the codes sent to the new and the current email', async ({ browser }) => {
+  const old = emailOf('old')
+  const next = emailOf('new')
+  const page = await open(browser)
+  const card = await signIn(page, old)
+  // The sign-in's code must not pass for the change's (codeFor looks back 2 s).
+  await page.waitForTimeout(2500)
+  await card.getByRole('button', { name: 'Mudar email' }).click()
+  const d = page.getByRole('dialog', { name: 'Mudar o email da conta' })
+  await d.getByLabel('Email novo').fill(old)
+  await d.getByRole('button', { name: 'Enviar código' }).click()
+  await expect(d.getByText('É o email que já tens.')).toBeVisible()
+  await d.getByLabel('Email novo').fill(next)
+  const sentAt = Date.now()
+  await d.getByRole('button', { name: 'Enviar código' }).click()
+  // Secure email change: a code to each address, both typed.
+  await d.getByLabel(`Código enviado para ${next}`).fill(await codeFor(next, sentAt))
+  await d.getByLabel(`Código enviado para ${old}`).fill(await codeFor(old, sentAt))
+  await d.getByRole('button', { name: 'Confirmar' }).click()
+  await expect(page.getByText(`Email mudado para ${next}`)).toBeVisible()
+  await expect(card.getByText(`Entraste como ${next}`)).toBeVisible()
+  await expect(page.locator('main header')).toContainText(next)
+  expect(await userByEmail(next)).toBeTruthy()
 })

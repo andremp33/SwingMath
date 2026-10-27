@@ -37,6 +37,12 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>To take your profile photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>To choose your profile photo.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>To keep the profile photo you take.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

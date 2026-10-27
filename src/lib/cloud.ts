@@ -14,6 +14,30 @@ let client: Promise<SupabaseClient> | null = null
 const waiting: ((c: SupabaseClient) => void)[] = []
 
 const STORAGE_KEY = 'swingmath-auth'
+const DEVICE_KEY = 'swingmath-device'
+let deviceMemo: string | undefined
+
+/** This device, for the sync (without Pro, one device syncs at a time):
+ *  made once and kept with the app's data. */
+export function deviceId(): string {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY)
+    if (!id) localStorage.setItem(DEVICE_KEY, (id = crypto.randomUUID()))
+    return id
+  } catch {
+    return (deviceMemo ??= crypto.randomUUID())
+  }
+}
+
+/** The database's requests carry the device; the functions' do not (their
+ *  CORS would refuse a header they do not know). */
+const withDevice: typeof fetch = (input, init) => {
+  const url = input instanceof Request ? input.url : String(input)
+  if (!url.includes('/rest/v1/')) return fetch(input, init)
+  const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+  headers.set('x-swing-device', deviceId())
+  return fetch(input, { ...init, headers })
+}
 
 export function getCloud(): Promise<SupabaseClient> | null {
   if (!cloudConfigured()) return null
@@ -23,6 +47,7 @@ export function getCloud(): Promise<SupabaseClient> | null {
         // The sign-in email carries a link (default template) and, with a
         // custom template, a code; the link lands back here with the session.
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: STORAGE_KEY },
+        global: { fetch: withDevice },
       }),
     )
     void client.then((c) => waiting.splice(0).forEach((f) => f(c)))

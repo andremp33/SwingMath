@@ -5,12 +5,13 @@ import type { OwnedRacket } from '../domain/journal'
 import { STROKES, type Setup } from '../domain/types'
 import { db, saveSetup, uid } from '../data/db'
 import { useAllRackets, useOwned, useSetups } from '../data/hooks'
-import { useStore } from '../data/store'
+import { isPro, useStore } from '../data/store'
+import { FREE_SETUPS } from '../domain/freePlans'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum, leadParts, racketLabel } from '../lib/format'
 import { compute } from '../domain/physics'
 import { bedLabel } from '../lib/bedLabel'
-import { Button, cx, EmptyState, PageTitle, Select } from '../ui/basics'
+import { Badge, Button, cx, EmptyState, PageTitle, Select } from '../ui/basics'
 import { MoreMenu } from '../ui/menu'
 import { useToast } from '../ui/overlay'
 import { OwnedSheet } from './JournalSheets'
@@ -22,6 +23,7 @@ export function Setups() {
   const t = useT()
   const nav = useNavigate()
   const setups = useSetups()
+  const pro = useStore(isPro)
   const rackets = useAllRackets()
   const compare = useStore((s) => s.compare)
   const clearCompare = useStore((s) => s.clearCompare)
@@ -61,7 +63,8 @@ export function Setups() {
 
   return (
     <>
-      <PageTitle>{t.setups.title}</PageTitle>
+      {/* Without Pro: how many of the free setups are used; at the limit, Pro. */}
+      <PageTitle action={!pro && setups.length > 0 && <Badge tone="pro">{setups.length < FREE_SETUPS ? fmt(t.setups.freeCount, { n: setups.length, max: FREE_SETUPS }) : 'Pro'}</Badge>}>{t.setups.title}</PageTitle>
 
       {setups.length === 0 ? (
         <EmptyState icon={ClipboardList} text={t.setups.empty} action={<Button variant="primary" onClick={() => nav('/')}>{t.setups.emptyAction}</Button>} />
@@ -81,7 +84,7 @@ export function Setups() {
             )}
           </div>
           {selecting && <p className="mb-2 text-sm text-muted">{t.setups.selectHint}</p>}
-          <ul className={cx('grid grid-cols-1 border-b border-border md:grid-cols-2 md:gap-x-8', selecting && 'mb-20')}>
+          <ul className={cx('grid grid-cols-1 gap-3 md:grid-cols-2', selecting && 'mb-32 sm:mb-20')}>
             {list.map((s) => (
               <li key={s.id} className="min-w-0">
                 <SetupCard
@@ -107,11 +110,12 @@ export function Setups() {
           aria-label={t.setups.compare}
           className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:left-56"
         >
-          <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-3">
+          {/* On a narrow phone the buttons go under the count, not off the edge. */}
+          <div className="mx-auto flex max-w-[1080px] flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <span className="text-sm font-medium" aria-live="polite">
               {picked.length === 1 ? t.setups.selectedOne : fmt(t.setups.selected, { n: picked.length })}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
               {/* The second place can be a pro. */}
               {picked.length === 1 && (
                 <Button icon={UserRound} onClick={() => nav(`/setups/pro/${picked[0]}`)}>
@@ -176,8 +180,10 @@ function SetupCard({
   }
 
   return (
-    <article aria-label={s.name} className={cx('relative border-t border-border py-4 pl-4 transition-colors', picked && 'bg-surface-2/50')}>
-      <span aria-hidden className={cx('absolute inset-y-4 left-0 w-0.5 rounded-full', picked ? 'bg-accent' : 'bg-transparent')} />
+    <article
+      aria-label={s.name}
+      className={cx('relative h-full rounded-xl border bg-surface p-4 shadow-card transition-[border-color,box-shadow]', picked ? 'border-accent ring-1 ring-accent' : 'border-border')}
+    >
       <div className="flex items-start justify-between gap-2">
         {selecting && (
           <input

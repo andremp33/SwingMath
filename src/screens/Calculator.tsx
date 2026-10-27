@@ -21,6 +21,8 @@ import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { CollapsibleCard, InfoTip } from '../ui/disclosure'
 import { RacketSources } from './RacketSources'
+import { useSetupRoom } from './freePlans'
+import { usePaywall } from './Pro'
 import { racketFeel, reviewOf } from '../data/racketFeel'
 import { FEEL_KEYS, type Feel } from '../domain/feel'
 import { suggestSetupName } from '../lib/setupName'
@@ -42,6 +44,8 @@ export function Calculator() {
   const noLeadConfig = useMemo(() => ({ ...config, leadG: emptyLead(), extra: [] }), [config])
   const noLead = useComputed(noLeadConfig, racket)
   const setups = useSetups()
+  const room = useSetupRoom()
+  const paywall = usePaywall()
   const loaded = setups?.find((s) => s.id === loadedSetupId)
   const [selected, setSelected] = useState<Position | string>('tip')
   const [addOpen, setAddOpen] = useState(false)
@@ -113,7 +117,7 @@ export function Calculator() {
 
       <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_300px] md:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="contents md:block md:space-y-4">
-          <Card className="order-1 border-t-0 pt-0 md:order-none">
+          <Card className="order-1 md:order-none">
             <div className="space-y-4">
               {/* The player's own rackets first; the picker then names their model. */}
               <MyRacketsRow />
@@ -241,21 +245,24 @@ export function Calculator() {
               // Until the first lead goes on, where to start.
               totalLead === 0 && <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
             )}
-            <LeadEditor
-              sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
-              geometry={geo}
-              pattern={racket.pattern}
-              lead={config.leadG}
-              extra={extra}
-              selected={selected}
-              onSelect={setSelected}
-              onLead={setLead}
-              onExtra={(id, grams) => updateExtra(id, { grams })}
-              onRemoveExtra={(id) => {
-                removeExtra(id)
-                setSelected('tip')
-              }}
-            />
+            {/* The racket keeps its own tones on the panel (index.css). */}
+            <div className="racket-tones">
+              <LeadEditor
+                sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
+                geometry={geo}
+                pattern={racket.pattern}
+                lead={config.leadG}
+                extra={extra}
+                selected={selected}
+                onSelect={setSelected}
+                onLead={setLead}
+                onExtra={(id, grams) => updateExtra(id, { grams })}
+                onRemoveExtra={(id) => {
+                  removeExtra(id)
+                  setSelected('tip')
+                }}
+              />
+            </div>
 
             <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3" role="group" aria-labelledby="custom-title">
               <h3 id="custom-title" className="flex items-center gap-1.5 text-sm text-muted">
@@ -311,7 +318,7 @@ export function Calculator() {
           </Card>
           <div className="order-5 md:order-none"><GoalsCard racket={racket} result={result} /></div>
           <div className="order-8 md:order-none"><ComfortCard racket={racket} specs={result} /></div>
-          <div className="order-9 md:order-none"><SaveButtons loaded={loaded} onSaveNew={() => setSaveOpen(true)} /></div>
+          <div className="order-9 md:order-none"><SaveButtons loaded={loaded} onSaveNew={() => (room ? setSaveOpen(true) : paywall('setups', { asked: true }))} /></div>
           <div className="order-10 md:order-none"><VerifyCard predicted={result} catalog={catalog} /></div>
         </div>
       </div>

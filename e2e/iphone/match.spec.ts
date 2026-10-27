@@ -51,7 +51,7 @@ test('M02 the library is the alternative; a target of the other kind is converte
 })
 
 test('M03 whole numbers in every field', async ({ page }) => {
-  await start(page, { path: '/match' })
+  await start(page, { path: '/match', pro: true })
   await step(page, 'De onde partes').getByRole('button', { name: 'Ajustar valores' }).click()
   await pickTarget(page, /Novak Djokovic/)
   for (const name of ['De onde partes', 'Onde queres chegar'])

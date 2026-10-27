@@ -17,6 +17,8 @@ import { withPlan } from '../domain/freePlans'
 import { freeProActive } from '../domain/trial'
 
 export type Theme = 'system' | 'dark' | 'light'
+/** The app's ground and accent: clay (the brand's), hard court or grass. */
+export type Court = 'clay' | 'hard' | 'grass'
 
 export interface License {
   /** 'store': App Store or Google Play, through RevenueCat; 'dev': development and tests. */
@@ -53,7 +55,8 @@ export interface SyncState {
   userId: string | null
   cursor: string | null
   lastAt?: number
-  error?: 'offline' | 'other'
+  /** 'elsewhere': without Pro, another device has the sync. */
+  error?: 'offline' | 'other' | 'elsewhere'
 }
 
 export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
@@ -79,12 +82,33 @@ export interface Profile {
   style?: Style
 }
 
+/** The avatar's colours without a photo (index.css, --avatar-*). */
+export const AVATAR_COLORS = ['clay', 'blue', 'green', 'violet', 'rose', 'ink'] as const
+export type AvatarColor = (typeof AVATAR_COLORS)[number]
+
+/** Who the player is, as the avatar shows them: on this device without an
+ *  account, on the account with one (app/account.ts, syncMe). All optional. */
+export interface Me {
+  /** The name to show. */
+  name?: string
+  /** A square JPEG (lib/photo.ts), as a data URL. */
+  photo?: string
+  /** Without a photo: initials on this colour, or on the neutral tone. */
+  color?: AvatarColor
+  /** Last change (ms): the newer of this device and the account wins. */
+  at?: number
+  /** When the photo was set or removed (ms): a sync sends or fetches it
+   *  only when this differs from the account's. */
+  photoAt?: number
+}
+
 /** Grams and millimetres, or ounces and inches (as players in the US read them). */
 export type UnitSystem = 'metric' | 'imperial'
 
 interface State {
   lang: Lang
   theme: Theme
+  court: Court
   units: UnitSystem
   masses: AccessoryMasses
   /** Mass of 10 cm of the player's lead tape, to show how much to cut. */
@@ -116,6 +140,7 @@ interface State {
   /** Stringings we already sent a restring reminder for. */
   reminded: string[]
   profile: Profile
+  me: Me
   /** The first-launch walkthrough has been done or skipped (store apps). */
   onboarded: boolean
   /** Community authors the player chose not to see (their user ids). */
@@ -128,6 +153,7 @@ interface State {
 
   setLang: (l: Lang) => void
   setTheme: (t: Theme) => void
+  setCourt: (c: Court) => void
   setUnits: (u: UnitSystem) => void
   setMasses: (m: Partial<AccessoryMasses>) => void
   setTape: (g: number | undefined) => void
@@ -150,6 +176,8 @@ interface State {
   setProNudgeAt: (at: number) => void
   markReminded: (ids: string[]) => void
   setProfile: (p: Partial<Profile>) => void
+  /** A change here (stamped now), or the account's version (stamped `at`). */
+  setMe: (m: Partial<Me>, at?: number) => void
   setOnboarded: (v: boolean) => void
   hideAuthor: (userId: string) => void
   noteString: (name: string) => void
@@ -173,6 +201,7 @@ export const useStore = create<State>()(
     (set) => ({
       lang: browserLang(),
       theme: 'system',
+      court: 'clay',
       units: browserUnits(),
       masses: DEFAULT_ACCESSORY_MASSES,
       license: null,
@@ -188,6 +217,7 @@ export const useStore = create<State>()(
       proNudgeAt: null,
       reminded: [],
       profile: {},
+      me: {},
       onboarded: false,
       hiddenAuthors: [],
       recentStrings: [],
@@ -197,6 +227,7 @@ export const useStore = create<State>()(
 
       setLang: (lang) => set({ lang }),
       setTheme: (theme) => set({ theme }),
+      setCourt: (court) => set({ court }),
       setUnits: (units) => set({ units }),
       setMasses: (m) => set((s) => ({ masses: { ...s.masses, ...m } })),
       setTape: (tapeGPer10cm) => set({ tapeGPer10cm }),
@@ -226,6 +257,7 @@ export const useStore = create<State>()(
       setAccountPro: (accountPro) => set({ accountPro }),
       setSync: (sync) => set((s) => ({ sync: { ...s.sync, ...sync } })),
       setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p } })),
+      setMe: (m, at = Date.now()) => set((s) => ({ me: { ...s.me, ...m, at } })),
       setOnboarded: (onboarded) => set({ onboarded }),
       hideAuthor: (id) => set((s) => ({ hiddenAuthors: [...new Set([...s.hiddenAuthors, id])] })),
       noteString: (name) =>
@@ -280,6 +312,12 @@ export const isPro = (s: { license: License | null; accountPro?: AccountPro | nu
   (s.license !== null && (s.license.status ?? 'active') === 'active') ||
   accountProActive(s.accountPro ?? null) ||
   freeProActive(s.freeProUntil)
+
+/** Keeps an edited profile: the photo stamped when it changed, a blank name as none. */
+export function keepMe(draft: Me, now = Date.now()) {
+  const { me, setMe } = useStore.getState()
+  setMe({ name: draft.name?.trim() || undefined, color: draft.color, photo: draft.photo, ...(draft.photo !== me.photo && { photoAt: now }) }, now)
+}
 /** Rackets on the map at once; more and the labels crowd. */
 export const MAP_MAX = 8
 /** Sessions the free journal shows. */

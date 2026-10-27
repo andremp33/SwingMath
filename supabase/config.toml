@@ -255,6 +255,11 @@ content_path = "./supabase/templates/code.html"
 subject = "SwingMath: {{ .Token }}"
 content_path = "./supabase/templates/code.html"
 
+# Changing the email: a code too, to the new and (secure change) the current one.
+[auth.email.template.email_change]
+subject = "SwingMath: {{ .Token }}"
+content_path = "./supabase/templates/email-change.html"
+
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"

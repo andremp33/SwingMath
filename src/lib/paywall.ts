@@ -8,7 +8,7 @@ import type { Plan } from './entitlement'
  */
 
 /** What opened the paywall; its title follows. */
-export type PaywallReason = 'solver' | 'journal' | 'fleet' | 'profile'
+export type PaywallReason = 'solver' | 'journal' | 'fleet' | 'profile' | 'pros' | 'strings' | 'setups' | 'sync'
 
 const DAY = 86_400_000
 

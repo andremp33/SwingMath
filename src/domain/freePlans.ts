@@ -10,6 +10,12 @@ import type { Base } from './physics'
  */
 export const FREE_PLANS = 3
 
+/** Saved setups without Pro. Past them, nothing is taken away: only a new
+ *  one waits for Pro. */
+export const FREE_SETUPS = 5
+
+export const setupRoom = (count: number, pro: boolean) => pro || count < FREE_SETUPS
+
 /** Hit a target: the start (its source) and where the target comes from
  *  (a pro's id, a racquet's or setup's id, or "typed" for numbers typed in). */
 export const targetPlanKey = (from: string, target: string) => `target|${from}|${target}`

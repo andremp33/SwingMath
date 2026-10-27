@@ -1,4 +1,5 @@
-import { planAccess, type PlanAccess } from '../domain/freePlans'
+import { planAccess, setupRoom, type PlanAccess } from '../domain/freePlans'
+import { useSetups } from '../data/hooks'
 import { isPro, useStore } from '../data/store'
 
 /**
@@ -15,4 +16,12 @@ export function useFreePlans() {
     /** After a result: the plan is now one of the player's free ones. */
     record: (key: string, a: PlanAccess) => a.spends && add(key),
   }
+}
+
+/** Room for one more saved setup (domain/freePlans.ts); unknown while the
+ *  setups load, and then there is room. */
+export function useSetupRoom() {
+  const pro = useStore(isPro)
+  const setups = useSetups()
+  return setupRoom(setups?.length ?? 0, pro)
 }

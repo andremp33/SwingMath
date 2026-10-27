@@ -37,8 +37,8 @@ export function Sheet({
       onClick={(e) => e.target === ref.current && onClose()}
       aria-labelledby={titleId}
       className={cx(
-        'm-0 mt-auto w-full max-w-none rounded-t-lg border border-border bg-surface p-0 text-text shadow-pop backdrop:bg-black/60',
-        'md:m-auto md:max-w-lg md:rounded-lg',
+        'm-0 mt-auto w-full max-w-none rounded-t-xl border border-border bg-surface p-0 text-text shadow-pop backdrop:bg-black/60',
+        'md:m-auto md:max-w-lg md:rounded-xl',
       )}
     >
       {open && (

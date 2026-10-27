@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <body style="font-family: system-ui, sans-serif; color: #1c1b19; background: #f5f3ee; padding: 24px">
+    <div style="max-width: 420px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 24px">
+      <p style="margin: 0 0 4px; font-weight: 600">SwingMath</p>
+      <p style="margin: 0 0 16px; color: #6b675f">Mudar o email · Change email · Cambiar email</p>
+      <p style="font-size: 32px; letter-spacing: 6px; font-weight: 700; margin: 0 0 16px">{{ .Token }}</p>
+      <p style="margin: 0; color: #6b675f; font-size: 14px">
+        Para mudar o email da conta para {{ .NewEmail }}, escreve este código na app. Expira dentro de 1 hora.<br />
+        To change the account's email to {{ .NewEmail }}, type this code in the app. It expires in 1 hour.<br />
+        Para cambiar el email de la cuenta a {{ .NewEmail }}, escribe este código en la app. Caduca en 1 hora.
+      </p>
+      <p style="margin: 16px 0 0; color: #6b675f; font-size: 12px">
+        Não pediste? Ignora este email: o email da conta não muda. · Did not ask for it? Ignore this email: the account's email stays. · ¿No lo pediste? Ignora este correo: el email de la cuenta no cambia.
+      </p>
+    </div>
+  </body>
+</html>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { saveOwned, saveStringing, uid } from '../data/db'
 import { STOCK_RACKETS } from '../data/rackets'
 import { useComputed } from '../data/hooks'
-import { defaultConfig, isPro, useStore } from '../data/store'
+import { defaultConfig, isPro, keepMe, useStore } from '../data/store'
 import { restringDue, type OwnedRacket, type Stringing } from '../domain/journal'
 import { DEFAULT_STRINGBED, type Stringbed, type StringSpec } from '../domain/strings'
 import { freeProEnd } from '../domain/trial'
@@ -18,6 +18,7 @@ import { useOpenOwned } from '../ui/MyRackets'
 import { matchesQuery } from '../ui/RacketPicker'
 import { SpecStrip, useSpecRows } from '../ui/specs'
 import { bedLabel, StringSpecFields } from '../ui/strings'
+import { MeFields } from './MeEditor'
 import { usePaywall } from './Pro'
 import { useReminders } from './reminders'
 
@@ -38,16 +39,16 @@ const WHEN = { today: 0, week: 7, twoWeeks: 14, month: 30, more: 60 } as const
 const HOURS = { light: 1.5, some: 3.5, lots: 6, most: 9 } as const
 const DAY = 86_400_000
 
-type Step = 'welcome' | 'racket' | 'strings' | 'goals' | 'reminders' | 'done'
-const COUNTED: Step[] = ['racket', 'strings', 'goals', 'reminders']
+type Step = 'welcome' | 'racket' | 'strings' | 'goals' | 'you' | 'reminders' | 'done'
+const COUNTED: Step[] = ['racket', 'strings', 'goals', 'you', 'reminders']
 
 /** "Pure Aero #1", "Pure Aero #2", ...: the second and later of the same frame. */
 export const nthName = (name: string, n: number) => (n === 1 ? name : /#1$/.test(name) ? name.replace(/#1$/, `#${n}`) : `${name} #${n}`)
 
 /**
  * The first launch of the store apps: the player's racket, its strings,
- * what they want to improve, and reminders, each step skippable. No account
- * and no paywall here.
+ * what they want to improve, their name and photo, and reminders, each step
+ * skippable. No account and no paywall here.
  */
 export function Onboarding() {
   const t = useT()
@@ -86,6 +87,7 @@ export function Onboarding() {
   const [goals, setGoals] = useState(profile.goals ?? [])
   const [level, setLevel] = useState(profile.level)
   const [style, setStyle] = useState(profile.style)
+  const [me, setMe] = useState(() => useStore.getState().me)
 
   // The racket as it will play: the frame with these strings, for the last screen.
   const playConfig = useMemo(() => racket && { ...defaultConfig(racket.id), ...(stringing && { strings: stringing.bed }) }, [racket, stringing])
@@ -108,7 +110,7 @@ export function Onboarding() {
         .then((on) => on && paywall('profile', { asked: true }))
         .catch(() => {})
   }
-  const afterGoals = (): Step => (IS_APP && reminders.supported && reminders.permission === 'default' ? 'reminders' : 'done')
+  const afterYou = (): Step => (IS_APP && reminders.supported && reminders.permission === 'default' ? 'reminders' : 'done')
 
   const pick = (r: Racket) => {
     setRacket(r)
@@ -139,14 +141,19 @@ export function Onboarding() {
   }
   const saveGoals = () => {
     setProfile({ goals, level, style })
-    setStep(afterGoals())
+    setStep('you')
+  }
+  const saveYou = () => {
+    if (me !== useStore.getState().me) keepMe(me)
+    setStep(afterYou())
   }
 
   const skip: Record<Step, () => void> = {
     welcome: () => finish('/'),
     racket: () => setStep('goals'),
     strings: () => setStep('goals'),
-    goals: () => setStep(afterGoals()),
+    goals: () => setStep('you'),
+    you: () => setStep(afterYou()),
     reminders: () => setStep('done'),
     done: () => finish('/'),
   }
@@ -262,6 +269,20 @@ export function Onboarding() {
           <MultiChoiceChips label={t.community.goal} value={goals} onChange={setGoals} max={2} options={GOALS.map((g) => ({ value: g, label: t.community.goals[g] }))} />
           <ChoiceChips label={`${t.community.level} (${t.common.optional})`} value={level} onChange={setLevel} options={LEVELS.map((l) => ({ value: l, label: t.community.levels[l] }))} />
           <ChoiceChips label={`${t.community.style} (${t.common.optional})`} value={style} onChange={setStyle} options={STYLES.map((s) => ({ value: s, label: t.community.styles[s] }))} />
+        </Page>
+      )}
+
+      {step === 'you' && (
+        <Page
+          title={t.me.welcome}
+          text={t.me.onboardingText}
+          footer={
+            <Button variant="primary" size="lg" className="w-full" onClick={saveYou}>
+              {t.onboarding.next}
+            </Button>
+          }
+        >
+          <MeFields value={me} onChange={setMe} />
         </Page>
       )}
 

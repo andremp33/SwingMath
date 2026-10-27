@@ -23,6 +23,10 @@ Deno.serve(async (req) => {
           if (!r.ok && r.status !== 404) throw new Error(`revenuecat ${r.status}`)
         }
       : null,
+    deleteFiles: async (id) => {
+      const { error } = await admin.storage.from('avatars').remove([`${id}/avatar.jpg`])
+      if (error) throw error
+    },
     deleteUser: async (id) => {
       const { error } = await admin.auth.admin.deleteUser(id)
       if (error) throw error
