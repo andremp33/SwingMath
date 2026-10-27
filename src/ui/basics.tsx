@@ -9,13 +9,14 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 type Variant = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger'
 type Size = 'sm' | 'md' | 'lg'
 
-// Primary actions are ink, not colour: the accent is kept for data.
+// Primary actions are ink, not colour: the accent is kept for data. The
+// others are tones, not outlines, so a row of them reads as one weight.
 const VARIANT: Record<Variant, string> = {
   primary: 'bg-text text-bg hover:opacity-90',
   accent: 'bg-accent text-on-accent hover:opacity-90',
-  secondary: 'border border-border text-text hover:bg-surface-2',
+  secondary: 'bg-surface-2 text-text hover:bg-border',
   ghost: 'text-text hover:bg-surface-2',
-  danger: 'border border-danger/40 text-danger hover:bg-danger/10',
+  danger: 'bg-danger/10 text-danger hover:bg-danger/15',
 }
 const SIZE: Record<Size, string> = {
   sm: 'h-8 px-3 text-sm gap-1.5',
@@ -35,7 +36,7 @@ export function Button({ variant = 'secondary', size = 'md', icon: Icon, loading
     <button
       type="button"
       className={cx(
-        'inline-flex items-center justify-center rounded-md font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none select-none whitespace-nowrap',
+        'press inline-flex items-center justify-center rounded-md font-medium disabled:opacity-40 disabled:pointer-events-none select-none whitespace-nowrap',
         VARIANT[variant],
         SIZE[size],
         className,
@@ -63,7 +64,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cx(
-        'inline-flex size-9 shrink-0 items-center justify-center rounded-md transition-colors disabled:opacity-40',
+        'press inline-flex size-9 shrink-0 items-center justify-center rounded-md disabled:opacity-40',
         active ? 'bg-surface-2 text-accent-text' : 'text-muted hover:bg-surface-2 hover:text-text',
         className,
       )}
@@ -74,9 +75,10 @@ export function IconButton({
   )
 }
 
-/** A section of a page: a hairline on top and room to breathe, no box. */
+/** A section of a page: one raised panel on the page's ground. What sits
+ *  inside it is never boxed again: rows part with hairlines, wells are a tone. */
 export function Card({ className, children, as: As = 'section', label, id }: { className?: string; children: ReactNode; as?: 'section' | 'div' | 'article'; label?: string; id?: string }) {
-  return <As id={id} aria-label={label} className={cx('border-t border-border pt-4 pb-5', className)}>{children}</As>
+  return <As id={id} aria-label={label} className={cx('rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5', className)}>{children}</As>
 }
 
 export function CardTitle({ children, action, info }: { children: ReactNode; action?: ReactNode; info?: ReactNode }) {
@@ -95,10 +97,10 @@ export function Badge({ children, tone = 'neutral', plain }: { children: ReactNo
   return (
     <span
       className={cx(
-        'inline-flex shrink-0 items-center whitespace-nowrap rounded-sm px-1.5 py-px text-xs font-medium',
+        'inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-px text-xs font-medium',
         plain && 'num',
-        tone === 'neutral' && 'border border-border text-muted',
-        tone === 'accent' && 'border border-accent-text/40 text-accent-text',
+        tone === 'neutral' && 'bg-surface-2 text-muted',
+        tone === 'accent' && 'bg-accent/12 text-accent-text',
         tone === 'pro' && 'bg-text text-bg',
       )}
     >
@@ -117,7 +119,7 @@ export function Label({ htmlFor, children, hint }: { htmlFor?: string; children:
 }
 
 const inputBase =
-  'h-11 w-full rounded-md border bg-surface px-3 text-base text-text placeholder:text-muted/60 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-text'
+  'h-11 w-full rounded-md border bg-field px-3 text-base text-text placeholder:text-muted/80 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-text'
 
 export function TextField({
   label,
@@ -302,7 +304,7 @@ export function Select<T extends string>({
         className={cx(inputBase, 'border-border-input appearance-none bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9')}
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a2afa7' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f897f' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
         }}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
@@ -362,7 +364,7 @@ export function Segmented<T extends string>({
   label: string
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex rounded-md border border-border p-0.5">
+    <div role="radiogroup" aria-label={label} className="flex rounded-md bg-surface-2 p-1">
       {options.map((o) => (
         <button
           key={o.value}
@@ -371,8 +373,8 @@ export function Segmented<T extends string>({
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cx(
-            'flex flex-1 items-center justify-center gap-1.5 rounded-[4px] px-3 py-1.5 text-sm transition-colors',
-            value === o.value ? 'bg-surface-2 font-medium text-text' : 'text-muted hover:text-text',
+            'flex flex-1 items-center justify-center gap-1.5 rounded-[calc(var(--radius-md)-4px)] px-3 py-1.5 text-sm transition-[color,background-color,box-shadow] duration-150',
+            value === o.value ? 'bg-raised font-medium text-text shadow-raised' : 'text-muted hover:text-text',
           )}
         >
           {o.label}
@@ -408,8 +410,8 @@ export function ChoiceChips<T extends string>({
             aria-label={o.aria}
             onClick={() => onChange(o.value)}
             className={cx(
-              'num min-h-10 rounded-full border px-3.5 text-sm transition-colors',
-              value === o.value ? 'border-text bg-text font-semibold text-bg' : 'border-border-input text-text hover:bg-surface-2',
+              'press num min-h-10 rounded-full border px-3.5 text-sm',
+              value === o.value ? 'border-text bg-text font-semibold text-bg' : 'border-transparent bg-surface-2 text-text hover:bg-border',
             )}
           >
             {o.label}
@@ -454,8 +456,8 @@ export function MultiChoiceChips<T extends string>({
               aria-checked={on}
               onClick={() => toggle(o.value)}
               className={cx(
-                'min-h-10 rounded-full border px-3.5 text-sm transition-colors',
-                on ? 'border-text bg-text font-semibold text-bg' : 'border-border-input text-text hover:bg-surface-2',
+                'press min-h-10 rounded-full border px-3.5 text-sm',
+                on ? 'border-text bg-text font-semibold text-bg' : 'border-transparent bg-surface-2 text-text hover:bg-border',
               )}
             >
               {o.label}
@@ -533,34 +535,34 @@ export function RatingInput({ label, value, onChange, ends }: { label: string; v
 /** A titled group of settings rows, separated by hairlines. */
 export function SettingsGroup({ title, children, info, action }: { title: string; children: ReactNode; info?: ReactNode; action?: ReactNode }) {
   return (
-    <section aria-label={title} className="border-t border-border pt-5">
-      <div className="mb-1 flex items-center justify-between gap-3">
+    <section aria-label={title}>
+      <div className="mb-2 flex min-h-8 items-center justify-between gap-3 px-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <h2 className="text-md font-semibold tracking-tight">{title}</h2>
           {info}
         </div>
         {action}
       </div>
-      <div className="divide-y divide-border">{children}</div>
+      <div className="divide-y divide-border rounded-xl border border-border bg-surface px-4 shadow-card">{children}</div>
     </section>
   )
 }
 
 /** Name and explanation on the left, the control on the right. A wide
- *  control (`stack`) goes below the name on phones. */
+ *  control (`stack`) goes below the name on phones, across the row. */
 export function SettingsRow({ label, hint, children, danger, stack }: { label: ReactNode; hint?: ReactNode; children?: ReactNode; danger?: boolean; stack?: boolean }) {
   return (
     <div
       className={cx(
         'grid items-center gap-x-4 gap-y-2.5 py-3.5 sm:gap-x-6',
-        stack ? 'sm:grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-[minmax(0,1fr)_auto]',
+        stack ? 'grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-[minmax(0,1fr)_auto]',
       )}
     >
       <div className="min-w-0">
         <p className={cx('text-sm font-medium', danger && 'text-danger')}>{label}</p>
         {hint && <p className="mt-0.5 text-sm text-muted">{hint}</p>}
       </div>
-      {children && <div className={cx('flex flex-wrap items-center gap-2', stack ? 'sm:justify-end' : 'justify-end')}>{children}</div>}
+      {children && <div className={cx('flex flex-wrap items-center gap-2', stack ? '*:flex-1 sm:justify-end sm:*:flex-none' : 'justify-end')}>{children}</div>}
     </div>
   )
 }

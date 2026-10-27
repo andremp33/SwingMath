@@ -62,7 +62,7 @@ export function SetupEditSheet({ setup, onClose }: { setup: Setup | null; onClos
             maxLength={500}
             value={draft.notes ?? ''}
             onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-            className="w-full rounded-md border border-border-input bg-bg px-3 py-2"
+            className="w-full rounded-md border border-border-input bg-field px-3 py-2"
           />
         </div>
       </div>
