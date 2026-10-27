@@ -1,6 +1,7 @@
 import { ChevronRight, FileText, LifeBuoy, Pencil, RotateCw, Shield, SlidersHorizontal, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { syncMe, useMeSync } from '../app/account'
 import { saveStringing, uid } from '../data/db'
 import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hooks'
 import { useStore, type Profile as GameProfile } from '../data/store'
@@ -18,6 +19,7 @@ import { bedLabel } from '../ui/strings'
 import { AccountEnd, AccountGroup } from './AccountCard'
 import { FleetGroup } from './Fleet'
 import { LifeBar } from './JournalSheets'
+import { MeSheet } from './MeEditor'
 import { PlanGroup } from './Settings'
 import { InfoTip } from '../ui/disclosure'
 
@@ -53,17 +55,44 @@ export function Profile() {
   )
 }
 
-/** The avatar, the page's name and whose data this is. */
+/** The avatar and the player's name (or the page's), whose data this is,
+ *  and the way to change the name and photo. */
 function ProfileHeader() {
   const t = useT()
   const account = useStore((s) => s.account)
+  const me = useStore((s) => s.me)
+  const meSync = useMeSync((s) => s.state)
+  const [editing, setEditing] = useState(false)
+  const name = me.name?.trim()
   return (
     <header className="mb-5 flex items-center gap-4">
-      <Avatar className="size-14 text-base" />
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight">{t.profile.title}</h1>
+      <button type="button" onClick={() => setEditing(true)} aria-label={t.me.changePhotoLabel} className="press shrink-0 rounded-full">
+        <Avatar className="size-14 text-base" />
+      </button>
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-xl font-semibold tracking-tight">{name || t.profile.title}</h1>
         <p className="truncate text-sm text-muted">{account ? account.email : t.profile.local}</p>
+        {account && (meSync === 'offline' || meSync === 'failed') && (
+          <p role="status" className="mt-0.5 text-xs text-warning">
+            {t.me[meSync]}{' '}
+            <button type="button" onClick={() => void syncMe()} className="font-semibold underline underline-offset-2">
+              {t.me.retry}
+            </button>
+          </p>
+        )}
+        {/* Nothing set yet: the invitation goes under the lines, so they keep their width. */}
+        {!name && !me.photo && (
+          <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setEditing(true)} className="mt-2">
+            {t.me.add}
+          </Button>
+        )}
       </div>
+      {(name || me.photo) && (
+        <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setEditing(true)} aria-label={t.me.edit}>
+          {t.common.edit}
+        </Button>
+      )}
+      {editing && <MeSheet onClose={() => setEditing(false)} />}
     </header>
   )
 }

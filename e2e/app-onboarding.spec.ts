@@ -35,7 +35,7 @@ test.describe('A01 first launch', () => {
     await page.getByRole('button', { name: 'Começar' }).click()
 
     // The racket: a popular one, two of them.
-    await expect(page.getByText('Passo 1 de 4')).toBeVisible()
+    await expect(page.getByText('Passo 1 de 5')).toBeVisible()
     await page.getByRole('radio', { name: /Pure Aero 98 \(2026\)/ }).click()
     await expect(page.getByLabel('Nome', { exact: true })).toHaveValue('Pure Aero 98 #1')
     await page.getByRole('radio', { name: '2', exact: true }).click()
@@ -60,6 +60,13 @@ test.describe('A01 first launch', () => {
     await page.getByRole('radio', { name: 'Avançado' }).click()
     await page.getByRole('button', { name: 'Continuar' }).click()
 
+    // Their name (and a photo, if they like): the profile's.
+    await expect(page.getByText('Passo 4 de 5')).toBeVisible()
+    await page.getByLabel('Nome a mostrar').fill('Ana Silva')
+    await page.getByRole('radio', { name: 'Verde' }).click()
+    await a11y(page)
+    await page.getByRole('button', { name: 'Continuar' }).click()
+
     // Reminders: asked before the system's dialog, with "not now" in sight.
     await expect(page.getByRole('heading', { name: 'Avisamos-te quando encordar' })).toBeVisible()
     await page.getByRole('button', { name: 'Agora não' }).click()
@@ -80,6 +87,11 @@ test.describe('A01 first launch', () => {
     await expect(rackets).toContainText('Pure Aero 98 #1')
     await expect(rackets).toContainText('Pure Aero 98 #2')
     await expect(rackets).toContainText('RPM Blast 1,25 · 24 kg')
+
+    // The name is the profile's, its initials the avatar's.
+    await page.goto('/perfil')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ana Silva')
+    await expect(page.locator('main [data-avatar="initials"]')).toHaveText(/^AS/)
   })
 })
 
@@ -94,6 +106,7 @@ test.describe('A02 Pro free until the next restring', () => {
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByRole('radio', { name: 'Há 1 semana' }).click()
     await page.getByRole('radio', { name: '3–4 h' }).click()
+    await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByRole('button', { name: 'Agora não' }).click()

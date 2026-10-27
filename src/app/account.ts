@@ -1,9 +1,11 @@
 import type { Session } from '@supabase/supabase-js'
 import { useEffect } from 'react'
+import { create } from 'zustand'
 import { db, ensureOwned } from '../data/db'
-import { useStore, type AccountPro } from '../data/store'
+import { AVATAR_COLORS, useStore, type AccountPro, type AvatarColor, type Me } from '../data/store'
 import { enqueueAll, supabaseRemote, SyncError, syncOnce, trackChanges } from '../data/sync'
 import { cloudConfigured, getCloud, sessionLikely, whenCloud } from '../lib/cloud'
+import { photoBlob, photoDataUrl } from '../lib/photo'
 import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
 
 /**
@@ -14,7 +16,7 @@ import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
 const store = () => useStore.getState()
 
 export class AccountError extends Error {
-  kind: 'offline' | 'invalid' | 'rate' | 'config'
+  kind: 'offline' | 'invalid' | 'rate' | 'config' | 'taken'
   constructor(kind: AccountError['kind']) {
     super(kind)
     this.kind = kind
@@ -22,7 +24,7 @@ export class AccountError extends Error {
 }
 
 const kindOf = (e: { status?: number; message?: string; code?: string } | null): AccountError['kind'] =>
-  !e ? 'invalid' : e.status === 429 || e.code === 'over_email_send_rate_limit' ? 'rate' : e.status === 0 || /fetch/i.test(e.message ?? '') ? 'offline' : 'invalid'
+  !e ? 'invalid' : e.code === 'email_exists' ? 'taken' : e.status === 429 || e.code === 'over_email_send_rate_limit' ? 'rate' : e.status === 0 || /fetch/i.test(e.message ?? '') ? 'offline' : 'invalid'
 
 async function client() {
   const c = getCloud()
@@ -30,16 +32,42 @@ async function client() {
   return c
 }
 
+const redirectTo = () => (IS_NATIVE ? 'app.swingmath://auth' : `${location.origin}${import.meta.env.BASE_URL}${IS_PREVIEW ? '' : 'perfil'}`)
+
 export async function sendCode(email: string) {
   const c = await client()
-  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: IS_NATIVE ? 'app.swingmath://auth' : `${location.origin}${import.meta.env.BASE_URL}${IS_PREVIEW ? '' : 'perfil'}` } }).catch(() => ({ error: { status: 0 } }))
+  const { error } = await c.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: redirectTo() } }).catch(() => ({ error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
 }
 
-export async function verifyCode(email: string, code: string) {
+/** Signs in; true when the account has no name or photo yet (a new one). */
+export async function verifyCode(email: string, code: string): Promise<boolean> {
   const c = await client()
-  const { error } = await c.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' }).catch(() => ({ error: { status: 0 } }))
+  const { data, error } = await c.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' }).catch(() => ({ data: { user: null }, error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
+  return !cloudMe(data.user?.user_metadata)
+}
+
+/** Asks for a new email: a code goes to it and, with secure email change
+ *  (the default), another to the current one. */
+export async function changeEmail(email: string) {
+  const c = await client()
+  const { error } = await c.auth.updateUser({ email: email.trim() }, { emailRedirectTo: redirectTo() }).catch(() => ({ error: { status: 0 } }))
+  if (error) throw new AccountError(kindOf(error))
+}
+
+/** Confirms one code of an email change, the one sent to `email`. True once
+ *  the account has the new email; false while the other code is missing. */
+export async function confirmEmailCode(email: string, code: string, newEmail: string): Promise<boolean> {
+  const c = await client()
+  const { error } = await c.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email_change' }).catch(() => ({ error: { status: 0 } }))
+  if (error) throw new AccountError(kindOf(error))
+  // Asked, not read from the token: the change may have just completed.
+  const { data } = await c.auth.getUser()
+  const now = data.user?.email
+  const account = store().account
+  if (now && account && now !== account.email) store().setAccount({ ...account, email: now })
+  return now?.toLowerCase() === newEmail.trim().toLowerCase()
 }
 
 /** The App Store and Google Play reviewers' account signs in with a
@@ -59,11 +87,15 @@ export async function signOut() {
   await c.auth.signOut({ scope: 'local' })
   store().setAccount(null)
   store().setAccountPro(null)
+  useMeSync.setState({ state: 'idle' })
 }
 
 /** Deletes the account and its cloud data. This device keeps its own copy. */
 export async function deleteAccount() {
   const c = await client()
+  // The photo first: the database cannot delete stored files itself.
+  const id = store().account?.userId
+  if (id) await c.storage.from(AVATARS).remove([photoPath(id)]).catch(() => {})
   // The function also deletes the RevenueCat customer. Until it is
   // deployed (it answers 404), the database deletes the account itself.
   const { error } = await c.functions.invoke('delete-account', { method: 'POST' })
@@ -80,6 +112,7 @@ export async function deleteAccount() {
   store().setAccount(null)
   store().setAccountPro(null)
   store().setSync({ userId: null, cursor: null, lastAt: undefined, error: undefined })
+  useMeSync.setState({ state: 'idle' })
 }
 
 /** The account's Pro, as the stores report it through RevenueCat's webhook
@@ -149,6 +182,121 @@ export function syncNow(): Promise<void> {
   return running
 }
 
+/** The profile's name and photo on the account: the name, the colour and
+ *  the stamps in the account's metadata, the photo in Storage at
+ *  avatars/<user id>/avatar.jpg. The newer of this device and the account
+ *  wins, as for the synced data. */
+const AVATARS = 'avatars'
+const photoPath = (userId: string) => `${userId}/avatar.jpg`
+
+export interface CloudMe {
+  name?: string
+  color?: AvatarColor
+  /** The photo's stamp; null: no photo. */
+  photo: number | null
+  at: number
+}
+
+/** The account's metadata, as the profile it holds (none set: null). */
+export function cloudMe(meta: Record<string, unknown> | undefined): CloudMe | null {
+  const a = meta?.avatar as { at?: unknown; photo?: unknown; color?: unknown } | undefined
+  if (!a || typeof a.at !== 'number') return null
+  const name = meta?.display_name
+  return {
+    name: typeof name === 'string' && name.trim() ? name.trim().slice(0, 40) : undefined,
+    color: AVATAR_COLORS.find((c) => c === a.color),
+    photo: typeof a.photo === 'number' ? a.photo : null,
+    at: a.at,
+  }
+}
+
+/** What a sync does: take the account's profile, or send this device's
+ *  (stamped `at`, the photo's stamp `photo`), and whether the photo travels
+ *  with it; null when both are the same. */
+export function mePlan(me: Me, remote: CloudMe | null) {
+  const at = me.at ?? 0
+  const photo = me.photo ? (me.photoAt ?? at) : null
+  if (remote && remote.at > at) return { take: true, photoMoves: remote.photo !== photo, at, photo }
+  if (at > (remote?.at ?? 0)) return { take: false, photoMoves: photo !== (remote?.photo ?? null), at, photo }
+  return null
+}
+
+type MeSyncState = 'idle' | 'sending' | 'offline' | 'failed'
+/** How the profile's last trip to the account went (not kept). */
+export const useMeSync = create<{ state: MeSyncState }>(() => ({ state: 'idle' }))
+
+let meRunning: Promise<void> | null = null
+let meAgain = false
+
+/** Sends or fetches the profile, if signed in. A change made while it runs
+ *  goes right after. */
+export function syncMe(): Promise<void> {
+  if (meRunning) {
+    meAgain = true
+    return meRunning
+  }
+  meRunning = (async () => {
+    do {
+      meAgain = false
+      await syncMeOnce()
+    } while (meAgain)
+  })().finally(() => {
+    meRunning = null
+  })
+  return meRunning
+}
+
+async function syncMeOnce() {
+  const account = store().account
+  if (!account) return
+  const set = (state: MeSyncState) => useMeSync.setState({ state })
+  try {
+    const c = await client()
+    // Asked each time: another device may have changed it.
+    const { data, error } = await c.auth.getUser()
+    if (error || !data.user) throw error ?? new Error('no user')
+    if (data.user.id !== account.userId) return
+    const remote = cloudMe(data.user.user_metadata)
+    const me = store().me
+    const plan = mePlan(me, remote)
+    if (plan?.take && remote) {
+      let { photo, photoAt } = me
+      if (plan.photoMoves) {
+        if (remote.photo) {
+          const got = await c.storage.from(AVATARS).download(photoPath(account.userId))
+          if (got.error) throw got.error
+          photo = await photoDataUrl(got.data)
+          photoAt = remote.photo
+        } else {
+          photo = photoAt = undefined
+        }
+      }
+      // Changed here meanwhile: that is newer, and goes next.
+      if ((store().me.at ?? 0) === plan.at) store().setMe({ name: remote.name, color: remote.color, photo, photoAt }, remote.at)
+    } else if (plan) {
+      set('sending')
+      if (plan.photoMoves) {
+        const bucket = c.storage.from(AVATARS)
+        const r = me.photo
+          ? await bucket.upload(photoPath(account.userId), photoBlob(me.photo), { upsert: true, contentType: 'image/jpeg', cacheControl: '0' })
+          : await bucket.remove([photoPath(account.userId)])
+        if (r.error) throw r.error
+      }
+      const { error: e } = await c.auth.updateUser({ data: { display_name: me.name ?? null, avatar: { at: plan.at, photo: plan.photo, color: me.color ?? null } } })
+      if (e) throw e
+    }
+    set('idle')
+  } catch {
+    set(navigator.onLine ? 'failed' : 'offline')
+  }
+}
+
+let meTimer: ReturnType<typeof setTimeout> | undefined
+const meSoon = () => {
+  clearTimeout(meTimer)
+  meTimer = setTimeout(() => void syncMe(), 1500)
+}
+
 let timer: ReturnType<typeof setTimeout> | undefined
 const soon = () => {
   clearTimeout(timer)
@@ -171,6 +319,7 @@ async function onSession(session: Session | null) {
   }
   store().setAccount({ userId: session.user.id, email: session.user.email })
   identifyStore(session.user.id)
+  void syncMe()
   await refreshSubscription()
   await syncNow()
 }
@@ -189,17 +338,26 @@ export function useAccountSync() {
       // calls made inside this callback can deadlock, so they run after it.
       const { data } = cl.auth.onAuthStateChange((event, session) => {
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') setTimeout(() => void onSession(session), 0)
+        // An email change confirmed by its links (maybe in another tab).
+        const account = store().account
+        if (event === 'USER_UPDATED' && account && session?.user.email && session.user.email !== account.email) store().setAccount({ ...account, email: session.user.email })
       })
       unsub = () => data.subscription.unsubscribe()
     })
+    // The name and photo go to the account a moment after they change.
+    const unsubMe = useStore.subscribe((s, prev) => {
+      if (s.me !== prev.me && s.account) meSoon()
+    })
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !store().account) return
+      void syncMe()
       void refreshSubscription().then(() => syncNow())
     }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('online', onVisible)
     return () => {
       unsub?.()
+      unsubMe()
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('online', onVisible)
     }
