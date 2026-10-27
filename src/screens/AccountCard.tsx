@@ -245,7 +245,8 @@ function SignedIn() {
 function EmailSheet({ onClose }: { onClose: () => void }) {
   const t = useT()
   const toast = useToast()
-  const current = useStore((s) => s.account)!.email
+  // As it was when asked: the account's changes once a code completes it.
+  const [current] = useState(() => useStore.getState().account!.email)
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [codeNew, setCodeNew] = useState('')
@@ -276,16 +277,20 @@ function EmailSheet({ onClose }: { onClose: () => void }) {
       setSent(true)
     })
   }
+  const changed = () => {
+    toast(fmt(t.account.emailChanged, { email: email.trim() }))
+    onClose()
+  }
+  // Each code that the server accepts may complete the change: then no
+  // other is asked for (it would be refused).
   const confirm = () =>
     run(async () => {
       if (codeOld && !oldDone) {
-        await confirmEmailCode(current, codeOld, email)
+        if (await confirmEmailCode(current, codeOld, email)) return changed()
         setOldDone(true)
       }
-      if (await confirmEmailCode(email, codeNew, email)) {
-        toast(fmt(t.account.emailChanged, { email: email.trim() }))
-        onClose()
-      } else setError(fmt(t.account.missingOther, { email: current }))
+      if (await confirmEmailCode(email, codeNew, email)) changed()
+      else setError(fmt(t.account.missingOther, { email: current }))
     })
 
   return (

@@ -12,6 +12,9 @@ export interface DeleteDeps {
   deleteSubscriber: ((appUserId: string) => Promise<void>) | null
   /** Deletes the user; the database removes their data by cascade. */
   deleteUser: (userId: string) => Promise<void>
+  /** Deletes the user's stored files (the profile photo): Storage keeps
+   *  them when the user goes, so they go first. */
+  deleteFiles?: (userId: string) => Promise<void>
   /** Local development only: delete without RevenueCat when it has no key. */
   allowWithoutRc?: boolean
 }
@@ -21,6 +24,11 @@ export async function handle(authorization: string | null, deps: DeleteDeps): Pr
   const userId = token ? await deps.userFrom(token) : null
   if (!userId) return { status: 401, body: 'not signed in' }
   if (!deps.deleteSubscriber && !deps.allowWithoutRc) return { status: 503, body: 'not configured' }
+  try {
+    await deps.deleteFiles?.(userId)
+  } catch {
+    return { status: 502, body: 'storage' }
+  }
   try {
     await deps.deleteSubscriber?.(userId)
   } catch {

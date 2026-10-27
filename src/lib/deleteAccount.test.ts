@@ -20,6 +20,15 @@ describe('delete account', () => {
     expect(log).toEqual(['rc:user-1', 'user:user-1'])
   })
 
+  it('the profile photo goes first; if it cannot, nothing else does', async () => {
+    const { d, log } = deps({ deleteFiles: async (id) => void log.push(`files:${id}`) })
+    expect((await handle('Bearer good', d)).status).toBe(200)
+    expect(log).toEqual(['files:user-1', 'rc:user-1', 'user:user-1'])
+    log.length = 0
+    expect(await handle('Bearer good', { ...d, deleteFiles: async () => Promise.reject(new Error('down')) })).toEqual({ status: 502, body: 'storage' })
+    expect(log).toEqual([])
+  })
+
   it('needs the player signed in', async () => {
     const { d, log } = deps()
     expect((await handle(null, d)).status).toBe(401)
