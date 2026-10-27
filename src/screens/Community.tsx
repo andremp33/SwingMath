@@ -9,7 +9,6 @@ import type { Racket, Setup } from '../domain/types'
 import { fmt, useT, type Dict } from '../i18n'
 import {
   communityEnabled,
-  countCopy,
   deletePublicSetup,
   measurementStats,
   BlockedWordsError,
@@ -20,6 +19,7 @@ import {
   myRecipe,
   publishSetup,
   rankPublicSetups,
+  REPORT_REASONS,
   reportSetup,
   roundResults,
   setupCounts,
@@ -30,6 +30,7 @@ import {
   type MeasurementStats,
   type PublicResults,
   type PublicSetup,
+  type ReportReason,
   type Style,
 } from '../lib/community'
 import { fmtNum, leadParts } from '../lib/format'
@@ -81,6 +82,9 @@ export function CommunityCard({ racket }: { racket: Racket }) {
   const loadConfig = useStore((s) => s.loadConfig)
   const masses = useStore((s) => s.masses)
   const mySetups = useSetups()
+  // The recipe whose report form is open, and the reason picked.
+  const [reporting, setReporting] = useState<string | null>(null)
+  const [reason, setReason] = useState<ReportReason>('offensive')
   const owned = useOwned()
   const stringings = useStringings()
   const sessions = useSessions()
@@ -141,8 +145,16 @@ export function CommunityCard({ racket }: { racket: Racket }) {
       setVersion((v) => v + 1)
     })
 
+  // On with a recipe, keeping what was in the calculator for Undo.
+  const tryOn = (p: PublicSetup) => {
+    const { config, loadedSetupId, triedRecipe } = useStore.getState()
+    loadConfig({ ...p.config, racketId: racket.id }, null, p.id)
+    toast(t.community.tried, { label: t.common.undo, run: () => loadConfig(config, loadedSetupId, triedRecipe) })
+    scrollToTop()
+  }
+
   // Authors the player hid stay out of sight on this phone.
-  const list = (setups ?? []).filter((p) => !hidden.includes(p.user_id))
+  const list = (setups ?? []).filter((p) => !hidden.includes(p.author_key))
   const goalsHere = GOALS.filter((g) => list.some((p) => p.goals.includes(g)))
   // The player's goal, if this frame has recipes for it.
   const active = goal !== 'all' && goalsHere.includes(goal) ? goal : 'all'
@@ -214,7 +226,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
           )}
           <ul className="divide-y divide-border">
             {shown.map((p) => {
-              const mine = account?.userId === p.user_id
+              const mine = p.mine
               const local = mine && p.setup_ref ? mySetups?.find((x) => x.id === p.setup_ref) : undefined
               const tags = [...p.goals.map((g) => t.community.goals[g]), p.level && t.community.levels[p.level], p.style && t.community.styles[p.style]].filter(Boolean) as string[]
               return (
@@ -252,20 +264,41 @@ export function CommunityCard({ racket }: { racket: Racket }) {
                         {resultsLine(p.results, t, lang, { outOf: true })} <span className="text-xs text-muted">({t.community.fromJournal})</span>
                       </p>
                     )}
+                    {mine && p.hidden && <p className="text-danger">{t.community.hiddenMine}</p>}
+                    {reporting === p.id && (
+                      <form
+                        className="space-y-3 rounded-md bg-surface-2 p-3"
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          void signedIn(async () => {
+                            await reportSetup(p.id, reason)
+                            setReporting(null)
+                            toast(t.community.reported)
+                          })()
+                        }}
+                      >
+                        <ChoiceChips<ReportReason>
+                          label={fmt(t.community.reportWhy, { name: p.name })}
+                          value={reason}
+                          onChange={setReason}
+                          options={REPORT_REASONS.map((r) => ({ value: r, label: t.community.reasons[r] }))}
+                        />
+                        <div className="flex gap-2">
+                          <Button type="submit" size="sm" variant="primary" icon={Flag}>
+                            {t.community.report}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setReporting(null)}>
+                            {t.common.cancel}
+                          </Button>
+                        </div>
+                      </form>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        loadConfig({ ...p.config, racketId: racket.id }, null)
-                        void countCopy(p.id)
-                        toast(t.community.tried)
-                        scrollToTop()
-                      }}
-                    >
+                    <Button size="sm" onClick={() => tryOn(p)}>
                       {t.community.tryIt}
                     </Button>
-                    {local && (
+                    {local && !p.hidden && (
                       <Button size="sm" variant="ghost" icon={RefreshCw} onClick={update(p, local)}>
                         {t.community.updateMine}
                       </Button>
@@ -285,17 +318,20 @@ export function CommunityCard({ racket }: { racket: Racket }) {
                           icon={EyeOff}
                           label={`${t.community.hideAuthor}: ${p.partner ?? p.author ?? t.community.anon}`}
                           onClick={() => {
-                            hideAuthor(p.user_id)
-                            toast(t.community.authorHidden, { label: t.common.undo, run: () => showAuthor(p.user_id) })
+                            hideAuthor(p.author_key)
+                            toast(t.community.authorHidden, { label: t.common.undo, run: () => showAuthor(p.author_key) })
                           }}
                         />
                         <IconButton
                           icon={Flag}
                           label={`${t.community.report} ${p.name}`}
-                          onClick={signedIn(async () => {
-                            await reportSetup(p.id)
-                            toast(t.community.reported)
-                          })}
+                          active={reporting === p.id}
+                          aria-expanded={reporting === p.id}
+                          onClick={() => {
+                            if (!account) return toast(t.community.needAccount)
+                            setReason('offensive')
+                            setReporting((id) => (id === p.id ? null : p.id))
+                          }}
                         />
                       </>
                     )}
@@ -347,6 +383,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
   const [busy, setBusy] = useState(false)
   const [tried, setTried] = useState(false)
   const [publishedAs, setPublishedAs] = useState<string | null>(null)
+  const [hiddenByReports, setHiddenByReports] = useState(false)
 
   // Already published: the form starts from the recipe as it is now.
   useEffect(() => {
@@ -355,6 +392,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
       myRecipe(setup.id).then((r) => {
         if (!alive || !r) return
         setPublishedAs(r.id)
+        setHiddenByReports(r.hidden)
         setGoals(r.goals)
         setLevel(r.level ?? '')
         setStyle(r.style ?? '')
@@ -371,6 +409,8 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
   const results = owned && stringings && sessions ? setupResults(setup.id, owned, stringings, sessions) : null
   const label = publishedAs ? t.community.update : t.community.publish
 
+  // Hidden by reports: nothing to publish until it is reviewed.
+  if (hiddenByReports) return <p className="text-sm text-danger">{t.community.hiddenRecipe}</p>
   if (!open)
     return (
       <Button icon={Users} className="w-full" onClick={() => (account ? setOpen(true) : toast(t.community.needAccount))}>

@@ -8,6 +8,7 @@ import { saveOwned, saveSetup, saveStringing, uid } from '../data/db'
 import { useComputed, useOwned, useRacket, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
+import { countCopy } from '../lib/community'
 import { fmtNum, fmtSigned, LOCALE } from '../lib/format'
 import { Badge, Button, Card, CardTitle, ChoiceChips, cx, IconButton, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { LeadEditor } from '../ui/lead'
@@ -619,6 +620,7 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
   const toast = useToast()
   const config = useStore((s) => s.config)
   const loadConfig = useStore((s) => s.loadConfig)
+  const triedRecipe = useStore((s) => s.triedRecipe)
   const owned = useOwned()
   const racket = useRacket(config.racketId)
   const [name, setName] = useState('')
@@ -654,6 +656,8 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
       updatedAt: now,
     }
     await saveSetup(s)
+    // A community recipe the player keeps: that is what its count means.
+    if (triedRecipe) void countCopy(triedRecipe)
     let where: string | undefined
     if (on === 'new') {
       // A name of its own, never a clash with another of yours.

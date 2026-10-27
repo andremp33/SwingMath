@@ -118,6 +118,9 @@ interface State {
   config: SetupConfig
   /** Saved setup the calculator was opened from, if any. */
   loadedSetupId: string | null
+  /** Community recipe the calculator was opened from, if any: saving it
+   *  counts as a copy. */
+  triedRecipe: string | null
   /** Setup ids picked for comparison. */
   compare: string[]
   /** Rackets shown on the racket map. */
@@ -143,7 +146,7 @@ interface State {
   me: Me
   /** The first-launch walkthrough has been done or skipped (store apps). */
   onboarded: boolean
-  /** Community authors the player chose not to see (their user ids). */
+  /** Community authors the player chose not to see (their author keys). */
   hiddenAuthors: string[]
   /** String names the player used last, newest first (the name field's suggestions). */
   recentStrings: string[]
@@ -163,7 +166,7 @@ interface State {
   addExtra: (e: ExtraLead) => void
   updateExtra: (id: string, e: Partial<ExtraLead>) => void
   removeExtra: (id: string) => void
-  loadConfig: (c: SetupConfig, setupId: string | null) => void
+  loadConfig: (c: SetupConfig, setupId: string | null, recipeId?: string | null) => void
   resetConfig: () => void
   toggleCompare: (id: string) => void
   toggleMap: (id: string) => void
@@ -179,9 +182,9 @@ interface State {
   /** A change here (stamped now), or the account's version (stamped `at`). */
   setMe: (m: Partial<Me>, at?: number) => void
   setOnboarded: (v: boolean) => void
-  hideAuthor: (userId: string) => void
+  hideAuthor: (authorKey: string) => void
   noteString: (name: string) => void
-  showAuthor: (userId: string) => void
+  showAuthor: (authorKey: string) => void
   showAllAuthors: () => void
   setAccount: (a: Account | null) => void
   setAccountPro: (p: AccountPro | null) => void
@@ -207,6 +210,7 @@ export const useStore = create<State>()(
       license: null,
       config: defaultConfig(),
       loadedSetupId: null,
+      triedRecipe: null,
       mapIds: [],
       compare: [],
       freePlans: [],
@@ -239,9 +243,9 @@ export const useStore = create<State>()(
       updateExtra: (id, e) =>
         set((s) => ({ config: { ...s.config, extra: (s.config.extra ?? []).map((x) => (x.id === id ? { ...x, ...e } : x)) } })),
       removeExtra: (id) => set((s) => ({ config: { ...s.config, extra: (s.config.extra ?? []).filter((x) => x.id !== id) } })),
-      loadConfig: (config, loadedSetupId) => set({ config: structuredClone(config), loadedSetupId }),
+      loadConfig: (config, loadedSetupId, triedRecipe = null) => set({ config: structuredClone(config), loadedSetupId, triedRecipe }),
       resetConfig: () =>
-        set((s) => ({ config: { ...defaultConfig(s.config.racketId) }, loadedSetupId: null })),
+        set((s) => ({ config: { ...defaultConfig(s.config.racketId) }, loadedSetupId: null, triedRecipe: null })),
       toggleCompare: (id) =>
         set((s) => ({
           compare: s.compare.includes(id) ? s.compare.filter((x) => x !== id) : [...s.compare, id].slice(-2),
@@ -271,7 +275,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'swingmath',
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       // v2: the stock library was replaced by verified frames with new ids.
       migrate: (persisted, version) => {
@@ -291,6 +295,9 @@ export const useStore = create<State>()(
           delete (s as { freeRunsUsed?: number }).freeRunsUsed
           s.freePlans = []
         }
+        // v6: the community hides authors by an opaque key, no longer by
+        // account id; the old ids match nothing now.
+        if (version < 6) s.hiddenAuthors = []
         return s as State
       },
     },

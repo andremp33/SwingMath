@@ -13,7 +13,7 @@ const config = {
 const row = (over: Partial<PublicSetup> = {}): PublicSetup =>
   ({
     id: 'a',
-    user_id: 'u',
+    author_key: 'k',
     racket_id: 'stock-x',
     name: 'Receita',
     author: null,
@@ -29,22 +29,25 @@ const row = (over: Partial<PublicSetup> = {}): PublicSetup =>
     setup_ref: null,
     partner: null,
     updated_at: '2026-10-10T00:00:00Z',
+    mine: false,
+    hidden: false,
     ...over,
   }) as PublicSetup
 
 describe('community recipes', () => {
-  it('ranks partners first, then recipes with results by rating, then copies, then newest', () => {
+  it('ranks partners first, then the most saved, then the newest', () => {
     const list = [
-      row({ id: 'copied', copies: 9 }),
+      row({ id: 'saved', copies: 9 }),
       row({ id: 'new', created_at: '2026-10-12T00:00:00Z' }),
       row({ id: 'old', created_at: '2026-10-01T00:00:00Z' }),
-      row({ id: 'good', results: { sessions: 5, hours: 4, avg: { overall: 4.6 } } }),
-      row({ id: 'ok', results: { sessions: 8, hours: 6, avg: { overall: 3.9 } } }),
-      // Too few sessions to count as results.
-      row({ id: 'thin', results: { sessions: 2, hours: 1, avg: { overall: 5 } } }),
       row({ id: 'shop', partner: 'Loja do Bairro' }),
     ]
-    expect(rankPublicSetups(list).map((p) => p.id)).toEqual(['shop', 'good', 'ok', 'copied', 'new', 'thin', 'old'])
+    expect(rankPublicSetups(list).map((p) => p.id)).toEqual(['shop', 'saved', 'new', 'old'])
+  })
+
+  it('the author rating their own recipe does not move it up', () => {
+    const list = [row({ id: 'saved', copies: 3 }), row({ id: 'self-rated', results: { sessions: 5, hours: 4, avg: { overall: 5 } } })]
+    expect(rankPublicSetups(list).map((p) => p.id)).toEqual(['saved', 'self-rated'])
   })
 
   it('filters by goal', () => {
@@ -60,9 +63,9 @@ describe('community recipes', () => {
   })
 
   it('rows from before recipes still read, with empty recipe fields', () => {
-    const { goals: _g, level: _l, style: _s, results: _r, setup_ref: _f, partner: _p, ...old } = row()
+    const { goals: _g, level: _l, style: _s, results: _r, setup_ref: _f, partner: _p, mine: _m, hidden: _h, ...old } = row()
     const [p] = parsePublicSetups([old])
-    expect(p).toMatchObject({ goals: [], level: null, results: null, partner: null })
+    expect(p).toMatchObject({ goals: [], level: null, results: null, partner: null, mine: false, hidden: false })
   })
 
   it('rounds averages to a tenth and hours to the half hour', () => {
