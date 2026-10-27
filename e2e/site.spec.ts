@@ -13,7 +13,7 @@ async function visit(page: Page, path = '/') {
 test.describe('S01 shop window', () => {
   test('S01-H1 the front page shows the app and the stores', async ({ page }) => {
     await visit(page)
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Personaliza a tua raquete com números que podes verificar.')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Afina a raquete ao grama.')
     await expect(page.getByRole('img', { name: /calculadora do SwingMath/ })).toBeVisible()
     // No store links yet: "coming soon", not a dead link.
     await expect(page.getByText('Em breve').first()).toBeVisible()
@@ -28,16 +28,16 @@ test.describe('S01 shop window', () => {
   test('S01-E1 in Spanish and English', async ({ page }) => {
     await visit(page)
     await page.getByRole('radio', { name: 'es' }).click()
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Personaliza tu raqueta')
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Afina tu raqueta')
     await page.getByRole('radio', { name: 'en' }).click()
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Customise your racket')
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Tune your racket')
   })
 
   test('S01-E2 the app’s old pages lead to the front page', async ({ page }) => {
     for (const path of ['/rackets', '/diario', '/perfil', '/sobre']) {
       await visit(page, path)
       await expect(page).toHaveURL(/\/$/)
-      await expect(page.getByRole('heading', { level: 1 })).toContainText('Personaliza a tua raquete')
+      await expect(page.getByRole('heading', { level: 1 })).toContainText('Afina a raquete')
     }
   })
 })
