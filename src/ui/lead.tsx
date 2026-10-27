@@ -375,7 +375,7 @@ export function LeadEditor({
       aria-label={`${dir < 0 ? '−' : '+'} 0,5 g ${sel.name}`}
       onClick={() => set(sel.key, sel.grams + dir * STEP)}
       disabled={dir < 0 ? sel.grams <= 0 : sel.grams >= LEAD_MAX}
-      className="flex size-11 shrink-0 items-center justify-center rounded-full text-text transition hover:bg-surface-2 active:scale-95 disabled:opacity-30"
+      className="flex size-11 shrink-0 items-center justify-center rounded-full text-text transition hover:bg-surface active:scale-95 disabled:opacity-30"
     >
       {dir < 0 ? <Minus className="size-5" aria-hidden /> : <Plus className="size-5" aria-hidden />}
     </button>
@@ -443,7 +443,7 @@ export function LeadEditor({
         <span className="text-sm text-muted">{sel.name}</span>
         <span className="readout text-xl">{fmtNum(sel.grams, 1, lang)} g</span>
       </p>
-      <div className="mx-auto mt-1 flex max-w-80 items-center rounded-full border border-border bg-surface p-0.5">
+      <div className="mx-auto mt-1 flex max-w-80 items-center rounded-full bg-surface-2 p-0.5">
         {step(-1)}
         <GramRuler grams={sel.grams} onChange={(v) => set(sel.key, v)} />
         {step(1)}
