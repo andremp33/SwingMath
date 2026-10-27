@@ -61,7 +61,6 @@ test.describe('F06 hit a target', () => {
 
   test('FIX-7 the fourth new plan shows its diagnosis; the plan per position is Pro', async ({ page }) => {
     await start(page, { path: '/match' })
-    const target = page.getByRole('region', { name: 'Onde queres chegar' })
     const plan = page.getByRole('region', { name: 'Plano de chumbo' })
     const run = page.getByRole('button', { name: 'Calcular', exact: true })
     for (const player of ['Novak Djokovic', 'Rafael Nadal', 'Roger Federer']) {
