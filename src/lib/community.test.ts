@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
-import { emptyLead } from '../domain/types'
-import { parsePublicSetups, rankPublicSetups, republishPlan, roundResults, type PublicSetup } from './community'
+import { emptyLead, type Racket } from '../domain/types'
+import { filterRecipes, frameDistance, parsePublicSetups, rankPublicSetups, republishPlan, roundResults, siblingsOf, SIMILAR_WITHIN, similarRecipes, type PublicSetup } from './community'
 
 const config = {
   racketId: 'stock-x',
@@ -85,5 +85,42 @@ describe('publishing a setup again', () => {
   it('a recipe hidden by reports is never replaced or updated', () => {
     expect(republishPlan({ ...prev, hidden: true }, 'stock-y')).toBe('hidden')
     expect(republishPlan({ ...prev, hidden: true }, 'stock-x')).toBe('hidden')
+  })
+})
+
+describe('other versions and similar frames', () => {
+  const frame = (id: string, brand: string, model: string, w = 305, b = 32, sw = 290) => ({ id, brand, model, isStock: true, weightG: w, balanceCm: b, swingweight: sw }) as Racket
+
+  it('the same brand and model, another year, is another version', () => {
+    const aero26 = frame('a26', 'Babolat', 'Pure Aero 98')
+    const all = [aero26, frame('a23', 'babolat', 'Pure Aero 98 '), frame('aero', 'Babolat', 'Pure Aero'), frame('blade', 'Wilson', 'Blade 98')]
+    expect(siblingsOf(aero26, all)).toEqual(['a23'])
+    expect(siblingsOf({ ...aero26, isStock: false }, all)).toEqual([])
+  })
+
+  it('this frame’s recipes come before its other versions’, after partners', () => {
+    const list = [row({ id: 'old-version', racket_id: 'a23', copies: 50 }), row({ id: 'here', racket_id: 'a26', copies: 1 }), row({ id: 'shop', racket_id: 'a23', partner: 'Loja' })]
+    expect(rankPublicSetups(list, undefined, 'a26').map((p) => p.id)).toEqual(['shop', 'here', 'old-version'])
+  })
+
+  it('similar frames: close in weight, balance and swingweight, closest first', () => {
+    const mine = frame('mine', 'X', 'Mine', 305, 32, 290)
+    const frames: Record<string, Racket> = {
+      near: frame('near', 'Y', 'Near', 307, 32.1, 292),
+      nearer: frame('nearer', 'Y', 'Nearer', 305, 32, 291),
+      far: frame('far', 'Z', 'Far', 285, 33.5, 270),
+      sibling: frame('sibling', 'X', 'Mine', 305, 32, 290),
+    }
+    const list = ['near', 'nearer', 'far', 'sibling', 'mine'].map((id) => row({ id, racket_id: id }))
+    const got = similarRecipes(list, mine, ['sibling'], (p) => frames[p.racket_id])
+    expect(got.map((p) => p.id)).toEqual(['nearer', 'near'])
+    expect(frameDistance(frames.far, mine)).toBeGreaterThan(SIMILAR_WITHIN)
+  })
+
+  it('filters by goal, level and style together', () => {
+    const list = [row({ id: 'a', goals: ['spin'], level: 'advanced', style: 'baseline' }), row({ id: 'b', goals: ['spin'], level: 'beginner' }), row({ id: 'c', goals: ['power'], level: 'advanced' })]
+    expect(filterRecipes(list, { goal: 'spin', level: 'advanced' }).map((p) => p.id)).toEqual(['a'])
+    expect(filterRecipes(list, { style: 'baseline' }).map((p) => p.id)).toEqual(['a'])
+    expect(filterRecipes(list, {})).toHaveLength(3)
   })
 })
