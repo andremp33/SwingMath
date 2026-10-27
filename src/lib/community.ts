@@ -156,16 +156,19 @@ const COLUMNS = 'id, author_key, racket_id, name, author, config, racket, specs,
 
 /** How many recipes per frame the app asks for, in the order it shows. */
 const FETCHED = 100
+/** How many of the most saved recipes, on any frame, for similar frames. */
+const TOP = 200
 
-export async function publicSetups(racketId: string): Promise<PublicSetup[]> {
+/** Recipes for these frames (a frame and its other versions), in the
+ *  order rankPublicSetups gives, so a recipe many saved is never pushed
+ *  out by newer ones. */
+export async function publicSetups(racketIds: string[]): Promise<PublicSetup[]> {
   const c = cloud()
-  if (!c) return []
-  // Ordered by the server as rankPublicSetups orders them, so a recipe many
-  // saved is never pushed out by newer ones.
+  if (!c || !racketIds.length) return []
   const { data } = await (await c)
     .from('community_setups')
     .select(COLUMNS)
-    .eq('racket_id', racketId)
+    .in('racket_id', racketIds)
     .order('partner', { ascending: false, nullsFirst: false })
     .order('copies', { ascending: false })
     .order('created_at', { ascending: false })
@@ -173,15 +176,79 @@ export async function publicSetups(racketId: string): Promise<PublicSetup[]> {
   return parsePublicSetups(data ?? [])
 }
 
+let topCache: Promise<PublicSetup[]> | undefined
+
+/** The most saved recipes on any frame: where similar frames' recipes come
+ *  from while a frame has none of its own. */
+export function topSetups(): Promise<PublicSetup[]> {
+  const c = cloud()
+  if (!c) return Promise.resolve([])
+  topCache ??= c
+    .then((cl) => cl.from('community_setups').select(COLUMNS).order('copies', { ascending: false }).order('created_at', { ascending: false }).limit(TOP))
+    .then(({ data }) => parsePublicSetups(data ?? []))
+    .catch(() => {
+      topCache = undefined
+      return []
+    })
+  return topCache
+}
+
+/** Library frames that are other versions of this one: the same brand and
+ *  model, another year. */
+export function siblingsOf(racket: Pick<Racket, 'id' | 'brand' | 'model' | 'isStock'>, stock: Pick<Racket, 'id' | 'brand' | 'model'>[]): string[] {
+  if (!racket.isStock) return []
+  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+  return stock.filter((r) => r.id !== racket.id && same(r.brand, racket.brand) && same(r.model, racket.model)).map((r) => r.id)
+}
+
+type FrameSpecs = Pick<Racket, 'weightG' | 'balanceCm' | 'swingweight'>
+
+/** How far apart two frames feel: 10 g, 5 mm of balance or 10 of swingweight
+ *  each count as one. */
+export function frameDistance(a: FrameSpecs, b: FrameSpecs): number {
+  return Math.abs(a.weightG - b.weightG) / 10 + Math.abs(a.balanceCm - b.balanceCm) / 0.5 + Math.abs(a.swingweight - b.swingweight) / 10
+}
+
+/** Frames this close count as similar. */
+export const SIMILAR_WITHIN = 2.5
+
 /**
- * The order players see: partner shops first, then the recipes most players
- * saved, then the newest. Journal results are shown, never ranked: they are
- * the author's own ratings of their own recipe.
+ * Recipes on other frames that feel like this one, closest first: a start
+ * for a frame nobody has published for yet. `frameOf` finds a recipe's frame
+ * (from the library, or the custom frame it carries).
  */
-export function rankPublicSetups(list: PublicSetup[], goal?: Goal): PublicSetup[] {
+export function similarRecipes(list: PublicSetup[], racket: Racket, skip: string[], frameOf: (p: PublicSetup) => FrameSpecs | undefined, n = 5): PublicSetup[] {
+  return list
+    .filter((p) => p.racket_id !== racket.id && !skip.includes(p.racket_id))
+    .flatMap((p) => {
+      const f = frameOf(p)
+      const d = f && frameDistance(f, racket)
+      return d !== undefined && d <= SIMILAR_WITHIN ? [{ p, d }] : []
+    })
+    .sort((a, b) => a.d - b.d || b.p.copies - a.p.copies)
+    .slice(0, n)
+    .map((x) => x.p)
+}
+
+/** Filters a list by goal, level and style; an unset filter keeps all. */
+export function filterRecipes(list: PublicSetup[], f: { goal?: Goal; level?: Level; style?: Style }): PublicSetup[] {
+  return list.filter((p) => (!f.goal || p.goals.includes(f.goal)) && (!f.level || p.level === f.level) && (!f.style || p.style === f.style))
+}
+
+/**
+ * The order players see: partner shops first, then recipes for this very
+ * frame before its other versions, then the recipes most players saved,
+ * then the newest. Journal results are shown, never ranked: they are the
+ * author's own ratings of their own recipe.
+ */
+export function rankPublicSetups(list: PublicSetup[], goal?: Goal, racketId?: string): PublicSetup[] {
+  const here = (p: PublicSetup) => Number(!racketId || p.racket_id === racketId)
   return list
     .filter((p) => !goal || p.goals.includes(goal))
-    .sort((a, b) => Number(!!b.partner) - Number(!!a.partner) || b.copies - a.copies || Date.parse(b.created_at) - Date.parse(a.created_at))
+    .sort(
+      (a, b) =>
+        Number(!!b.partner) - Number(!!a.partner) || here(b) - here(a) || b.copies - a.copies || Date.parse(b.created_at) - Date.parse(a.created_at),
+    )
 }
 
 /** Published averages to a tenth, hours to the half hour. */
@@ -281,6 +348,7 @@ export async function publishSetup(p: PublishInput): Promise<'created' | 'update
   const plan = republishPlan(prev, racketId)
   if (plan === 'hidden') throw new HiddenRecipeError()
   countsCache = undefined
+  topCache = undefined
   if (plan === 'update') {
     const { error } = await cl.from('public_setups').update({ ...row, updated_at: new Date().toISOString() }).eq('id', prev!.id)
     if (error) throw error

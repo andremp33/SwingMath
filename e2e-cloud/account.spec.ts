@@ -287,15 +287,17 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
 
   const visitor = await open(browser)
   await visitor.goto('/')
+  // The link under the racket opens all of its recipes, with filters.
   await visitor.getByRole('button', { name: /setups? da comunidade para esta raquete/ }).click()
-  const card = visitor.getByRole('region', { name: 'Comunidade' })
-  await expect(card.getByRole('button', { name: /^Comunidade/ })).toHaveAttribute('aria-expanded', 'true')
-  await card.getByRole('radio', { name: 'Estabilidade' }).click()
-  const row = card.getByRole('listitem').filter({ hasText: `Estável ${stamp}` })
+  const sheet = visitor.getByRole('dialog', { name: 'Receitas para a Babolat Pure Aero 98' })
+  await sheet.getByLabel('Objetivo').selectOption({ label: 'Estabilidade' })
+  await sheet.getByLabel('Nível').selectOption({ label: 'Avançado' })
+  const row = sheet.getByRole('listitem').filter({ hasText: `Estável ${stamp}` })
   await expect(row).toContainText('Avançado')
   await expect(row).toContainText('Base de catálogo')
-  await a11y(visitor, '#card-community')
+  await a11y(visitor, 'dialog[open]')
   await row.getByRole('button', { name: 'Experimentar' }).click()
+  await expect(sheet).toBeHidden()
   await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveAttribute('aria-valuetext', '0,5 g')
 
   // The library says how many recipes a frame has, and opens them.
@@ -303,7 +305,44 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   await lib.goto('/rackets')
   await lib.getByRole('button', { name: /setups? ?: Ver os setups da comunidade para a Babolat Pure Aero 98$/ }).first().click()
   await expect(lib.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
-  await expect(lib.getByRole('region', { name: 'Comunidade' }).getByRole('button', { name: /^Comunidade/ })).toHaveAttribute('aria-expanded', 'true')
+  await expect(lib.getByRole('dialog', { name: 'Receitas para a Babolat Pure Aero 98' })).toBeVisible()
+})
+
+test('a racket without recipes shows those of similar rackets, and Planear reaches one', async ({ browser }) => {
+  test.setTimeout(90_000)
+  const name = `Parecida ${stamp}`
+  const author = await open(browser)
+  await signIn(author, emailOf('similar'))
+  await saveSetup(author, name)
+  await author.goto('/setups')
+  await share(author)
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Spin' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+  // First among the many Pure Aero 98 recipes earlier runs left.
+  const { data } = await admin.from('public_setups').update({ copies: 99999 }).eq('name', name).select('id').single()
+
+  // A Yonex VCORE 98 (2021): nobody published for it, and it feels like a Pure Aero 98.
+  const visitor = await open(browser)
+  await visitor.goto('/rackets')
+  await visitor.getByRole('searchbox').fill('vcore 98')
+  await visitor.getByRole('article').filter({ hasText: /VCORE 98\s*2021/ }).getByRole('button', { name: 'Usar na calculadora' }).click()
+  await expect(visitor.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
+  const card = await openCommunity(visitor)
+  await card.getByRole('button', { name: 'Ver receitas de raquetes parecidas' }).click()
+  const sheet = visitor.getByRole('dialog', { name: 'Receitas para a Yonex VCORE 98' })
+  const similar = sheet.getByRole('region', { name: 'Receitas em raquetes parecidas' })
+  const row = similar.getByRole('listitem').filter({ hasText: name })
+  await expect(row).toContainText('na Babolat Pure Aero 98 (2026)')
+  await a11y(visitor, 'dialog[open]')
+
+  // Planear, from the VCORE in the calculator to the recipe's numbers: one free plan.
+  await row.getByRole('button', { name: `Chegar a isto: ${name}` }).click()
+  await expect(visitor).toHaveURL(/\/match$/)
+  await expect(visitor.getByText(name).first()).toBeVisible()
+  const plans = await visitor.evaluate(() => JSON.parse(localStorage.getItem('swingmath') ?? '{}').state?.freePlans as string[])
+  expect(plans).toContain(`target|calc|recipe:${data!.id}`)
 })
 
 test('a setup moved to another racket moves its recipe; a hidden one stays put', async ({ browser }) => {

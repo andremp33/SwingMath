@@ -113,9 +113,21 @@ type Source = 'calc' | 'library' | `owned:${string}` | `setup:${string}`
 export interface MatchHandoff {
   from?: Source
   pro?: string
+  /** A community recipe as the target ("reach this with my racket"). */
+  recipe?: RecipeTarget
   run?: boolean
   /** The fleet's rackets (owned ids) to match, the reference first. */
   fleet?: string[]
+}
+
+/** A community recipe as a target: its numbers as published, with or
+ *  without strings, and the size of its frame (to move between the two). */
+export interface RecipeTarget {
+  id: string
+  name: string
+  frame: { headSizeSqIn: number; lengthCm: number }
+  specs: PlainSpecs
+  strung: boolean
 }
 
 /** The starting point: the frame, its numbers, with or without strings, and
@@ -133,7 +145,7 @@ interface TargetSrc {
   frame: { headSizeSqIn: number; lengthCm: number }
   specs: PlainSpecs
   strung: boolean
-  /** Which target it is, for the free plans: "pro:sinner", "racket:…", "setup:…", "owned:…". */
+  /** Which target it is, for the free plans: "pro:sinner", "racket:…", "setup:…", "owned:…", "recipe:…". */
   origin: string
   /** What the picker shows: the setup's, racket's or player's name. */
   name: string
@@ -249,8 +261,14 @@ function Smart() {
   const fromStrung = start?.strung ?? false
   const racket = useRacket(start?.racketId)
 
+  // A recipe is no Pro feature: it spends a free plan like any target.
+  const recipe = handoff?.recipe
   const [targetSrc, setTargetSrc] = useState<TargetSrc | null>(
-    handoffPro ? { frame: handoffPro, specs: handoffPro, strung: handoffPro.strung, origin: `pro:${handoffPro.id}`, name: handoffPro.player } : null,
+    handoffPro
+      ? { frame: handoffPro, specs: handoffPro, strung: handoffPro.strung, origin: `pro:${handoffPro.id}`, name: handoffPro.player }
+      : recipe
+        ? { frame: recipe.frame, specs: recipe.specs, strung: recipe.strung, origin: `recipe:${recipe.id}`, name: recipe.name }
+        : null,
   )
   const [typed, setTyped] = useState<Vals | null>(null)
   const pickedPro = typed ? undefined : PRO_TARGETS.find((p) => targetSrc?.origin === `pro:${p.id}`)

@@ -8,11 +8,11 @@ import { defaultConfig, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
 import { Badge, Button, Card, CardTitle, EmptyState, IconButton, PageTitle, Select } from '../ui/basics'
-import { InfoTip, openCollapsible } from '../ui/disclosure'
+import { InfoTip } from '../ui/disclosure'
 import { MyRacketsSection } from '../ui/MyRackets'
 import { RacketMap } from '../ui/RacketMap'
 import { useToast } from '../ui/overlay'
-import { useSetupCounts } from './Community'
+import { openRecipes, useSetupCounts } from './Community'
 import { matchesQuery } from '../ui/RacketPicker'
 import { useUnits } from '../lib/units'
 
@@ -286,7 +286,7 @@ function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showB
             type="button"
             onClick={() => {
               openInCalc()
-              openCollapsible('community')
+              openRecipes()
             }}
             className="num mr-auto min-h-9 rounded-md px-1.5 text-sm text-muted hover:bg-surface-2 hover:text-text"
           >
