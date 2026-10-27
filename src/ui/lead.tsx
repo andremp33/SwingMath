@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react'
 import { Minus, Plus, X } from 'lucide-react'
 import { geometry as frameGeometry, leadPositions, type Geometry } from '../domain/physics'
 import type { Strip } from '../domain/preview'
@@ -291,6 +292,169 @@ export function RacketDiagram({
   )
 }
 
+/** Where the lead editor is pointed: a preset position or a custom one's id. */
+export type LeadKey = Position | string
+
+/**
+ * The lead, edited on the racket itself: tap a spot to pick it, and − and +
+ * sit either side of it. Each spot is its position's slider for the keyboard
+ * and screen readers (arrows step 0.5 g, Home and End go to 0 and the most).
+ * Under the frame, one line: the position, its grams (each side's where the
+ * lead is split) and the player's tape to cut. No list of sliders: the page
+ * stays short and quiet.
+ */
+export function LeadEditor({
+  lead,
+  extra = [],
+  selected,
+  onSelect,
+  onLead,
+  onExtra,
+  onRemoveExtra,
+  sweetSpot,
+  geometry,
+  pattern,
+}: {
+  lead: LeadMap
+  extra?: ExtraLead[]
+  selected: LeadKey
+  onSelect: (k: LeadKey) => void
+  onLead: (p: Position, g: number) => void
+  onExtra: (id: string, g: number) => void
+  onRemoveExtra: (id: string) => void
+  sweetSpot?: { x: number; g: Geometry; from?: number }
+  geometry?: Geometry
+  pattern?: string
+}) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const tape = useStore((s) => s.tapeGPer10cm)
+  const g = geometry ?? sweetSpot?.g ?? DEFAULT_GEOMETRY
+  const f = frameShape(g)
+  const pctX = (p: { x: number }) => ((p.x - f.box.x) / f.box.w) * 100
+  const pctY = (p: { y: number }) => ((p.y - f.box.y) / f.box.h) * 100
+  const ss = sweetSpot ? f.y(sweetSpot.x) : undefined
+
+  // Every spot on the frame: its key, name, grams, and dots (two where split).
+  const spots = [
+    ...POSITIONS.map((p) => ({
+      key: p as LeadKey,
+      name: t.pos[p],
+      grams: lead[p],
+      dots: p === 'handle' ? [{ x: 0, y: f.y(leadPositions(g).handle.x) }] : HOUR[p].map((th) => f.at(th)),
+      custom: false,
+    })),
+    ...extra.map((e) => {
+      const th = ((e.hour ?? 3) / 12) * 2 * Math.PI
+      const dots = e.kind === 'shaft' ? [{ x: 0, y: f.y(e.cm ?? 6) }] : (e.sides === 2 && e.hour !== 6 ? [th, -th] : [th]).map((a) => f.at(a))
+      return { key: e.id as LeadKey, name: extraLabel(e, t, lang), grams: e.grams, dots, custom: true }
+    }),
+  ]
+  const set = (k: LeadKey, grams: number) => {
+    const v = Math.min(LEAD_MAX, Math.max(0, Math.round(grams / STEP) * STEP))
+    if ((POSITIONS as readonly string[]).includes(k)) onLead(k as Position, v)
+    else onExtra(k, v)
+  }
+  const sel = spots.find((s) => s.key === selected) ?? spots[0]
+  const split = sel.dots.length > 1
+  // The steppers flank one dot: the right-hand one where the lead is split.
+  const anchor = [...sel.dots].sort((a, b) => b.x - a.x)[0]
+  const keys = (k: LeadKey, grams: number) => (e: KeyboardEvent) => {
+    const by: Record<string, number> = { ArrowRight: STEP, ArrowUp: STEP, ArrowLeft: -STEP, ArrowDown: -STEP, PageUp: 2, PageDown: -2 }
+    if (e.key in by) set(k, grams + by[e.key])
+    else if (e.key === 'Home') set(k, 0)
+    else if (e.key === 'End') set(k, LEAD_MAX)
+    else return
+    e.preventDefault()
+  }
+
+  return (
+    <div>
+      <div className="relative mx-auto w-full max-w-[170px]" style={{ aspectRatio: `${f.box.w} / ${f.box.h}` }}>
+        <svg viewBox={`${f.box.x} ${f.box.y} ${f.box.w} ${f.box.h}`} className="absolute inset-0 size-full overflow-visible" aria-hidden>
+          <RacketArt g={g} pattern={pattern} />
+          {sweetSpot?.from !== undefined && Math.abs(sweetSpot.from - sweetSpot.x) >= 0.05 && (
+            <ellipse cx="0" cy={f.y(sweetSpot.from)} rx={g.b * 0.42} ry={g.a * 0.2} fill="none" stroke="var(--c-success)" strokeWidth="0.15" strokeDasharray="0.5 0.4" opacity="0.8" />
+          )}
+          {ss !== undefined && (
+            <g style={{ transform: `translateY(${ss}px)`, transition: 'transform 200ms ease-out' }}>
+              <ellipse cx="0" cy="0" rx={g.b * 0.42} ry={g.a * 0.2} fill="var(--c-success)" opacity="0.2" />
+              <circle cx="0" cy="0" r="0.45" fill="var(--c-success)" />
+            </g>
+          )}
+        </svg>
+        {spots.flatMap((s) =>
+          s.dots.map((d, i) => {
+            const on = s.grams > 0
+            const picked = s.key === sel.key
+            const first = i === 0
+            return (
+              <button
+                key={`${s.key}${i}`}
+                type="button"
+                // The first dot is the position's slider; a second one (the
+                // other side) only picks it.
+                role={first ? 'slider' : undefined}
+                aria-label={first ? s.name : undefined}
+                aria-hidden={first ? undefined : true}
+                aria-valuemin={first ? 0 : undefined}
+                aria-valuemax={first ? LEAD_MAX : undefined}
+                aria-valuenow={first ? s.grams : undefined}
+                aria-valuetext={first ? `${fmtNum(s.grams, 1, lang)} g` : undefined}
+                data-lead={first ? s.key : undefined}
+                tabIndex={first ? 0 : -1}
+                onClick={() => onSelect(s.key)}
+                onFocus={() => onSelect(s.key)}
+                onKeyDown={keys(s.key, s.grams)}
+                className={cx(
+                  'num absolute flex min-h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center px-1.5 text-[11px] font-bold shadow-sm transition',
+                  s.custom ? 'rounded-md' : 'rounded-full',
+                  on ? (s.custom ? 'bg-bar text-bg' : 'bg-accent text-on-accent') : 'bg-surface text-muted ring-1 ring-border-input',
+                  picked && 'ring-2 ring-text ring-offset-2 ring-offset-bg',
+                )}
+                style={{ left: `${pctX(d)}%`, top: `${pctY(d)}%` }}
+              >
+                {on ? dotLabel(s.grams / s.dots.length, lang) : '+'}
+              </button>
+            )
+          }),
+        )}
+        {/* − and + either side of the picked spot. */}
+        {([-1, 1] as const).map((dir) => (
+          <button
+            key={dir}
+            type="button"
+            aria-label={`${dir < 0 ? '−' : '+'} 0,5 g ${sel.name}`}
+            onClick={() => set(sel.key, sel.grams + dir * STEP)}
+            disabled={dir < 0 ? sel.grams <= 0 : sel.grams >= LEAD_MAX}
+            className="absolute z-10 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-text shadow-pop hover:bg-surface-2 disabled:opacity-30"
+            style={{ left: `calc(${pctX(anchor)}% ${dir < 0 ? '-' : '+'} 2.6rem)`, top: `${pctY(anchor)}%` }}
+          >
+            {dir < 0 ? <Minus className="size-4" aria-hidden /> : <Plus className="size-4" aria-hidden />}
+          </button>
+        ))}
+      </div>
+      {/* The picked spot, in words. */}
+      <p className="num mt-3 flex min-h-9 flex-wrap items-center justify-center gap-x-2 text-sm" aria-live="polite">
+        <span className="font-medium">{sel.name}</span>
+        <span className="readout">{fmtNum(sel.grams, 1, lang)} g</span>
+        {split && sel.grams > 0 && <span className="text-muted">{fmtNum(sel.grams / 2, 2, lang)} g × 2</span>}
+        {tape && sel.grams > 0 && (
+          <span className="text-muted">
+            {fmt(t.calc.tapeCm, { cm: fmtNum(tapeCm(split ? sel.grams / 2 : sel.grams, tape), 1, lang) })}
+            {split && ' × 2'}
+          </span>
+        )}
+        {sel.custom && (
+          <button type="button" onClick={() => onRemoveExtra(sel.key)} aria-label={fmt(t.custom.remove, { name: sel.name })} className="rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-text">
+            <X className="size-4" aria-hidden />
+          </button>
+        )}
+      </p>
+    </div>
+  )
+}
+
 /**
  * The paywall's racket: the frame and the strips of lead a plan puts on,
  * the first `shown` of them. No grams and nothing to press: the strips only
@@ -312,148 +476,6 @@ export function StripDiagram({ geometry: g, pattern, strips, shown }: { geometry
           ),
         )}
       </svg>
-    </div>
-  )
-}
-
-/** Slider row for a custom position, with a remove button. */
-export function ExtraControl({
-  item,
-  onChange,
-  onRemove,
-  selected,
-  onFocus,
-}: {
-  item: ExtraLead
-  onChange: (g: number) => void
-  onRemove: () => void
-  selected?: boolean
-  onFocus?: () => void
-}) {
-  const t = useT()
-  const lang = useStore((s) => s.lang)
-  const tape = useStore((s) => s.tapeGPer10cm)
-  const name = extraLabel(item, t, lang)
-  const split = item.kind === 'hoop' && item.sides === 2 && item.hour !== 6
-  const value = item.grams
-  const set = (g: number) => onChange(Math.min(LEAD_MAX, Math.max(0, Math.round(g / STEP) * STEP)))
-  return (
-    <div id={`lead-${item.id}`} className={cx('rounded-md px-3 py-2 transition-colors', selected ? 'bg-surface-2/70' : 'bg-transparent')} onFocusCapture={onFocus}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="min-w-0 text-sm font-medium">
-          {name}
-          {split && <span className="ml-1.5 text-xs font-normal text-muted">{t.calc.perSide}</span>}
-        </span>
-        <span className="flex shrink-0 items-center gap-1">
-          <span className="readout whitespace-nowrap text-sm">
-            {fmtNum(value, 1, lang)} <span className="font-normal text-muted">g</span>
-          </span>
-          <button type="button" onClick={onRemove} aria-label={fmt(t.custom.remove, { name })} className="rounded-full p-1 text-muted hover:bg-surface-2 hover:text-text">
-            <X className="size-4" aria-hidden />
-          </button>
-        </span>
-      </div>
-      {tape && value > 0 && (
-        <p className="num text-xs text-muted">
-          {fmt(t.calc.tapeCm, { cm: fmtNum(tapeCm(split ? value / 2 : value, tape), 1, lang) })}
-          {split && ' × 2'}
-        </p>
-      )}
-      <div className="mt-1 flex items-center gap-2">
-        <button type="button" aria-label={`− 0,5 g ${name}`} onClick={() => set(value - STEP)} disabled={value <= 0} className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-text hover:bg-surface-2 disabled:opacity-30">
-          <Minus className="size-4" aria-hidden />
-        </button>
-        <input
-          type="range"
-          className="range min-w-0 flex-1"
-          min={0}
-          max={LEAD_MAX}
-          step={STEP}
-          value={value}
-          aria-label={name}
-          aria-valuetext={`${fmtNum(value, 1, lang)} g`}
-          style={{ ['--fill' as string]: `${(value / LEAD_MAX) * 100}%` }}
-          onChange={(e) => set(Number(e.target.value))}
-        />
-        <button type="button" aria-label={`+ 0,5 g ${name}`} onClick={() => set(value + STEP)} disabled={value >= LEAD_MAX} className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-text hover:bg-surface-2 disabled:opacity-30">
-          <Plus className="size-4" aria-hidden />
-        </button>
-      </div>
-    </div>
-  )
-}
-
-export function LeadControl({
-  position,
-  value,
-  onChange,
-  selected,
-  onFocus,
-}: {
-  position: Position
-  value: number
-  onChange: (g: number) => void
-  selected?: boolean
-  onFocus?: () => void
-}) {
-  const t = useT()
-  const lang = useStore((s) => s.lang)
-  const tape = useStore((s) => s.tapeGPer10cm)
-  const split = position === 'tenTwo' || position === 'threeNine'
-  const set = (g: number) => onChange(Math.min(LEAD_MAX, Math.max(0, Math.round(g / STEP) * STEP)))
-  return (
-    <div
-      id={`lead-${position}`}
-      className={cx('rounded-md px-3 py-2 transition-colors', selected ? 'bg-surface-2/70' : 'bg-transparent')}
-      onFocusCapture={onFocus}
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="min-w-0 text-sm font-medium">
-          {t.pos[position]}
-          {split && <span className="ml-1.5 text-xs font-normal text-muted">{t.calc.perSide}</span>}
-        </span>
-        <span className="readout shrink-0 whitespace-nowrap text-sm">
-          {fmtNum(value, 1, lang)} <span className="font-normal text-muted">g</span>
-        </span>
-      </div>
-      {tape && value > 0 && (
-        <p className="num text-xs text-muted">
-          {fmt(t.calc.tapeCm, { cm: fmtNum(tapeCm(split ? value / 2 : value, tape), 1, lang) })}
-          {split && ' × 2'}
-        </p>
-      )}
-      <div className="mt-1 flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={`− 0,5 g ${t.pos[position]}`}
-          onClick={() => set(value - STEP)}
-          disabled={value <= 0}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-text hover:bg-surface-2 disabled:opacity-30"
-        >
-          <Minus className="size-4" aria-hidden />
-        </button>
-        <input
-          type="range"
-          className="range min-w-0 flex-1"
-          min={0}
-          max={LEAD_MAX}
-          step={STEP}
-          value={value}
-          aria-label={t.pos[position]}
-          aria-valuetext={`${fmtNum(value, 1, lang)} g`}
-          style={{ ['--fill' as string]: `${(value / LEAD_MAX) * 100}%` }}
-          onChange={(e) => set(Number(e.target.value))}
-        />
-        <button
-          type="button"
-          aria-label={`+ 0,5 g ${t.pos[position]}`}
-          onClick={() => set(value + STEP)}
-          disabled={value >= LEAD_MAX}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-text hover:bg-surface-2 disabled:opacity-30"
-        >
-          <Plus className="size-4" aria-hidden />
-        </button>
-      </div>
     </div>
   )
 }

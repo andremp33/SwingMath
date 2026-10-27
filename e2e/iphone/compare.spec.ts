@@ -1,4 +1,4 @@
-import { a11y, expect, saveSetup, start, test } from '../fixtures'
+import { a11y, expect, saveSetup, start, tapLead, test } from '../fixtures'
 import type { Page } from '@playwright/test'
 
 // Comparing two setups on an iPhone (WebKit, 390 px).
@@ -14,7 +14,7 @@ async function twoSetups(page: Page) {
   await saveSetup(page, 'Clube')
   // "Torneio": the same strings at 23 kg, and lead at 12h.
   await card.getByLabel('Tensão').fill('23')
-  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+  await tapLead(page, '12h (ponta)', 4)
   await saveSetup(page, 'Torneio')
   await page.goto('/setups')
   await page.getByRole('button', { name: 'Comparar', exact: true }).click()

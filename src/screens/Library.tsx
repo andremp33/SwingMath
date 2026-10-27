@@ -1,4 +1,4 @@
-import { Calculator, CircleCheck, Copy, Diamond, Pencil, Plus, Ruler, Search, SearchX } from 'lucide-react'
+import { Calculator, CircleCheck, Copy, Diamond, Pencil, Plus, Search, SearchX } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Racket, RacketType } from '../domain/types'
@@ -77,7 +77,10 @@ export function Library() {
       <MyRacketsSection />
 
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-md font-semibold tracking-tight">{t.library.catalogue}</h2>
+        <h2 className="flex items-center gap-1.5 text-md font-semibold tracking-tight">
+          {t.library.catalogue}
+          <InfoTip title={t.library.catalogue}>{t.library.stockNote}</InfoTip>
+        </h2>
         <Button size="sm" variant="ghost" icon={Plus} onClick={() => nav('/rackets/new')}>
           {t.library.add}
         </Button>
@@ -111,11 +114,6 @@ export function Library() {
         <Select label={t.library.brand} value={brand} onChange={setBrand} options={[{ value: 'all', label: t.library.all }, ...brands.map((b) => ({ value: b, label: b }))]} />
         <Select label={t.library.sort} value={sort} onChange={setSort} options={SORTS.map((s) => ({ value: s, label: t.library.sorts[s] }))} />
       </div>
-
-      <p className="mb-4 flex items-center gap-1.5 text-sm text-muted">
-        <Ruler className="size-4 shrink-0" aria-hidden />
-        {t.library.stockNote}
-      </p>
 
       <Card label={t.library.map.title} className="mb-6">
         <CardTitle info={<InfoTip title={t.library.map.title}>{t.library.map.info}</InfoTip>}>{t.library.map.title}</CardTitle>

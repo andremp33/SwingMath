@@ -1,4 +1,4 @@
-import { a11y, expand, expect, resultCard, start, test } from './fixtures'
+import { a11y, expand, expect, resultCard, start, tapLead, test } from './fixtures'
 
 test.describe('F01 see the effect of adding lead', () => {
   test('F01-H1 lead at the tip raises weight and swingweight', async ({ page }) => {
@@ -14,10 +14,11 @@ test.describe('F01 see the effect of adding lead', () => {
     await a11y(page)
   })
 
-  test('F01-E1 slider stops at 20 g and the plus button disables', async ({ page }) => {
+  test('F01-E1 the spot stops at 20 g and the plus button disables', async ({ page }) => {
     await start(page)
     const slider = page.getByRole('slider', { name: 'Cabo' })
-    await slider.fill('20')
+    await slider.focus()
+    await page.keyboard.press('End')
     await expect(page.getByRole('button', { name: '+ 0,5 g Cabo' })).toBeDisabled()
     await expect(slider).toHaveAttribute('aria-valuetext', '20,0 g')
   })
@@ -33,14 +34,14 @@ test.describe('F01 see the effect of adding lead', () => {
 
   test('F01-E3 refresh keeps the work in progress', async ({ page }) => {
     await start(page)
-    await page.getByRole('button', { name: '+ 0,5 g Garganta' }).click()
+    await tapLead(page, 'Garganta')
     await page.reload()
     await expect(page.getByRole('slider', { name: 'Garganta' })).toHaveAttribute('aria-valuetext', '0,5 g')
   })
 
   test('F01-E4 clear resets lead and accessories', async ({ page }) => {
     await start(page)
-    await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)')
     await page.getByRole('button', { name: /^Com cordas e overgrip/ }).click()
     await page.getByRole('switch', { name: /Antivibrador/ }).click()
     await page.getByRole('button', { name: 'Limpar alterações' }).click()
@@ -48,10 +49,12 @@ test.describe('F01 see the effect of adding lead', () => {
     await expect(page.getByRole('switch', { name: /Antivibrador/ })).toHaveAttribute('aria-checked', 'false')
   })
 
-  test('F01-E5 tapping the diagram selects a position', async ({ page }) => {
+  test('F01-E5 tapping the racket picks a position, with − and + beside it', async ({ page }) => {
     await start(page)
-    await page.getByRole('button', { name: /^Cabo: 0,0 g$/ }).click()
+    await page.getByRole('slider', { name: 'Cabo' }).click()
     await expect(page.getByRole('slider', { name: 'Cabo' })).toBeFocused()
+    await expect(page.getByRole('button', { name: '+ 0,5 g Cabo' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '+ 0,5 g Garganta' })).toHaveCount(0)
   })
 
   test('F01-E6 changing racket recalculates', async ({ page }) => {
@@ -94,10 +97,10 @@ test.describe('Fixes from user reviews', () => {
   test('FIX-3 sweet spot moves up with lead at the tip', async ({ page }) => {
     await start(page)
     const row = resultCard(page).locator('div').filter({ hasText: /^Ponto doce/ })
-    await expect(row).toContainText('do fundo do cabo')
+    await expect(row).toContainText('cm')
     const cm = async () => Number((await row.locator('.readout').textContent())!.replace(',', '.'))
     const before = await cm()
-    for (let i = 0; i < 6; i++) await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)', 6)
     await expect(async () => expect(await cm()).toBeGreaterThan(before)).toPass()
   })
 

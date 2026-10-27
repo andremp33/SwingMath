@@ -69,3 +69,10 @@ export function leadParts(cfg: { leadG: LeadMap; extra?: ExtraLead[] }, t: Dict,
 export const gripLabel = (eighths: number) => `L${Math.floor(eighths)}${eighths % 1 ? '½' : ''}`
 
 export const kgToLb = (kg: number) => kg * 2.20462
+
+/** Lower case without accents, for searches: "Świątek" -> "swiatek". */
+export const fold = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()

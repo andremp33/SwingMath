@@ -76,3 +76,21 @@ export async function setupAction(page: Page, setupName: string, action: string)
   await page.getByRole('button', { name: `Mais ações: ${setupName}` }).click()
   await page.getByRole('menu').getByRole('menuitem', { name: action, exact: true }).click()
 }
+
+/** Lead at a position the way a player adds it: pick its spot on the racket,
+ *  then tap + (or − for a negative n) beside it. */
+export async function tapLead(page: Page, name: string, n = 1) {
+  await page.getByRole('slider', { name, exact: true }).click()
+  const button = page.getByRole('button', { name: `${n < 0 ? '−' : '+'} 0,5 g ${name}`, exact: true })
+  for (let i = 0; i < Math.abs(n); i++) await button.click()
+}
+
+/** Planear's target, from its one picker: a setup, a racket, a pro or the
+ *  catalogue, searched first when the list is long. */
+export async function pickTarget(page: Page, name: string | RegExp, search?: string) {
+  await page.getByRole('region', { name: 'Onde queres chegar' }).getByRole('button', { name: /^Igualar a/ }).click()
+  const sheet = page.getByRole('dialog', { name: 'Igualar a' })
+  if (search) await sheet.getByRole('searchbox').fill(search)
+  await sheet.getByRole('button', { name }).first().click()
+  await expect(sheet).toBeHidden()
+}

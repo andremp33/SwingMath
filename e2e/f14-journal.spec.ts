@@ -1,4 +1,4 @@
-import { a11y, expand, expect, resultCard, start, test } from './fixtures'
+import { a11y, expand, expect, resultCard, start, tapLead, test } from './fixtures'
 import type { Page } from '@playwright/test'
 
 async function addRacket(page: Page, name: string) {
@@ -216,9 +216,9 @@ test.describe('F17 phone sections', () => {
     await bar.click()
     const feel = page.getByRole('list', { name: 'Sensação estimada' })
     await expect(feel.getByRole('listitem')).toHaveCount(6)
-    // No lead yet: nothing moved.
-    await expect(feel.getByRole('listitem').filter({ hasText: 'Peso de bola' })).toContainText('·')
-    for (let i = 0; i < 8; i++) await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    // No lead yet: nothing moved, so no difference shows.
+    await expect(feel.getByRole('listitem').filter({ hasText: 'Peso de bola' })).not.toContainText(/[+−]/)
+    await tapLead(page, '12h (ponta)', 8)
     await expect(feel.getByRole('listitem').filter({ hasText: 'Peso de bola' })).toContainText('+')
     await expect(feel.getByRole('listitem').filter({ hasText: 'Manobrabilidade' })).toContainText('−')
     await a11y(page)

@@ -1,9 +1,9 @@
-import { a11y, expect, saveSetup, setupAction, start, test } from './fixtures'
+import { a11y, expect, saveSetup, setupAction, start, tapLead, test } from './fixtures'
 
 test.describe('F03 save, name and rate a setup', () => {
   test('F03-H1 save, rate and favourite', async ({ page }) => {
     await start(page)
-    await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)')
     await saveSetup(page, 'Torneio de sábado')
     await expect(page.getByText('A editar: Torneio de sábado')).toBeVisible()
 
@@ -38,7 +38,7 @@ test.describe('F03 save, name and rate a setup', () => {
   test('F03-E3 updating a loaded setup keeps one copy', async ({ page }) => {
     await start(page)
     await saveSetup(page, 'Base')
-    await page.getByRole('button', { name: '+ 0,5 g Cabo' }).click()
+    await tapLead(page, 'Cabo')
     await page.getByRole('button', { name: 'Atualizar setup' }).click()
     await expect(page.getByText('Setup atualizado')).toBeVisible()
     await page.goto('/setups')
@@ -75,8 +75,8 @@ test.describe('F04 compare two setups', () => {
   test('F04-H1 side by side', async ({ page }) => {
     await start(page)
     await saveSetup(page, 'Leve')
-    await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
-    await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)')
+    await tapLead(page, '12h (ponta)')
     await saveSetup(page, 'Pesada')
     await page.goto('/setups')
     await expect(page.getByRole('article')).toHaveCount(2)

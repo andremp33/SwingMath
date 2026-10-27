@@ -1,4 +1,4 @@
-import { a11y, expect, start, test } from './fixtures'
+import { a11y, expect, pickTarget, start, test } from './fixtures'
 
 test.describe('F06 hit a target', () => {
   test('F06-H1 finds lead to reach a target', async ({ page }) => {
@@ -64,15 +64,14 @@ test.describe('F06 hit a target', () => {
     const target = page.getByRole('region', { name: 'Onde queres chegar' })
     const plan = page.getByRole('region', { name: 'Plano de chumbo' })
     const run = page.getByRole('button', { name: 'Calcular', exact: true })
-    await target.getByRole('radio', { name: 'Profissional' }).click()
     for (const player of ['Novak Djokovic', 'Rafael Nadal', 'Roger Federer']) {
-      await target.getByRole('radio', { name: new RegExp(player) }).click()
+      await pickTarget(page, new RegExp(player))
       await run.click()
       await expect(plan).toContainText('Chumbo total')
     }
     await expect(page.getByText('Pro', { exact: true })).toBeVisible()
     // A fourth: what is missing, whether lead gets there, where it lands.
-    await target.getByRole('radio', { name: /Thiago Seyboth Wild/ }).click()
+    await pickTarget(page, /Thiago Seyboth Wild/)
     await run.click()
     await expect(plan).toContainText('Falta')
     await expect(plan).toContainText(/Peso \+\d+ g/)
@@ -85,7 +84,7 @@ test.describe('F06 hit a target', () => {
     await expect(page.getByRole('dialog', { name: 'SwingMath Pro' })).toContainText('Usaste os 3 planos grátis do Planear.')
     await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click()
     // One of the three again: whole.
-    await target.getByRole('radio', { name: /Rafael Nadal/ }).click()
+    await pickTarget(page, /Rafael Nadal/)
     await run.click()
     await expect(plan).toContainText('Chumbo total')
     await a11y(page)
@@ -129,13 +128,16 @@ test.describe('Pro targets', () => {
   test('F06-H5 a pro target, converted to the state of the starting point, with its source', async ({ page }) => {
     await start(page, { path: '/match' })
     const to = page.getByRole('region', { name: 'Onde queres chegar' })
-    await to.getByRole('radio', { name: 'Profissional' }).click()
-    await to.getByRole('radio', { name: /Rafael Nadal/ }).click()
+    // Measured or reported, in the list already.
+    await to.getByRole('button', { name: /^Igualar a/ }).click()
+    await expect(page.getByRole('dialog').getByRole('button', { name: /Rafael Nadal/ })).toContainText('Medido')
+    await page.keyboard.press('Escape')
+    await pickTarget(page, /Rafael Nadal/)
+    await expect(to.getByRole('button', { name: /^Igualar a/ })).toContainText('Rafael Nadal')
     // Library values are unstrung, so Nadal's strung 337 g loses the 17 g of strings.
     await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('320')
     await expect(to).toContainText('Medida com cordas; convertemos para sem cordas')
-    // Measured or reported, by whom and when, with the link.
-    await expect(to.getByRole('radio', { name: /Rafael Nadal/ })).toContainText('Medido')
+    // By whom and when, with the link.
     await expect(to).toContainText('Medido: Medido por um laboratório, encordoador, loja ou autor identificados.')
     await expect(to.getByRole('link', { name: /Fonte: Tennis Warehouse \(lab\), junho de 2023/ })).toHaveAttribute('href', /tennis-warehouse\.com/)
     await expect(to).toContainText('Specs publicados; o SwingMath não tem relação com os jogadores nem com as marcas.')
@@ -145,19 +147,25 @@ test.describe('Pro targets', () => {
   test('F06-H7 search, ATP and WTA apart, and the stock racquet to start from', async ({ page }) => {
     await start(page, { path: '/match' })
     const to = page.getByRole('region', { name: 'Onde queres chegar' })
-    await to.getByRole('radio', { name: 'Profissional' }).click()
-    await expect(to.getByRole('radiogroup', { name: 'Profissional ATP' })).toBeVisible()
-    const wta = to.getByRole('radiogroup', { name: 'Profissional WTA' })
-    await expect(wta.getByRole('radio', { name: /Iga Świątek/ })).toContainText('Reportado')
+    await to.getByRole('button', { name: /^Igualar a/ }).click()
+    const sheet = page.getByRole('dialog', { name: 'Igualar a' })
+    // One list: the pros, ATP and WTA apart, and the catalogue.
+    await expect(sheet.getByRole('region', { name: 'Profissional ATP' })).toBeVisible()
+    await expect(sheet.getByRole('region', { name: 'Catálogo' })).toBeVisible()
+    const wta = sheet.getByRole('region', { name: 'Profissional WTA' })
+    await expect(wta.getByRole('button', { name: /Iga Świątek/ })).toContainText('Reportado')
     // Searching ignores accents and case.
-    await to.getByLabel('Procurar jogador').fill('swiatek')
-    await expect(to.getByRole('radiogroup', { name: 'Profissional ATP' })).toHaveCount(0)
-    await expect(wta.getByRole('radio')).toHaveCount(1)
-    await to.getByLabel('Procurar jogador').fill('zzz')
-    await expect(to).toContainText('Nenhum jogador com esse nome.')
+    const search = sheet.getByRole('searchbox', { name: 'Procurar setup, raquete ou jogador' })
+    await search.fill('swiatek')
+    await expect(sheet.getByRole('region', { name: 'Profissional ATP' })).toHaveCount(0)
+    await expect(sheet.getByRole('region', { name: 'Catálogo' })).toHaveCount(0)
+    await expect(wta.getByRole('button')).toHaveCount(1)
+    await search.fill('zzz')
+    await expect(sheet).toContainText('Nada com esse nome.')
+    await a11y(page)
     // Sinner: his strings, and his stock racquet as the starting point.
-    await to.getByLabel('Procurar jogador').fill('sinner')
-    await to.getByRole('radio', { name: /Jannik Sinner/ }).click()
+    await search.fill('sinner')
+    await sheet.getByRole('button', { name: /Jannik Sinner/ }).click()
     await expect(to).toContainText('Cordas: Head Hawk Touch 1.30 · 28 kg')
     await expect(to.getByRole('link', { name: /Fonte: Tennisnerd/ })).toBeVisible()
     await to.getByRole('button', { name: 'Partir da raquete de série' }).click()
@@ -172,8 +180,7 @@ test.describe('Pro targets', () => {
     await start(page, { path: '/match' })
     await page.getByLabel('Ponto de partida').selectOption({ label: 'Da calculadora' })
     const to = page.getByRole('region', { name: 'Onde queres chegar' })
-    await to.getByRole('radio', { name: 'Profissional' }).click()
-    await to.getByRole('radio', { name: /Roger Federer/ }).click()
+    await pickTarget(page, /Roger Federer/)
     await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('357')
     await expect(to).toContainText('com cordas')
   })

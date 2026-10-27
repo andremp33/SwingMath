@@ -1,5 +1,5 @@
-import { Calculator, Plus, Save, Sparkles, Target as TargetIcon, X } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { Calculator, ChevronDown, Plus, Save, Search, Sparkles, Target as TargetIcon, X } from 'lucide-react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { matchRackets, solveTarget, toReference, type BatchResult, type MatchResult, type Target, type TargetKey } from '../domain/match'
 import type { Base } from '../domain/physics'
@@ -13,15 +13,15 @@ import { defaultConfig, isPro, useStore } from '../data/store'
 import { diagnose, freePlansLeft, matchPlanKey, targetPlanKey, type Diagnosis } from '../domain/freePlans'
 import { PRO_TARGETS, withStrings, type PlainSpecs } from '../data/pros'
 import { fmt, useT } from '../i18n'
-import { fmtNum, fmtSigned, LOCALE, racketLabel } from '../lib/format'
+import { fmtNum, fmtSigned, fold, LOCALE, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select } from '../ui/basics'
 import { LEAD_MAX, RacketDiagram } from '../ui/lead'
 import { RacketPicker } from '../ui/RacketPicker'
-import { ProList } from '../ui/ProPicker'
+import { ProDetails, ProRow } from '../ui/ProPicker'
 import { useFreePlans } from './freePlans'
 import { ProGate } from './Pro'
 import { InfoTip } from '../ui/disclosure'
-import { useToast } from '../ui/overlay'
+import { Sheet, useToast } from '../ui/overlay'
 import { BalanceField, WeightField } from '../ui/unitFields'
 import { useUnits } from '../lib/units'
 
@@ -37,7 +37,20 @@ export function Match() {
   const [mode, setMode] = useState<Mode>(handoff?.fleet ? 'batch' : 'smart')
   return (
     <>
-      <PageTitle action={badge}>{t.match.title}</PageTitle>
+      <PageTitle
+        action={
+          <div className="flex items-center gap-2">
+            {badge}
+            {/* What each mode does, out of the way: the steps say it as you go. */}
+            <InfoTip title={mode === 'smart' ? t.match.smart : t.match.batch}>
+              <p>{mode === 'smart' ? t.match.smartIntro : t.match.batchIntro}</p>
+              {mode === 'batch' && <p>{t.match.sameRacketTwice}</p>}
+            </InfoTip>
+          </div>
+        }
+      >
+        {t.match.title}
+      </PageTitle>
       <div className="mb-4 max-w-md">
         <Segmented
           label={t.match.title}
@@ -120,8 +133,10 @@ interface TargetSrc {
   frame: { headSizeSqIn: number; lengthCm: number }
   specs: PlainSpecs
   strung: boolean
-  /** Which target it is, for the free plans: "pro:sinner", "racket:…", "setup:…". */
+  /** Which target it is, for the free plans: "pro:sinner", "racket:…", "setup:…", "owned:…". */
   origin: string
+  /** What the picker shows: the setup's, racket's or player's name. */
+  name: string
 }
 
 /** A plan as shown: whole, or (past the free plans) only its diagnosis. */
@@ -232,14 +247,11 @@ function Smart() {
   const fromStrung = start?.strung ?? false
   const racket = useRacket(start?.racketId)
 
-  const [kind, setKind] = useState<'racket' | 'pro'>(handoffPro ? 'pro' : 'racket')
-  const [targetRacketId, setTargetRacketId] = useState<string>()
-  const targetRacket = useRacket(targetRacketId)
-  const [proId, setProId] = useState(handoffPro?.id ?? '')
   const [targetSrc, setTargetSrc] = useState<TargetSrc | null>(
-    handoffPro ? { frame: handoffPro, specs: handoffPro, strung: handoffPro.strung, origin: `pro:${handoffPro.id}` } : null,
+    handoffPro ? { frame: handoffPro, specs: handoffPro, strung: handoffPro.strung, origin: `pro:${handoffPro.id}`, name: handoffPro.player } : null,
   )
   const [typed, setTyped] = useState<Vals | null>(null)
+  const pickedPro = typed ? undefined : PRO_TARGETS.find((p) => targetSrc?.origin === `pro:${p.id}`)
   // A target from a racket, a setup or a pro follows the starting point into
   // its state (with or without strings); numbers typed in stay as typed.
   const to = typed ?? (targetSrc ? asVals(withStrings(targetSrc.frame, targetSrc.specs, targetSrc.strung, fromStrung)) : {})
@@ -336,8 +348,6 @@ function Smart() {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
       <div className="space-y-4">
-        <p className="text-sm text-muted">{t.match.smartIntro}</p>
-
         <Card className="space-y-3" label={t.match.step1}>
           <CardTitle info={<Badge>{state(fromStrung)}</Badge>}>{step(1, t.match.step1)}</CardTitle>
           <Select<string>
@@ -378,52 +388,67 @@ function Smart() {
           >
             {step(2, t.match.step2)}
           </CardTitle>
-          <Segmented
-            label={t.match.to}
-            value={kind}
-            onChange={(k) => {
-              setKind(k)
-              setRes(null)
-            }}
-            options={[
-              { value: 'racket', label: t.match.kindRacket },
-              { value: 'pro', label: t.match.kindPro },
+          <TargetPicker
+            value={targetSrc ? { name: targetSrc.name, adjusted: !!typed } : undefined}
+            selected={typed ? undefined : targetSrc?.origin}
+            groups={[
+              {
+                title: t.match.savedSetups,
+                items: starts.setups.map((x) => {
+                  const r = findRacket(x.racketId, customRackets)
+                  const v = r && compute({ spec: r, ...x, masses }).result
+                  return {
+                    key: `setup:${x.id}`,
+                    search: `${x.name} ${r ? racketLabel(r) : ''}`,
+                    row: <TargetRow name={x.name} detail={r ? racketLabel(r) : undefined} specs={v} strung={x.accessories.strings} />,
+                    pick: () => r && v && pickTarget({ frame: r, specs: v, strung: x.accessories.strings, origin: `setup:${x.id}`, name: x.name }),
+                  }
+                }),
+              },
+              {
+                title: t.journal.myRackets,
+                items: starts.owned.map((o) => {
+                  // As last measured, or as played.
+                  const st = starts.start(`owned:${o.id}`)
+                  const r = st && starts.rackets.find((x) => x.id === st.racketId)
+                  const v = st?.vals
+                  const specs =
+                    v?.weightG !== undefined && v.balanceMm !== undefined && v.swingweight !== undefined ? { weightG: v.weightG, balanceCm: v.balanceMm / 10, swingweight: v.swingweight } : undefined
+                  return {
+                    key: `owned:${o.id}`,
+                    search: `${o.name} ${r ? racketLabel(r) : ''}`,
+                    row: <TargetRow name={o.name} detail={r ? racketLabel(r) : undefined} specs={specs} strung={st?.strung} />,
+                    pick: () => st && r && specs && pickTarget({ frame: r, specs, strung: st.strung, origin: `owned:${o.id}`, name: o.name }),
+                  }
+                }),
+              },
+              ...(['ATP', 'WTA'] as const).map((tour) => ({
+                title: `${t.match.kindPro} ${tour}`,
+                items: PRO_TARGETS.filter((p) => p.tour === tour).map((p) => ({
+                  key: `pro:${p.id}`,
+                  search: `${p.player} ${p.racket}`,
+                  row: <ProRow p={p} />,
+                  pick: () => {
+                    setLastPro(p.id)
+                    pickTarget({ frame: p, specs: p, strung: p.strung, origin: `pro:${p.id}`, name: p.player })
+                  },
+                })),
+              })),
+              {
+                title: t.library.catalogue,
+                items: starts.rackets.map((r) => ({
+                  key: `racket:${r.id}`,
+                  search: racketLabel(r),
+                  row: <TargetRow name={r.model} detail={r.brand + (r.year ? ` (${r.year})` : '')} specs={r} strung={false} />,
+                  pick: () => pickTarget({ frame: r, specs: r, strung: false, origin: `racket:${r.id}`, name: racketLabel(r) }),
+                })),
+              },
             ]}
           />
-          {kind === 'racket' ? (
-            <>
-              <RacketPicker
-                label={t.match.targetRacket}
-                value={targetRacket}
-                onChange={(r) => {
-                  setTargetRacketId(r.id)
-                  pickTarget({ frame: r, specs: r, strung: false, origin: `racket:${r.id}` })
-                }}
-              />
-              {starts.setups.length > 0 && (
-                <Select
-                  label={t.match.targetSetup}
-                  value=""
-                  onChange={(id) => {
-                    const s = starts.setups.find((x) => x.id === id)
-                    const r = s && findRacket(s.racketId, customRackets)
-                    if (!s || !r) return
-                    const { result } = compute({ spec: r, ...s, masses })
-                    pickTarget({ frame: r, specs: result, strung: s.accessories.strings, origin: `setup:${s.id}` })
-                  }}
-                  options={[{ value: '', label: t.match.pickSetup }, ...starts.setups.map((s) => ({ value: s.id, label: s.name }))]}
-                />
-              )}
-            </>
-          ) : (
-            <ProList
-              selected={proId}
+          {pickedPro && (
+            <ProDetails
+              p={pickedPro}
               fromStrung={fromStrung}
-              onPick={(p) => {
-                setProId(p.id)
-                setLastPro(p.id)
-                pickTarget({ frame: p, specs: p, strung: p.strung, origin: `pro:${p.id}` })
-              }}
               // The starting point becomes the stock frame (unstrung, as in the
               // library), and the target follows it into that state.
               onStock={(p) => {
@@ -433,10 +458,10 @@ function Smart() {
               }}
             />
           )}
-          {targetSrc && !typed && targetSrc.strung !== fromStrung && kind === 'racket' && (
+          {targetSrc && !typed && !pickedPro && targetSrc.strung !== fromStrung && (
             <p className="text-sm font-medium">{fmt(t.match.converted, { from: state(targetSrc.strung), to: state(fromStrung) })}</p>
           )}
-          <SpecFields v={to} onChange={(v) => { setTyped(v); setProId(''); setRes(null) }} />
+          <SpecFields v={to} onChange={(v) => { setTyped(v); setRes(null) }} />
         </Card>
 
         <Card label={t.match.step3}>
@@ -473,6 +498,114 @@ function Smart() {
       </div>
 
       <div className="xl:sticky xl:top-8">{res ? <PlanCard res={res.plan} full={res.full} diag={res.diag} onOpen={openInCalc} /> : null}</div>
+    </div>
+  )
+}
+
+/** A target in the picker: its name, what it is, and its numbers. */
+function TargetRow({ name, detail, specs, strung }: { name: string; detail?: string; specs?: PlainSpecs; strung?: boolean }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const u = useUnits()
+  return (
+    <>
+      <span className="min-w-0">
+        <span className="block truncate font-medium">{name}</span>
+        {detail && <span className="block truncate text-muted">{detail}</span>}
+      </span>
+      {specs && (
+        <span className="num shrink-0 text-right text-xs text-muted">
+          {u.weight(specs.weightG)} {u.weightUnit} · SW {fmtNum(specs.swingweight, 0, lang)}
+          <span className="block">{strung ? t.match.strungShort : t.match.unstrungShort}</span>
+        </span>
+      )}
+    </>
+  )
+}
+
+interface TargetGroup {
+  title: string
+  items: { key: string; search: string; row: ReactNode; pick: () => void }[]
+}
+
+/** Every word of the search in the text, without accents or case. */
+const hits = (text: string, q: string) => {
+  const s = fold(text)
+  return fold(q)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((w) => s.includes(w))
+}
+
+/**
+ * The target, from wherever it comes: a saved setup, one of the player's
+ * rackets, a pro or the catalogue. One button, one sheet, one search.
+ */
+function TargetPicker({ value, groups, selected }: { value?: { name: string; adjusted: boolean }; groups: TargetGroup[]; selected?: string }) {
+  const t = useT()
+  const id = useId()
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const shown = groups.map((g) => ({ ...g, items: g.items.filter((i) => hits(i.search, q)) })).filter((g) => g.items.length > 0)
+  return (
+    <div>
+      <label id={`${id}-l`} htmlFor={id} className="mb-1.5 block text-sm font-medium text-muted">
+        {t.match.matchTo}
+      </label>
+      <button
+        id={id}
+        type="button"
+        aria-haspopup="dialog"
+        aria-labelledby={`${id}-l ${id}-v`}
+        onClick={() => setOpen(true)}
+        className="flex h-12 w-full items-center justify-between gap-2 rounded-md border border-border-input bg-bg px-3 text-left"
+      >
+        <span id={`${id}-v`} className={cx('truncate', value ? 'font-semibold' : 'text-muted')}>
+          {value ? value.name : t.match.pickTarget}
+          {value?.adjusted && <span className="font-normal text-muted"> · {t.match.adjusted}</span>}
+        </span>
+        <ChevronDown className="size-4 shrink-0 text-muted" aria-hidden />
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={t.match.matchTo}>
+        <div className="relative mb-3">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+          <input
+            autoFocus
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t.match.targetSearch}
+            aria-label={t.match.targetSearch}
+            className="h-11 w-full rounded-md border border-border-input bg-bg pl-9 pr-3"
+          />
+        </div>
+        <div className="-mx-2 max-h-[55dvh] space-y-4 overflow-y-auto">
+          {shown.map((g) => (
+            <section key={g.title} aria-label={g.title}>
+              <h3 className="mb-1 px-3 text-xs font-semibold tracking-wide text-muted">{g.title}</h3>
+              <ul>
+                {g.items.map((i) => (
+                  <li key={i.key}>
+                    <button
+                      type="button"
+                      aria-current={selected === i.key || undefined}
+                      onClick={() => {
+                        i.pick()
+                        setOpen(false)
+                        setQ('')
+                      }}
+                      className={cx('flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left text-sm hover:bg-surface-2', selected === i.key && 'bg-surface-2')}
+                    >
+                      {i.row}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+          {shown.length === 0 && <p className="px-3 py-6 text-center text-sm text-muted">{t.match.noTarget}</p>}
+        </div>
+      </Sheet>
     </div>
   )
 }
@@ -546,8 +679,9 @@ function PlanCard({ res, full, diag, onOpen, title, action }: { res: MatchResult
       <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-4">
         <RacketDiagram lead={res.lead} selected={sel} onSelect={setSel} />
         <dl className="num space-y-1.5 text-sm">
-          {POSITIONS.map((p) => (
-            <div key={p} className={cx('flex justify-between gap-2', res.lead[p] === 0 && 'text-muted')}>
+          {/* Only where lead goes: the frame shows the rest bare. */}
+          {POSITIONS.filter((p) => res.lead[p] > 0).map((p) => (
+            <div key={p} className="flex justify-between gap-2">
               <dt>{t.pos[p]}</dt>
               <dd className="font-semibold">{fmtNum(res.lead[p], 1, lang)} g</dd>
             </div>
@@ -635,10 +769,7 @@ function Batch() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-1.5 text-sm text-muted">
-        <p>{t.match.batchIntro}</p>
-        <InfoTip title={t.match.batch}>{t.match.sameRacketTwice}</InfoTip>
-      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {slots.map((s, i) => (
           <BatchSlot

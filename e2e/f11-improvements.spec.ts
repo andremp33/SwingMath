@@ -1,5 +1,5 @@
 import { periodFromSwingweight } from '../src/domain/measure'
-import { a11y, expect, resultCard, saveSetup, setupAction, start, test } from './fixtures'
+import { a11y, expect, pickTarget, resultCard, saveSetup, setupAction, start, tapLead, test } from './fixtures'
 
 test.describe('F11 measuring and tuning in steps', () => {
   test('F11-H1 measure at home: pendulum swingweight goes to the calculator', async ({ page }) => {
@@ -62,7 +62,7 @@ test.describe('F11 measuring and tuning in steps', () => {
 
   test('F11-H2 a measurement becomes the new starting point', async ({ page }) => {
     await start(page)
-    await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)')
     await page.getByRole('button', { name: 'Confirmar com a minha medição' }).click()
     const card = page.getByRole('region', { name: 'Confirmar com a minha medição' })
     await card.getByLabel('Peso', { exact: true }).fill('330,5')
@@ -78,20 +78,20 @@ test.describe('F12 practical helpers', () => {
     await start(page, { path: '/settings' })
     await page.getByLabel('Gramas por 10 cm').fill('4')
     await page.getByRole('link', { name: 'Calcular' }).first().click()
-    for (let i = 0; i < 4; i++) await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)', 4)
     await expect(page.getByText('≈ 5,0 cm de fita')).toBeVisible()
-    await page.getByRole('button', { name: '+ 0,5 g 3h e 9h' }).click()
-    await page.getByRole('button', { name: '+ 0,5 g 3h e 9h' }).click()
+    await tapLead(page, '3h e 9h')
+    await tapLead(page, '3h e 9h')
     // 1 g split in two: 0.5 g per side = 1.25 cm each.
     await expect(page.getByText('≈ 1,3 cm de fita × 2')).toBeVisible()
   })
 
   test('F12-H2 hit the specs of a saved setup', async ({ page }) => {
     await start(page, { pro: true })
-    for (let i = 0; i < 6; i++) await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)', 6)
     await saveSetup(page, 'Antiga')
     await page.goto('/match')
-    await page.getByLabel('Igualar a um setup guardado').selectOption({ label: 'Antiga' })
+    await pickTarget(page, /Antiga/)
     const target = page.getByRole('region', { name: 'Onde queres chegar' })
     // The setup weighs 331 g strung, and so does the starting point (the
     // racket it was saved on, as played): no conversion.
@@ -110,7 +110,7 @@ test.describe('F12 practical helpers', () => {
       Object.defineProperty(navigator, 'share', { configurable: true, value: async (d: ShareData) => void ((window as unknown as { shared: ShareData }).shared = d) })
     })
     await start(page)
-    await page.getByRole('button', { name: '+ 0,5 g Garganta' }).click()
+    await tapLead(page, 'Garganta')
     await saveSetup(page, 'Para o Rui')
     await page.goto('/setups')
     await setupAction(page, 'Para o Rui', 'Ficha para o encordoador')

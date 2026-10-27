@@ -1,4 +1,4 @@
-import { a11y, expect, resultCard, saveSetup, setupAction, start, test } from './fixtures'
+import { a11y, expect, resultCard, saveSetup, setupAction, start, tapLead, test } from './fixtures'
 
 async function addPosition(page: import('@playwright/test').Page, opts: { hour?: string; one?: boolean; shaftCm?: string }) {
   await page.getByRole('button', { name: 'Adicionar posição' }).click()
@@ -17,16 +17,16 @@ async function addPosition(page: import('@playwright/test').Page, opts: { hour?:
 test.describe('F13 custom lead positions', () => {
   test('F13-H1 11 and 1 on both sides adds weight and shows on the drawing', async ({ page }) => {
     await start(page)
-    await expect(page.getByText(/Chumbo em qualquer hora do aro/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Informação: Outras posições' })).toBeVisible()
     await addPosition(page, { hour: '11h' })
     // New positions start at 1 g.
     await expect(page.getByRole('slider', { name: '11h e 1h' })).toHaveAttribute('aria-valuetext', '1,0 g')
-    await page.getByRole('button', { name: '+ 0,5 g 11h e 1h' }).click()
-    await page.getByRole('button', { name: '+ 0,5 g 11h e 1h' }).click()
+    await tapLead(page, '11h e 1h')
+    await tapLead(page, '11h e 1h')
     await expect(page.getByText('Chumbo total:')).toContainText('2,0 g')
     // 323 measured strung + 6 overgrip + 2
     await expect(resultCard(page)).toContainText('330')
-    await expect(page.getByRole('button', { name: '11h e 1h: 2,0 g' }).first()).toBeVisible()
+    await expect(page.getByRole('slider', { name: '11h e 1h' })).toHaveAttribute('aria-valuetext', '2,0 g')
     await a11y(page)
   })
 
@@ -37,6 +37,7 @@ test.describe('F13 custom lead positions', () => {
     await addPosition(page, { shaftCm: '25' })
     await expect(page.getByRole('slider', { name: 'Haste a 25 cm' })).toBeVisible()
     await expect(page.getByText('Chumbo total:')).toContainText('2,0 g')
+    await page.getByRole('slider', { name: '4h, um lado' }).click()
     await page.getByRole('button', { name: 'Remover 4h, um lado' }).click()
     await expect(page.getByRole('slider', { name: '4h, um lado' })).toHaveCount(0)
     await expect(page.getByText('Chumbo total:')).toContainText('1,0 g')

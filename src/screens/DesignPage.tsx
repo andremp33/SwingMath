@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { emptyLead, type Position } from '../domain/types'
 import { useT } from '../i18n'
 import { Badge, Button, Card, CardTitle, EmptyState, IconButton, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
-import { LeadControl, RacketDiagram } from '../ui/lead'
+import { LeadEditor } from '../ui/lead'
 import { FeelRings, SpecTable } from '../ui/specs'
 
 /** Every primitive in one place: the design system check (/design). */
@@ -71,10 +71,14 @@ export function DesignPage() {
         </Card>
         <Card>
           <CardTitle>Lead</CardTitle>
-          <div className="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-4">
-            <RacketDiagram lead={lead} selected={sel} onSelect={setSel} />
-            <LeadControl position={sel} value={lead[sel]} onChange={(g) => setLead({ ...lead, [sel]: g })} selected />
-          </div>
+          <LeadEditor
+            lead={lead}
+            selected={sel}
+            onSelect={(k) => setSel(k as Position)}
+            onLead={(p, g) => setLead({ ...lead, [p]: g })}
+            onExtra={() => {}}
+            onRemoveExtra={() => {}}
+          />
         </Card>
         <Card>
           <CardTitle>Specs and feel</CardTitle>
