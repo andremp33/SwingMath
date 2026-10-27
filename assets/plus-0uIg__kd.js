@@ -1,1 +1,0 @@
-import{M as e}from"./basics-BcL5grg6.js";var t={name:`minus`,size:24,node:[[`path`,{d:`M5 12h14`,key:`1ays0h`}]]};t.node;var n=e(t),r={name:`plus`,size:24,node:[[`path`,{d:`M5 12h14`,key:`1ays0h`}],[`path`,{d:`M12 5v14`,key:`s699le`}]]};r.node;var i=e(r);export{n,i as t};
