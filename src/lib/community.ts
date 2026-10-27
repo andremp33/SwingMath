@@ -1,13 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { racketSchema, setupSchema } from '../data/db'
-import { MIN_RESULT_SESSIONS, SESSION_RATINGS, type SessionRating } from '../domain/journal'
+import { SESSION_RATINGS, type SessionRating } from '../domain/journal'
 import type { Racket, SetupConfig, Specs } from '../domain/types'
 import { cloudConfigured, getCloud } from './cloud'
 import { hasBlockedWords } from './wordFilter'
 
 /** Community data: medians of frames players measured, and setups they
- *  published. Reading needs no account; writing does. */
+ *  published. Reading needs no account; writing does. Recipes are read
+ *  through the community_setups view, which never shows who wrote them. */
 
 /** On the website and in the app alike, wherever the cloud is set up. */
 export const communityEnabled = () => cloudConfigured()
@@ -90,7 +91,8 @@ export interface PublicResults {
 
 export interface PublicSetup {
   id: string
-  user_id: string
+  /** The author, as an opaque key: enough to hide them, nothing more. */
+  author_key: string
   racket_id: string
   name: string
   author: string | null
@@ -106,6 +108,9 @@ export interface PublicSetup {
   setup_ref: string | null
   partner: string | null
   updated_at: string
+  /** Mine, and hidden by reports (only my own hidden recipes reach me). */
+  mine: boolean
+  hidden: boolean
 }
 
 const score = z.number().finite().min(1).max(5)
@@ -119,7 +124,7 @@ const finite = z.number().finite()
 /** Rows are written by other players: each one is checked before the app uses it. */
 const rowSchema = z.object({
   id: z.string(),
-  user_id: z.string(),
+  author_key: z.string(),
   racket_id: z.string(),
   name: z.string().min(1),
   author: z.string().nullable(),
@@ -135,6 +140,8 @@ const rowSchema = z.object({
   setup_ref: z.string().nullable().default(null),
   partner: z.string().nullable().default(null),
   updated_at: z.string(),
+  mine: z.boolean().default(false),
+  hidden: z.boolean().default(false),
 })
 
 /** Keeps the rows that pass the schema; drops the rest without a fuss. */
@@ -145,32 +152,36 @@ export function parsePublicSetups(rows: unknown[]): PublicSetup[] {
   })
 }
 
-const COLUMNS = 'id, user_id, racket_id, name, author, config, racket, specs, copies, created_at, goals, level, style, results, setup_ref, partner, updated_at'
+const COLUMNS = 'id, author_key, racket_id, name, author, config, racket, specs, copies, created_at, goals, level, style, results, setup_ref, partner, updated_at, mine, hidden'
+
+/** How many recipes per frame the app asks for, in the order it shows. */
+const FETCHED = 100
 
 export async function publicSetups(racketId: string): Promise<PublicSetup[]> {
   const c = cloud()
   if (!c) return []
-  const { data } = await (await c).from('public_setups').select(COLUMNS).eq('racket_id', racketId).order('created_at', { ascending: false }).limit(50)
+  // Ordered by the server as rankPublicSetups orders them, so a recipe many
+  // saved is never pushed out by newer ones.
+  const { data } = await (await c)
+    .from('community_setups')
+    .select(COLUMNS)
+    .eq('racket_id', racketId)
+    .order('partner', { ascending: false, nullsFirst: false })
+    .order('copies', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(FETCHED)
   return parsePublicSetups(data ?? [])
 }
 
-const hasResults = (p: PublicSetup) => (p.results?.sessions ?? 0) >= MIN_RESULT_SESSIONS
-
 /**
- * The order players see: partner shops first, then recipes with journal
- * results (best overall first), then the most copied, then the newest.
+ * The order players see: partner shops first, then the recipes most players
+ * saved, then the newest. Journal results are shown, never ranked: they are
+ * the author's own ratings of their own recipe.
  */
 export function rankPublicSetups(list: PublicSetup[], goal?: Goal): PublicSetup[] {
   return list
     .filter((p) => !goal || p.goals.includes(goal))
-    .sort(
-      (a, b) =>
-        Number(!!b.partner) - Number(!!a.partner) ||
-        Number(hasResults(b)) - Number(hasResults(a)) ||
-        (hasResults(a) && hasResults(b) ? (b.results!.avg.overall ?? 0) - (a.results!.avg.overall ?? 0) : 0) ||
-        b.copies - a.copies ||
-        Date.parse(b.created_at) - Date.parse(a.created_at),
-    )
+    .sort((a, b) => Number(!!b.partner) - Number(!!a.partner) || b.copies - a.copies || Date.parse(b.created_at) - Date.parse(a.created_at))
 }
 
 /** Published averages to a tenth, hours to the half hour. */
@@ -184,14 +195,13 @@ async function myId(cl: SupabaseClient) {
   return (await cl.auth.getSession()).data.session?.user.id
 }
 
-/** My published copy of a saved setup, if there is one. */
+/** My published copy of a saved setup, if there is one (hidden or not). */
 export async function myRecipe(setupRef: string): Promise<PublicSetup | null> {
   const c = cloud()
   if (!c) return null
   const cl = await c
-  const uid = await myId(cl)
-  if (!uid) return null
-  const { data } = await cl.from('public_setups').select(COLUMNS).eq('user_id', uid).eq('setup_ref', setupRef).maybeSingle()
+  if (!(await myId(cl))) return null
+  const { data } = await cl.from('community_setups').select(COLUMNS).eq('mine', true).eq('setup_ref', setupRef).maybeSingle()
   return data ? (parsePublicSetups([data])[0] ?? null) : null
 }
 
@@ -302,14 +312,20 @@ export function setupCounts(): Promise<Map<string, number>> {
   return countsCache
 }
 
+/** A player saved a recipe as a setup of their own: one copy, once per
+ *  account (count_copy). Trying one on does not count. */
 export async function countCopy(id: string) {
   const c = cloud()
   if (c) await (await c).rpc('count_copy', { setup_id: id })
 }
 
-export async function reportSetup(id: string) {
+/** Why a player reports a recipe, as the moderation queue lists it. */
+export const REPORT_REASONS = ['offensive', 'false', 'spam'] as const
+export type ReportReason = (typeof REPORT_REASONS)[number]
+
+export async function reportSetup(id: string, reason: ReportReason) {
   const cl = await getCloud()!
-  const { error } = await cl.from('reports').insert({ setup_id: id })
+  const { error } = await cl.from('reports').insert({ setup_id: id, reason })
   // Reporting twice is fine.
   if (error && error.code !== '23505') throw error
 }

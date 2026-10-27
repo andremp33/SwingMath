@@ -86,6 +86,12 @@ async function pickPhoto(page: Page) {
 
 const userByEmail = async (email: string) => (await admin.auth.admin.listUsers({ perPage: 1000 })).data.users.find((u) => u.email === email)!
 
+/** The first setup's share sheet, from its ⋯ menu. */
+async function share(page: Page) {
+  await page.getByRole('button', { name: /^Mais ações:/ }).first().click()
+  await page.getByRole('menuitem', { name: 'Partilhar' }).click()
+}
+
 async function saveSetup(page: Page, name: string) {
   await page.goto('/')
   await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
@@ -146,7 +152,7 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   await signIn(author, emailOf('author'))
   await saveSetup(author, 'Plow extra')
   await author.goto('/setups')
-  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await share(author)
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
   await author.getByRole('dialog').getByLabel(/Assinar como/).fill('Ana')
   await author.getByRole('dialog').getByRole('checkbox', { name: 'Potência' }).click()
@@ -160,9 +166,21 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   const row = card.getByRole('listitem').filter({ hasText: 'Plow extra' })
   await expect(row).toContainText('Ana')
   await expect(row).toContainText('12h 0,5 g')
+  // Trying it on can be undone; it counts only once it is saved.
   await row.getByRole('button', { name: 'Experimentar' }).click()
   await expect(visitor.getByText('Setup carregado na calculadora')).toBeVisible()
-  await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveValue('0.5')
+  await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveAttribute('aria-valuetext', '0,5 g')
+  await visitor.getByRole('button', { name: 'Anular' }).click()
+  await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveAttribute('aria-valuetext', '0,0 g')
+  const copies = async () => (await admin.from('public_setups').select('copies').eq('name', 'Plow extra').eq('author', 'Ana')).data?.[0]?.copies
+  expect(await copies()).toBe(0)
+  await row.getByRole('button', { name: 'Experimentar' }).click()
+  await visitor.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
+  await visitor.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await expect.poll(copies).toBe(1)
+  await visitor.goto('/')
+  await openCommunity(visitor)
+  await expect(row).toContainText('guardado por 1')
   // Reporting needs an account.
   await row.getByRole('button', { name: /Denunciar/ }).click()
   await expect(visitor.getByText('Precisas de conta para isto.')).toBeVisible()
@@ -172,12 +190,51 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   await expect(card.getByRole('listitem').filter({ hasText: 'Plow extra' })).toHaveCount(0)
 })
 
+test('a report says why, and three of them hide the recipe from everyone but its author', async ({ browser }) => {
+  test.setTimeout(120_000)
+  const name = `Denunciada ${stamp}`
+  const author = await open(browser)
+  await signIn(author, emailOf('reported'))
+  await saveSetup(author, name)
+  await author.goto('/setups')
+  await share(author)
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Spin' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+  const { data } = await admin.from('public_setups').select('id').eq('name', name).single()
+
+  // One report through the app, with its reason; two more straight to the database.
+  const reporter = await open(browser)
+  await signIn(reporter, emailOf('reporter'))
+  await reporter.goto('/')
+  const row = (await openCommunity(reporter)).getByRole('listitem').filter({ hasText: name })
+  await row.getByRole('button', { name: `Denunciar ${name}` }).click()
+  await row.getByRole('radio', { name: 'Números falsos' }).click()
+  await a11y(reporter, '#card-community')
+  await row.getByRole('button', { name: 'Denunciar', exact: true }).click()
+  await expect(reporter.getByText('Obrigado. Vamos rever.')).toBeVisible()
+  for (const n of ['rep2', 'rep3']) {
+    const { data: u } = await admin.auth.admin.createUser({ email: emailOf(n), email_confirm: true })
+    await admin.from('reports').insert({ setup_id: data!.id, user_id: u.user!.id, reason: 'spam' })
+  }
+  const queue = await admin.from('moderation_queue').select('reasons').eq('id', data!.id).single()
+  expect(queue.data?.reasons).toEqual(['false', 'spam', 'spam'])
+
+  await reporter.reload()
+  await openCommunity(reporter)
+  await expect(reporter.getByRole('region', { name: 'Comunidade' }).getByRole('listitem').filter({ hasText: name })).toHaveCount(0)
+  await author.goto('/')
+  const mine = (await openCommunity(author)).getByRole('listitem').filter({ hasText: name })
+  await expect(mine).toContainText('Escondido depois de denúncias')
+})
+
 test('a name with an insult is not published', async ({ browser }) => {
   const author = await open(browser)
   await signIn(author, emailOf('rude'))
   await saveSetup(author, `Setup de merda ${stamp}`)
   await author.goto('/setups')
-  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await share(author)
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
   await author.getByRole('dialog').getByRole('checkbox', { name: 'Potência' }).click()
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
@@ -206,7 +263,7 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   await signIn(author, emailOf('recipe'))
   await saveSetup(author, `Estável ${stamp}`)
   await author.goto('/setups')
-  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await share(author)
   const d = author.getByRole('dialog')
   await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
   // A goal is required.
@@ -220,7 +277,7 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
 
   // Publishing the same setup again updates the recipe.
   await author.keyboard.press('Escape')
-  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await share(author)
   await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
   await author.getByRole('dialog').getByRole('checkbox', { name: 'Conforto' }).click()
   await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
@@ -239,7 +296,7 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   await expect(row).toContainText('Base de catálogo')
   await a11y(visitor, '#card-community')
   await row.getByRole('button', { name: 'Experimentar' }).click()
-  await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveValue('0.5')
+  await expect(visitor.getByRole('slider', { name: '12h (ponta)' })).toHaveAttribute('aria-valuetext', '0,5 g')
 
   // The library says how many recipes a frame has, and opens them.
   const lib = await open(browser)
@@ -256,7 +313,7 @@ test('a setup moved to another racket moves its recipe; a hidden one stays put',
   await signIn(author, emailOf('mover'))
   await saveSetup(author, name)
   await author.goto('/setups')
-  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await share(author)
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
   await author.getByRole('dialog').getByRole('checkbox', { name: 'Controlo' }).click()
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
@@ -268,14 +325,15 @@ test('a setup moved to another racket moves its recipe; a hidden one stays put',
   // The same setup, now on a Prestige.
   await author.goto('/')
   await expect(author.getByText(`A editar: ${name}`)).toBeVisible()
-  await author.getByRole('button', { name: /Raquete Babolat Pure Aero 98/ }).first().click()
+  // On one of the player's rackets, the picker is named after it.
+  await author.getByRole('button', { name: /^(Raquete|Modelo da .+) Babolat Pure Aero 98/ }).first().click()
   await author.getByRole('dialog').getByRole('searchbox').fill('prestige')
   await author.getByRole('dialog').getByRole('button', { name: 'Head Prestige MP (2023)' }).click()
   await author.getByRole('button', { name: 'Atualizar setup' }).click()
   await expect(author.getByText('Setup atualizado', { exact: true })).toBeVisible()
   await author.goto('/setups')
   await expect(author.getByRole('article').filter({ hasText: name })).toContainText('Prestige MP')
-  await author.getByRole('button', { name: 'Partilhar' }).first().click()
+  await share(author)
   await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
   await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
   await expect(author.getByText('Setup publicado na raquete nova; saiu da antiga')).toBeVisible()
@@ -286,13 +344,17 @@ test('a setup moved to another racket moves its recipe; a hidden one stays put',
   // Another recipe: copies start again, the goals carry over.
   expect(after.data![0]).toMatchObject({ copies: 0, goals: ['control'] })
 
-  // Hidden by reports: publishing again changes nothing.
+  // Hidden by reports: the author is told, and cannot publish it again.
   await admin.from('public_setups').update({ hidden: true }).eq('id', after.data![0].id)
   await author.keyboard.press('Escape')
-  await author.getByRole('button', { name: 'Partilhar' }).first().click()
-  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
-  await author.getByRole('dialog').getByRole('button', { name: 'Atualizar na comunidade' }).click()
-  await expect(author.getByText('Este setup foi escondido depois de denúncias', { exact: false })).toBeVisible()
+  await share(author)
+  await expect(author.getByRole('dialog').getByText('Este setup foi escondido depois de denúncias', { exact: false })).toBeVisible()
+  await expect(author.getByRole('dialog').getByRole('button', { name: /na comunidade$/ })).toHaveCount(0)
+  await author.keyboard.press('Escape')
+  await author.getByRole('article').filter({ hasText: name }).getByRole('button', { name: `Abrir: ${name}` }).click()
+  const mine = (await openCommunity(author)).getByRole('listitem').filter({ hasText: name })
+  await expect(mine).toContainText('Escondido depois de denúncias: só tu o vês até o revermos.')
+  await expect(mine.getByRole('button', { name: 'Atualizar' })).toHaveCount(0)
   const still = await admin.from('public_setups').select('id, hidden').eq('name', name)
   expect(still.data).toEqual([{ id: after.data![0].id, hidden: true }])
 })

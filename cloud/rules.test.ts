@@ -143,10 +143,10 @@ describe('public setups', () => {
     expect((await anon.from('public_setups').insert(setup)).error).not.toBeNull()
     const { data, error } = await free.db.from('public_setups').insert(setup).select('id').single()
     expect(error).toBeNull()
-    const seen = await anon.from('public_setups').select('name, copies').eq('id', data!.id).single()
+    const seen = await anon.from('community_setups').select('name, copies').eq('id', data!.id).single()
     expect(seen.data).toEqual({ name: 'Mais plow', copies: 0 })
     await anon.rpc('count_copy', { setup_id: data!.id })
-    expect((await anon.from('public_setups').select('copies').eq('id', data!.id).single()).data?.copies).toBe(1)
+    expect((await anon.from('community_setups').select('copies').eq('id', data!.id).single()).data?.copies).toBe(1)
   })
 
   it('cannot fake copies or publish as someone else', async () => {
@@ -160,14 +160,14 @@ describe('public setups', () => {
       const r = await user(n)
       expect((await r.db.from('reports').insert({ setup_id: data!.id })).error).toBeNull()
     }
-    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data).toEqual([])
-    // The author still sees it.
-    expect((await free.db.from('public_setups').select('hidden').eq('id', data!.id).single()).data?.hidden).toBe(true)
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toEqual([])
+    // The author still sees it, and that it is hidden.
+    expect((await free.db.from('community_setups').select('hidden, mine').eq('id', data!.id).single()).data).toEqual({ hidden: true, mine: true })
   })
 
   it('a copy counts once per player; without an account, at most 20 a day', async () => {
     const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'Contada' }).select('id').single()
-    const copies = async () => (await anon.from('public_setups').select('copies').eq('id', data!.id).single()).data?.copies
+    const copies = async () => (await anon.from('community_setups').select('copies').eq('id', data!.id).single()).data?.copies
     const p = await user('c1')
     await p.db.rpc('count_copy', { setup_id: data!.id })
     await p.db.rpc('count_copy', { setup_id: data!.id })
@@ -180,12 +180,49 @@ describe('public setups', () => {
     const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'Popular' }).select('id').single()
     await admin.from('public_setups').update({ copies: 50 }).eq('id', data!.id)
     for (const n of ['p1', 'p2', 'p3']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id })
-    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data).toHaveLength(1)
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toHaveLength(1)
     for (const n of ['p4', 'p5']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id })
-    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data).toEqual([])
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toEqual([])
     // Only the service role sees the queue.
     expect((await anon.from('moderation_queue').select('id')).data ?? []).toEqual([])
     expect((await admin.from('moderation_queue').select('reports').eq('id', data!.id).single()).data?.reports).toBe(5)
+  })
+})
+
+describe('who wrote a recipe', () => {
+  const setup = { racket_id: 'stock-x', name: 'De quem', config: { leadG: { tip: 2 } }, specs: { weightG: 330 } }
+
+  it('the table is read only by its author; everyone else reads the view', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...setup, setup_ref: 'mine-only' }).select('id').single()
+    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data ?? []).toEqual([])
+    expect((await pro.db.from('public_setups').select('id').eq('id', data!.id)).data).toEqual([])
+    expect((await free.db.from('public_setups').select('id').eq('id', data!.id)).data).toHaveLength(1)
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toHaveLength(1)
+  })
+
+  it('the view names no account: an opaque key, the same for all of one author', async () => {
+    const one = (await free.db.from('public_setups').insert({ ...setup, name: 'Um' }).select('id').single()).data!.id
+    const two = (await free.db.from('public_setups').insert({ ...setup, name: 'Dois' }).select('id').single()).data!.id
+    const other = (await pro.db.from('public_setups').insert({ ...setup, name: 'Outro' }).select('id').single()).data!.id
+    expect((await anon.from('community_setups').select('user_id').eq('id', one)).error).not.toBeNull()
+    const key = async (id: string) => (await anon.from('community_setups').select('author_key').eq('id', id).single()).data?.author_key
+    expect(await key(one)).toBe(await key(two))
+    expect(await key(one)).not.toBe(await key(other))
+    expect([free.id, pro.id]).not.toContain(await key(one))
+  })
+
+  it('mine and setup_ref only for the author', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...setup, setup_ref: 'ref-private' }).select('id').single()
+    const cols = 'mine, setup_ref'
+    expect((await free.db.from('community_setups').select(cols).eq('id', data!.id).single()).data).toEqual({ mine: true, setup_ref: 'ref-private' })
+    expect((await pro.db.from('community_setups').select(cols).eq('id', data!.id).single()).data).toEqual({ mine: false, setup_ref: null })
+    expect((await anon.from('community_setups').select(cols).eq('id', data!.id).single()).data).toEqual({ mine: false, setup_ref: null })
+  })
+
+  it('a report keeps its reason for the moderation queue', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'Falso' }).select('id').single()
+    for (const n of ['why1', 'why2', 'why3']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id, reason: 'false' })
+    expect((await admin.from('moderation_queue').select('reasons').eq('id', data!.id).single()).data?.reasons).toEqual(['false', 'false', 'false'])
   })
 })
 
@@ -230,15 +267,15 @@ describe('community recipes', () => {
   it('nobody updates someone else’s recipe', async () => {
     const { data } = await free.db.from('public_setups').insert({ ...recipe, setup_ref: 'not-yours' }).select('id').single()
     await pro.db.from('public_setups').update({ name: 'Roubado' }).eq('id', data!.id)
-    expect((await anon.from('public_setups').select('name').eq('id', data!.id).single()).data?.name).toBe('Estável')
+    expect((await anon.from('community_setups').select('name').eq('id', data!.id).single()).data?.name).toBe('Estável')
   })
 
   it('copies and reports still work through their functions', async () => {
     const { data } = await free.db.from('public_setups').insert({ ...recipe, setup_ref: 'counted' }).select('id').single()
     await anon.rpc('count_copy', { setup_id: data!.id })
-    expect((await anon.from('public_setups').select('copies').eq('id', data!.id).single()).data?.copies).toBe(1)
+    expect((await anon.from('community_setups').select('copies').eq('id', data!.id).single()).data?.copies).toBe(1)
     for (const n of ['rr1', 'rr2', 'rr3']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id })
-    expect((await anon.from('public_setups').select('id').eq('id', data!.id)).data).toEqual([])
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toEqual([])
   })
 
   it('counts per frame show only visible setups, to anyone', async () => {
