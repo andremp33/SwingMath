@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diagnose, FREE_PLANS, freePlansLeft, matchPlanKey, planAccess, targetPlanKey, withPlan } from './freePlans'
+import { diagnose, FREE_PLANS, FREE_SETUPS, freePlansLeft, matchPlanKey, planAccess, setupRoom, targetPlanKey, withPlan } from './freePlans'
 import { solveTarget } from './match'
 import type { Base } from './physics'
 
@@ -43,5 +43,13 @@ describe('free plans', () => {
     const light = diagnose(base, { weightG: 290 }, solveTarget(base, { weightG: 290 }))
     expect(light.missing.weightG).toBe(-10)
     expect(light.reachable).toBe(false)
+  })
+
+  it('free setups: room for a new one below the limit; past it, Pro (what is there stays)', () => {
+    expect(setupRoom(0, false)).toBe(true)
+    expect(setupRoom(FREE_SETUPS - 1, false)).toBe(true)
+    expect(setupRoom(FREE_SETUPS, false)).toBe(false)
+    expect(setupRoom(FREE_SETUPS + 3, false)).toBe(false)
+    expect(setupRoom(50, true)).toBe(true)
   })
 })

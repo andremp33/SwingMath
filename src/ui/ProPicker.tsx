@@ -1,7 +1,7 @@
 import { ExternalLink, Play } from 'lucide-react'
 import { useState } from 'react'
 import { PRO_TARGETS, type ProTarget } from '../data/pros'
-import { useStore } from '../data/store'
+import { isPro, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum, fold, LOCALE } from '../lib/format'
 import { Badge, Button, cx, TextField } from './basics'
@@ -14,10 +14,12 @@ export const monthYear = (ym: string, lang: string) =>
 /** A pro's name and racquet, searched without accents or case. */
 const proMatches = (p: ProTarget, q: string) => fold(`${p.player} ${p.racket}`).includes(fold(q.trim()))
 
-/** A pro as a row: the player, measured or reported, the racquet and its numbers. */
+/** A pro as a row: the player, measured or reported, the racquet and its
+ *  numbers. The numbers are Pro: everyone else sees whose racquet it is. */
 export function ProRow({ p }: { p: ProTarget }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
+  const pro = useStore(isPro)
   const u = useUnits()
   return (
     <>
@@ -28,10 +30,14 @@ export function ProRow({ p }: { p: ProTarget }) {
         </span>
         <span className="block truncate text-muted">{p.racket}</span>
       </span>
-      <span className="num shrink-0 text-right text-xs text-muted">
-        {u.weight(p.weightG)} {u.weightUnit} · SW {fmtNum(p.swingweight, 0, lang)}
-        <span className="block">{p.strung ? t.match.strungShort : t.match.unstrungShort}</span>
-      </span>
+      {pro ? (
+        <span className="num shrink-0 text-right text-xs text-muted">
+          {u.weight(p.weightG)} {u.weightUnit} · SW {fmtNum(p.swingweight, 0, lang)}
+          <span className="block">{p.strung ? t.match.strungShort : t.match.unstrungShort}</span>
+        </span>
+      ) : (
+        <Badge tone="pro">Pro</Badge>
+      )}
     </>
   )
 }

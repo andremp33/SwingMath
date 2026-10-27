@@ -1,6 +1,6 @@
-import { ExternalLink, LogOut, RefreshCw, Trash2, UserRound } from 'lucide-react'
+import { ExternalLink, LogOut, RefreshCw, Sparkles, Trash2, UserRound } from 'lucide-react'
 import { useState } from 'react'
-import { AccountError, deleteAccount, isReviewEmail, sendCode, signInWithPassword, signOut, syncNow, verifyCode } from '../app/account'
+import { AccountError, deleteAccount, isReviewEmail, sendCode, signInWithPassword, signOut, syncHere, syncNow, verifyCode } from '../app/account'
 import { accountProActive, useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { cloudConfigured } from '../lib/cloud'
@@ -9,6 +9,7 @@ import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
 import { Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
+import { usePaywall } from './Pro'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -152,6 +153,7 @@ function SignedIn() {
   const accountPro = useStore((s) => s.accountPro)
   const sync = useStore((s) => s.sync)
   const [busy, setBusy] = useState(false)
+  const paywall = usePaywall()
   // During the beta every account has Pro, sync included.
   const pro = PRO_BETA || accountProActive(accountPro)
 
@@ -169,17 +171,20 @@ function SignedIn() {
             : t.account.noPro
         }
       />
-      {/* Any account: it is the player's backup. */}
+      {/* Any account: it is the player's backup. Without Pro, on one device
+          at a time; this one can take it back. */}
       <SettingsRow
         label={t.account.sync}
         hint={
           sync.error === 'offline'
             ? t.account.syncOffline
-            : sync.error
-              ? t.account.syncOther
-              : sync.lastAt
-                ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
-                : t.account.never
+            : sync.error === 'elsewhere'
+              ? t.account.syncElsewhere
+              : sync.error
+                ? t.account.syncOther
+                : sync.lastAt
+                  ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
+                  : t.account.never
         }
       >
         <Button
@@ -189,13 +194,20 @@ function SignedIn() {
           loading={busy}
           onClick={async () => {
             setBusy(true)
-            await syncNow()
+            await (sync.error === 'elsewhere' ? syncHere() : syncNow())
             setBusy(false)
           }}
         >
-          {t.account.syncNow}
+          {sync.error === 'elsewhere' ? t.account.syncHere : t.account.syncNow}
         </Button>
       </SettingsRow>
+      {sync.error === 'elsewhere' && (
+        <SettingsRow label={t.paywall.titles.sync} hint={t.paywall.subs.sync}>
+          <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('sync', { asked: true })}>
+            {t.paywall.seePro}
+          </Button>
+        </SettingsRow>
+      )}
     </>
   )
 }

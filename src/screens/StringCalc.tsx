@@ -8,6 +8,7 @@ import { Card, CardTitle, PageTitle, Select, Toggle } from '../ui/basics'
 import { RacketPicker } from '../ui/RacketPicker'
 import { StringbedEditor } from '../ui/strings'
 import { InfoTip } from '../ui/disclosure'
+import { ProGate } from './Pro'
 
 /** Same stringbed stiffness in another frame, pattern or string. */
 export function StringCalc() {
@@ -69,25 +70,13 @@ export function StringCalc() {
 
         <Card label={t.stringCalc.result}>
           <CardTitle info={<InfoTip title={t.stringCalc.title}>{t.stringCalc.hint}</InfoTip>}>{t.stringCalc.result}</CardTitle>
+          {/* The answer is Pro; behind the lock, a made-up one. */}
+          <ProGate title={t.paywall.titles.strings} reason="strings" bare preview={<dl><Readout label={t.strings.tension} value={kg(23.5)} sub={lb(23.5)} /></dl>}>
             {eq && from && to && (
               <div className="space-y-4">
                 <dl className="space-y-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="text-sm text-muted">{toCrosses ? t.strings.mains : t.strings.tension}</dt>
-                    <dd className="text-right">
-                      <span className="readout text-3xl">{kg(eq.mainsKg)}</span>
-                      <span className="num block text-sm text-muted">{lb(eq.mainsKg)}</span>
-                    </dd>
-                  </div>
-                  {toCrosses && (
-                    <div className="flex items-baseline justify-between gap-3">
-                      <dt className="text-sm text-muted">{t.strings.crosses}</dt>
-                      <dd className="text-right">
-                        <span className="readout text-3xl">{kg(eq.crossesKg)}</span>
-                        <span className="num block text-sm text-muted">{lb(eq.crossesKg)}</span>
-                      </dd>
-                    </div>
-                  )}
+                  <Readout label={toCrosses ? t.strings.mains : t.strings.tension} value={kg(eq.mainsKg)} sub={lb(eq.mainsKg)} />
+                  {toCrosses && <Readout label={t.strings.crosses} value={kg(eq.crossesKg)} sub={lb(eq.crossesKg)} />}
                 </dl>
                 <p className="num text-sm text-muted">
                   {fmt(t.stringCalc.same, {
@@ -97,8 +86,21 @@ export function StringCalc() {
                 </p>
               </div>
             )}
+          </ProGate>
         </Card>
       </div>
     </>
+  )
+}
+
+function Readout({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-sm text-muted">{label}</dt>
+      <dd className="text-right">
+        <span className="readout text-3xl">{value}</span>
+        <span className="num block text-sm text-muted">{sub}</span>
+      </dd>
+    </div>
   )
 }

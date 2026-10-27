@@ -53,7 +53,8 @@ export interface SyncState {
   userId: string | null
   cursor: string | null
   lastAt?: number
-  error?: 'offline' | 'other'
+  /** 'elsewhere': without Pro, another device has the sync. */
+  error?: 'offline' | 'other' | 'elsewhere'
 }
 
 export const defaultConfig = (racketId = STOCK_RACKETS[0].id): SetupConfig => ({
