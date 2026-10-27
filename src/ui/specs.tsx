@@ -68,8 +68,10 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
 
 /** Four numbers in a row, for the reference on phones. */
 export function SpecStrip({ rows }: { rows: SpecRow[] }) {
+  // Each column as wide as its figure, the room left spread between them:
+  // the long ones (kg·cm²) fit a phone's panel without cutting.
   return (
-    <dl className="grid grid-cols-4 gap-2">
+    <dl className="grid grid-cols-[repeat(4,auto)] justify-between gap-x-2">
       {rows.slice(0, 4).map((r) => (
         <div key={r.key} className="min-w-0">
           <dt className="truncate text-xs text-muted">{r.key === 'sw' ? 'SW' : r.key === 'tw' ? 'TW' : r.label}</dt>

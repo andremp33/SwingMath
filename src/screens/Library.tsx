@@ -98,7 +98,7 @@ export function Library() {
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="h-11 w-full rounded-md border border-border-input bg-bg pl-9 pr-3"
+              className="h-11 w-full rounded-md border border-border-input bg-field pl-9 pr-3"
             />
           </div>
         </div>

@@ -28,7 +28,7 @@ export function Settings() {
   return (
     <div className="max-w-2xl">
       <BackTitle fallback="/perfil">{t.settings.title}</BackTitle>
-      <div className="space-y-8 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">
+      <div className="space-y-8">
         <SettingsGroup title={t.settings.prefs}>
           <SettingsRow label={t.settings.language} stack>
             <Segmented<Lang>

@@ -84,7 +84,7 @@ export function Setups() {
             )}
           </div>
           {selecting && <p className="mb-2 text-sm text-muted">{t.setups.selectHint}</p>}
-          <ul className={cx('grid grid-cols-1 border-b border-border md:grid-cols-2 md:gap-x-8', selecting && 'mb-20')}>
+          <ul className={cx('grid grid-cols-1 gap-3 md:grid-cols-2', selecting && 'mb-32 sm:mb-20')}>
             {list.map((s) => (
               <li key={s.id} className="min-w-0">
                 <SetupCard
@@ -110,11 +110,12 @@ export function Setups() {
           aria-label={t.setups.compare}
           className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:left-56"
         >
-          <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-3">
+          {/* On a narrow phone the buttons go under the count, not off the edge. */}
+          <div className="mx-auto flex max-w-[1080px] flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <span className="text-sm font-medium" aria-live="polite">
               {picked.length === 1 ? t.setups.selectedOne : fmt(t.setups.selected, { n: picked.length })}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
               {/* The second place can be a pro. */}
               {picked.length === 1 && (
                 <Button icon={UserRound} onClick={() => nav(`/setups/pro/${picked[0]}`)}>
@@ -179,8 +180,10 @@ function SetupCard({
   }
 
   return (
-    <article aria-label={s.name} className={cx('relative border-t border-border py-4 pl-4 transition-colors', picked && 'bg-surface-2/50')}>
-      <span aria-hidden className={cx('absolute inset-y-4 left-0 w-0.5 rounded-full', picked ? 'bg-accent' : 'bg-transparent')} />
+    <article
+      aria-label={s.name}
+      className={cx('relative h-full rounded-xl border bg-surface p-4 shadow-card transition-[border-color,box-shadow]', picked ? 'border-accent ring-1 ring-accent' : 'border-border')}
+    >
       <div className="flex items-start justify-between gap-2">
         {selecting && (
           <input

@@ -56,8 +56,8 @@ export function MyRacketsRow() {
               aria-pressed={on}
               onClick={() => open(o)}
               className={cx(
-                'min-h-10 rounded-full border px-3.5 text-sm transition-colors',
-                on ? 'border-text bg-text font-semibold text-bg' : 'border-border-input hover:bg-surface-2',
+                'press min-h-10 rounded-full border px-3.5 text-sm',
+                on ? 'border-text bg-text font-semibold text-bg' : 'border-transparent bg-surface-2 hover:bg-border',
               )}
             >
               {o.name}

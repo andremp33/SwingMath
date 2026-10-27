@@ -44,7 +44,7 @@ export function RacketPicker({
         aria-haspopup="dialog"
         aria-labelledby={`${id}-l ${id}-v`}
         onClick={() => setOpen(true)}
-        className="flex h-12 w-full items-center justify-between gap-2 rounded-md border border-border-input bg-bg px-3 text-left"
+        className="flex h-12 w-full items-center justify-between gap-2 rounded-md border border-border-input bg-field px-3 text-left"
       >
         {value ? (
           <span id={`${id}-v`} className="truncate">
@@ -69,7 +69,7 @@ export function RacketPicker({
             onChange={(e) => setQ(e.target.value)}
             placeholder={t.library.search}
             aria-label={t.library.search}
-            className="h-11 w-full rounded-md border border-border-input bg-bg pl-9 pr-3"
+            className="h-11 w-full rounded-md border border-border-input bg-field pl-9 pr-3"
           />
         </div>
         <ul className="-mx-2 max-h-[55dvh] overflow-y-auto">

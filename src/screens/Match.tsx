@@ -561,7 +561,7 @@ function TargetPicker({ value, groups, selected }: { value?: { name: string; adj
         aria-haspopup="dialog"
         aria-labelledby={`${id}-l ${id}-v`}
         onClick={() => setOpen(true)}
-        className="flex h-12 w-full items-center justify-between gap-2 rounded-md border border-border-input bg-bg px-3 text-left"
+        className="flex h-12 w-full items-center justify-between gap-2 rounded-md border border-border-input bg-field px-3 text-left"
       >
         <span id={`${id}-v`} className={cx('truncate', value ? 'font-semibold' : 'text-muted')}>
           {value ? value.name : t.match.pickTarget}
@@ -579,7 +579,7 @@ function TargetPicker({ value, groups, selected }: { value?: { name: string; adj
             onChange={(e) => setQ(e.target.value)}
             placeholder={t.match.targetSearch}
             aria-label={t.match.targetSearch}
-            className="h-11 w-full rounded-md border border-border-input bg-bg pl-9 pr-3"
+            className="h-11 w-full rounded-md border border-border-input bg-field pl-9 pr-3"
           />
         </div>
         <div className="-mx-2 max-h-[55dvh] space-y-4 overflow-y-auto">

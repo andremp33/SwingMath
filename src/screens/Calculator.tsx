@@ -117,7 +117,7 @@ export function Calculator() {
 
       <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_300px] md:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="contents md:block md:space-y-4">
-          <Card className="order-1 border-t-0 pt-0 md:order-none">
+          <Card className="order-1 md:order-none">
             <div className="space-y-4">
               {/* The player's own rackets first; the picker then names their model. */}
               <MyRacketsRow />
@@ -245,21 +245,24 @@ export function Calculator() {
               // Until the first lead goes on, where to start.
               totalLead === 0 && <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
             )}
-            <LeadEditor
-              sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
-              geometry={geo}
-              pattern={racket.pattern}
-              lead={config.leadG}
-              extra={extra}
-              selected={selected}
-              onSelect={setSelected}
-              onLead={setLead}
-              onExtra={(id, grams) => updateExtra(id, { grams })}
-              onRemoveExtra={(id) => {
-                removeExtra(id)
-                setSelected('tip')
-              }}
-            />
+            {/* The racket keeps its own tones on the panel (index.css). */}
+            <div className="racket-tones">
+              <LeadEditor
+                sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
+                geometry={geo}
+                pattern={racket.pattern}
+                lead={config.leadG}
+                extra={extra}
+                selected={selected}
+                onSelect={setSelected}
+                onLead={setLead}
+                onExtra={(id, grams) => updateExtra(id, { grams })}
+                onRemoveExtra={(id) => {
+                  removeExtra(id)
+                  setSelected('tip')
+                }}
+              />
+            </div>
 
             <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3" role="group" aria-labelledby="custom-title">
               <h3 id="custom-title" className="flex items-center gap-1.5 text-sm text-muted">

@@ -89,7 +89,7 @@ function StringName({ label, value, onType, onPick }: { label: string; value: st
         autoComplete="off"
         maxLength={60}
         placeholder={t.strings.namePlaceholder}
-        className="h-11 w-full rounded-md border border-border-input bg-surface px-3 text-base text-text placeholder:text-muted/60 focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-text"
+        className="h-11 w-full rounded-md border border-border-input bg-field px-3 text-base text-text placeholder:text-muted/80 focus:outline-none focus-visible:outline-2 focus-visible:outline-accent-text"
         value={value}
         onChange={(e) => {
           onType(e.target.value)

@@ -40,7 +40,7 @@ export const fromDateInput = (s: string) => {
 }
 const sameDay = (a: number, b: number) => toDateInput(a) === toDateInput(b)
 
-const inputClass = 'h-11 w-full rounded-md border border-border-input bg-bg px-3'
+const inputClass = 'h-11 w-full rounded-md border border-border-input bg-field px-3'
 
 export function DateField({ label, value, onChange }: { label: string; value: number; onChange: (ms: number) => void }) {
   const id = useId()
@@ -71,7 +71,7 @@ function Notes({ value, onChange }: { value?: string; onChange: (v: string) => v
         maxLength={500}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border-input bg-bg px-3 py-2"
+        className="w-full rounded-md border border-border-input bg-field px-3 py-2"
       />
     </div>
   )
