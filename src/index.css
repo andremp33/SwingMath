@@ -88,66 +88,119 @@
   color-scheme: light;
 }
 
-/* The player's court (Settings), over the clay above. Only the ground, the
-   ink and the accent move; data and area colours stay as they are.
-   Hard court: the blue of a fast court. Grass: lawn green with the purple of
-   the oldest grass tournament. Contrast checked like clay's: text 15:1,
-   muted 5:1 or more on every surface, field edges 3:1. */
+/* The player's court (Settings). In the app, data-court is always set; the
+   website has none and keeps the clay above. Each court moves the ground,
+   the ink and the accent (data and area colours stay), and paints its own
+   surface, texture and white lines on the app's bar (.court-band, the top bar
+   on a phone) and rail (.court-rail, the side rail on a computer).
+   Contrast checked for every court and theme: text 15:1, muted 5:1 or more
+   on every surface, field edges 3:1, white on each court 4.8:1 or more. */
+:root {
+  /* Grain: light speckles and dark grains, from the same kind of noise. */
+  --grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.4 0 0 0 -1.55'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.6 0 0 0 1.05'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-fine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1.8 0 0 0 -1.2'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23n)'/%3E%3C/svg%3E");
+  --court-shade: linear-gradient(transparent, transparent);
+}
+:root:not([data-theme='light']) {
+  /* Courts under lights at night: the same paint, a little darker. */
+  --court-shade: linear-gradient(rgb(0 0 0 / 0.22), rgb(0 0 0 / 0.22));
+}
+
+/* Clay: crushed brick, grainy, the brand's own. */
+:root[data-court='clay'] {
+  --court-base: #a94c26;
+  --court-paint: var(--grain-light), var(--grain-dark), linear-gradient(#a94c26, #a94c26);
+  --court-logo: #ffd6bf;
+}
+:root[data-court='clay']:not([data-theme='light']) {
+  --c-bg: #16110e;
+  --c-surface: #1e1814;
+  --c-surface-2: #2a221c;
+  --c-raised: #3b322a;
+  --c-border: #33291f;
+  --c-border-input: #74695e;
+  --c-text: #ede7df;
+  --c-text-muted: #a89d91;
+}
+:root[data-court='clay'][data-theme='light'] {
+  --c-bg: #f6efe7;
+  --c-surface: #fffcf8;
+  --c-surface-2: #efe5da;
+  --c-border: #e6dacc;
+  --c-border-input: #877b6e;
+  --c-text: #1d1914;
+  --c-text-muted: #615a51;
+}
+
+/* Hard court: a fast court's acrylic blue with fine sand in the paint. By
+   day the accent is the court's own blue; at night, the ball's yellow. */
+:root[data-court='hard'] {
+  --court-base: #1f5fa6;
+  --court-paint: var(--grain-fine), linear-gradient(#1f5fa6, #1f5fa6);
+}
 :root[data-court='hard']:not([data-theme='light']) {
-  --c-bg: #0e131a;
-  --c-surface: #151c26;
-  --c-surface-2: #1f2835;
-  --c-raised: #2d3847;
-  --c-border: #263142;
-  --c-border-input: #5f6c80;
-  --c-text: #e8ecf2;
-  --c-text-muted: #9ba6b6;
-  --c-accent: #46a6dc;
-  --c-accent-text: #68b8e6;
-  --c-on-accent: #04131d;
-  --c-bar: #46a6dc;
+  --c-bg: #0a1628;
+  --c-surface: #11223b;
+  --c-surface-2: #1a2e4c;
+  --c-raised: #26406a;
+  --c-border: #1f3352;
+  --c-border-input: #5d7598;
+  --c-text: #e8eef7;
+  --c-text-muted: #a2b3cb;
+  --c-accent: #d6ec3c;
+  --c-accent-text: #dcef5e;
+  --c-on-accent: #1a2000;
+  --c-bar: #d6ec3c;
 }
 :root[data-court='hard'][data-theme='light'] {
-  --c-bg: #eef2f6;
-  --c-surface: #fbfcfe;
-  --c-surface-2: #e1e7ef;
+  --c-bg: #e9f1fb;
+  --c-surface: #fbfdff;
+  --c-surface-2: #dbe7f6;
   --c-raised: #ffffff;
-  --c-border: #d7dee8;
-  --c-border-input: #7a8597;
-  --c-text: #131a23;
-  --c-text-muted: #526070;
-  --c-accent: #1468a6;
-  --c-accent-text: #11609a;
+  --c-border: #cddcef;
+  --c-border-input: #6c82a3;
+  --c-text: #0f1a2a;
+  --c-text-muted: #475f7e;
+  --c-accent: #1565c0;
+  --c-accent-text: #0f5fa0;
   --c-on-accent: #ffffff;
-  --c-bar: #1468a6;
+  --c-bar: #1565c0;
+}
+
+/* Grass: lawn mown in stripes, with the purple of the oldest grass
+   tournament as the accent. */
+:root[data-court='grass'] {
+  --court-base: #3a7730;
+  --court-paint: var(--grain-dark), repeating-linear-gradient(90deg, #3f7f34 0 44px, #376f2d 44px 88px);
 }
 :root[data-court='grass']:not([data-theme='light']) {
-  --c-bg: #0f1410;
-  --c-surface: #161d17;
-  --c-surface-2: #202a21;
-  --c-raised: #2d382e;
-  --c-border: #27312a;
-  --c-border-input: #647163;
-  --c-text: #e8ede5;
-  --c-text-muted: #9fa99b;
-  --c-accent: #b08be6;
-  --c-accent-text: #bf9ef0;
-  --c-on-accent: #170b27;
-  --c-bar: #b08be6;
+  --c-bg: #0b170d;
+  --c-surface: #112214;
+  --c-surface-2: #1a301d;
+  --c-raised: #284429;
+  --c-border: #1f3523;
+  --c-border-input: #5e7d5f;
+  --c-text: #e9f2e6;
+  --c-text-muted: #a2b59e;
+  --c-accent: #b58cf0;
+  --c-accent-text: #c4a3f5;
+  --c-on-accent: #180a2a;
+  --c-bar: #b58cf0;
 }
 :root[data-court='grass'][data-theme='light'] {
-  --c-bg: #f1f4ec;
-  --c-surface: #fcfdf9;
-  --c-surface-2: #e4e9dc;
+  --c-bg: #edf5e6;
+  --c-surface: #fbfdf8;
+  --c-surface-2: #dfebd4;
   --c-raised: #ffffff;
-  --c-border: #d8dfd0;
-  --c-border-input: #7c8676;
-  --c-text: #17201a;
-  --c-text-muted: #556052;
-  --c-accent: #5a2d8f;
-  --c-accent-text: #5a2d8f;
+  --c-border: #d0dfc4;
+  --c-border-input: #72866a;
+  --c-text: #142016;
+  --c-text-muted: #4d6047;
+  --c-accent: #5b2a96;
+  --c-accent-text: #5b2a96;
   --c-on-accent: #ffffff;
-  --c-bar: #5a2d8f;
+  --c-bar: #5b2a96;
 }
 
 @theme inline {
@@ -332,6 +385,43 @@ textarea {
 }
 .press:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+/* The court itself: the app's bar on a phone and its rail on a computer
+   are painted as the player's court, with a white line where it ends
+   (the baseline, and its centre mark, on the bar; the sideline on the rail).
+   What sits on it reads its colours from these local tokens. */
+.court-band {
+  --c-bg: var(--court-base);
+  --c-text: #ffffff;
+  --c-text-muted: rgb(255 255 255 / 0.92);
+  --c-surface-2: rgb(255 255 255 / 0.16);
+  --c-border: rgb(255 255 255 / 0.3);
+  --c-accent-text: #ffffff;
+  --c-brand: var(--court-logo, #d9764a);
+  color: #ffffff;
+  background:
+    linear-gradient(#fff, #fff) 50% 100% / 3px 10px no-repeat,
+    linear-gradient(#fff, #fff) 0 100% / 100% 3px no-repeat,
+    var(--court-shade),
+    var(--court-paint);
+}
+/* On a phone the rail is the tab bar, which stays the page's own. */
+@media (min-width: 1024px) {
+  .court-rail {
+    --c-bg: var(--court-base);
+    --c-text: #ffffff;
+    --c-text-muted: rgb(255 255 255 / 0.92);
+    --c-surface-2: rgb(255 255 255 / 0.16);
+    --c-border: rgb(255 255 255 / 0.3);
+    --c-accent-text: #ffffff;
+    --c-brand: var(--court-logo, #d9764a);
+    color: #ffffff;
+    background:
+      linear-gradient(#fff, #fff) 100% 0 / 3px 100% no-repeat,
+      var(--court-shade),
+      var(--court-paint);
+  }
 }
 
 /* The calculator's racket keeps the tones it was drawn in (clay's), whatever

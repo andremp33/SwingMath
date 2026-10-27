@@ -5,6 +5,7 @@ import { Share } from '@capacitor/share'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { getCloud } from './cloud'
+import { courtBarColor } from './courtBar'
 import { openPath, reminderPath } from './platform'
 
 /** Address the sign-in email's link opens in the store apps. */
@@ -12,13 +13,16 @@ export const APP_AUTH_URL = 'app.swingmath://auth'
 
 /** Store apps only: status bar, Android back button, sign-in links. */
 export async function initNative() {
+  // The top bar is the player's court (light text on its paint), and the
+  // status bar runs on from it.
   const paintStatusBar = () => {
     const dark = document.documentElement.dataset.theme !== 'light'
-    StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {})
-    StatusBar.setBackgroundColor({ color: dark ? '#141312' : '#f5f3ee' }).catch(() => {})
+    const court = courtBarColor()
+    StatusBar.setStyle({ style: court || dark ? Style.Dark : Style.Light }).catch(() => {})
+    StatusBar.setBackgroundColor({ color: court ?? (dark ? '#141312' : '#f5f3ee') }).catch(() => {})
   }
   paintStatusBar()
-  new MutationObserver(paintStatusBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  new MutationObserver(paintStatusBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-court'] })
   // The splash stays until the first screen has something on it (a screen
   // still loading shows nothing), or 3 s at the most.
   const root = document.getElementById('root')!
