@@ -192,7 +192,7 @@ function Hero() {
           <h1 id="hero-title" className="site-display site-rise">
             {t.heroTitle}
           </h1>
-          <p className="site-rise mt-8 max-w-[38ch] text-[18px] leading-[1.55]" style={stagger(1)}>
+          <p className="site-rise site-hero-text mt-8 max-w-[38ch] text-[18px] leading-[1.55]" style={stagger(1)}>
             {t.heroSub}
           </p>
           <div className="site-rise" style={stagger(2)}>
@@ -200,7 +200,7 @@ function Hero() {
           </div>
         </div>
       </div>
-      <div className="site-stage mt-12 lg:mt-[-136px]">
+      <div className="site-stage mt-12 xl:mt-[-136px]">
         <div className="site-shutter">
           <img src={img('clay.jpg')} alt="" width={1920} height={1280} className="site-stage-img" fetchPriority="high" />
         </div>

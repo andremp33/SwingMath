@@ -414,6 +414,13 @@ input[type='range'].range:disabled {
     clip-path: polygon(120px 0, 100% 0, 100% 100%, 0 100%, 0 120px);
   }
 }
+/* From 1280px the stage rises beside the words: they keep to the four
+   columns left of it (less a little for a scrollbar). */
+@media (min-width: 1280px) {
+  .site-hero-text {
+    max-width: min(38ch, calc(4 * ((100vw - 2 * var(--site-margin) - 11 * var(--site-gap)) / 12) + 3 * var(--site-gap) - 8px));
+  }
+}
 .site-shutter {
   position: absolute;
   inset: 0;
