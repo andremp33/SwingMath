@@ -274,6 +274,406 @@ input[type='range'].range:disabled {
   opacity: 0.5;
 }
 
+/* The website (Landing.tsx). One grid, one pair of margins, five type sizes:
+   display, section heading, 24, text (17–18), small (13–15). Interface
+   fragments (data-ui) keep the app's own sizes, borders and radii. */
+:root {
+  --site-margin: 16px;
+  --site-gap: 20px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --site-dark: #1c1a17;
+  --site-dark-ink: #f5f3ee;
+  --site-dark-muted: #c9c4ba;
+}
+:root[data-theme='dark'] {
+  --site-dark: #0b0a09;
+}
+@media (min-width: 640px) {
+  :root {
+    --site-margin: 24px;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --site-margin: 40px;
+  }
+}
+.site-wrap {
+  padding-inline: var(--site-margin);
+}
+.site-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--site-gap);
+}
+.site-section {
+  padding-top: 112px;
+}
+.site-section-gap {
+  margin-top: 112px;
+}
+@media (min-width: 1024px) {
+  .site-section {
+    padding-top: 200px;
+  }
+  .site-section-gap {
+    margin-top: 200px;
+  }
+}
+.site-display {
+  font-size: clamp(40px, 10vw, 52px);
+  line-height: 1;
+  font-weight: 560;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+@media (min-width: 1024px) {
+  .site-display {
+    font-size: clamp(52px, 5.2vw, 84px);
+  }
+}
+.site-h2 {
+  font-size: clamp(30px, 3.6vw, 52px);
+  line-height: 1.04;
+  font-weight: 560;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.site-h2-large {
+  font-size: clamp(36px, 8.5vw, 52px);
+  line-height: 1.02;
+  font-weight: 560;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+@media (min-width: 1024px) {
+  .site-h2-large {
+    font-size: clamp(52px, 5.2vw, 84px);
+  }
+}
+.site-link {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+  transition: text-decoration-color 160ms ease;
+}
+@media (hover: hover) {
+  .site-link:hover {
+    text-decoration-color: var(--c-accent);
+  }
+}
+/* The film: as wide as its column, and never taller than the screen. */
+.site-film {
+  max-width: min(100%, 360px);
+}
+@media (min-width: 1024px) {
+  .site-film {
+    max-width: min(100%, calc((100svh - 160px) * 9 / 16));
+  }
+}
+.site-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding-inline: 14px;
+  border-radius: 6px;
+  background: var(--c-surface-2);
+  font-size: 15px;
+}
+@media (hover: hover) {
+  .site-chip:hover {
+    background: var(--c-border);
+  }
+}
+.site-chip[aria-pressed='true'] {
+  background: var(--c-text);
+  color: var(--c-bg);
+}
+.site-photo {
+  border-radius: 2px;
+  background: var(--c-surface-2);
+}
+
+/* Press feedback on everything pressable. */
+.site-press,
+.site-press-soft {
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+.site-press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.site-press-soft:active {
+  transform: scale(0.99);
+}
+.site-round {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.1);
+  color: var(--site-dark-ink);
+}
+.site-round:disabled {
+  opacity: 0.35;
+}
+@media (hover: hover) {
+  .site-round:not(:disabled):hover {
+    background: rgb(255 255 255 / 0.18);
+  }
+}
+
+/* The hero's stage: the clay court, bleeding off the right and bottom
+   edges, its corner cut. On a phone it bleeds off both sides. */
+.site-stage {
+  position: relative;
+  overflow: hidden;
+  /* The clay's own colour, under the picture while it opens or loads. */
+  background: #a4502e;
+  clip-path: polygon(72px 0, 100% 0, 100% 100%, 0 100%, 0 72px);
+}
+@media (min-width: 1024px) {
+  .site-stage {
+    margin-left: calc(var(--site-margin) + 4 * ((100% - 2 * var(--site-margin) - 11 * var(--site-gap)) / 12 + var(--site-gap)));
+    clip-path: polygon(120px 0, 100% 0, 100% 100%, 0 100%, 0 120px);
+  }
+}
+/* From 1280px the stage rises beside the words: they keep to the four
+   columns left of it (less a little for a scrollbar). */
+@media (min-width: 1280px) {
+  .site-hero-text {
+    max-width: min(38ch, calc(4 * ((100vw - 2 * var(--site-margin) - 11 * var(--site-gap)) / 12) + 3 * var(--site-gap) - 8px));
+  }
+}
+.site-shutter {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.site-stage-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 40% 50%;
+}
+.site-stage-inner {
+  padding: 56px var(--site-margin) 72px;
+}
+@media (min-width: 1024px) {
+  .site-stage-inner {
+    padding: 56px 56px 72px;
+  }
+}
+.site-stage-label {
+  color: #fff;
+}
+.site-fragment {
+  box-shadow: none;
+}
+.site-move {
+  transition: transform 260ms var(--ease-out);
+}
+
+/* The showcase: one dark field, a row of the app's screens; the centred
+   one is lit, the text beside it names it. */
+.site-dark {
+  background: var(--site-dark);
+  color: var(--site-dark-ink);
+}
+.site-showcase {
+  --panel: min(78vw, 300px);
+}
+.site-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-inline: calc((100vw - var(--panel)) / 2);
+  outline-offset: -4px;
+}
+.site-row::-webkit-scrollbar {
+  display: none;
+}
+.site-panel {
+  flex: 0 0 var(--panel);
+  scroll-snap-align: center;
+  opacity: 0.22;
+  cursor: pointer;
+  transition: opacity 320ms var(--ease-out);
+}
+.site-panel.is-lit {
+  opacity: 1;
+  cursor: default;
+}
+.site-panel-text {
+  padding: 32px var(--site-margin) 0;
+  max-width: 34ch;
+}
+@media (min-width: 1024px) {
+  .site-showcase {
+    --panel: 320px;
+  }
+  .site-row {
+    gap: max(26vw, 420px);
+    scroll-padding-inline: 0 30vw;
+    padding-inline: calc(35vw - var(--panel) / 2) calc(65vw - var(--panel) / 2);
+  }
+  .site-panel-text {
+    position: absolute;
+    top: 0;
+    left: calc(35vw + var(--panel) / 2 + 48px);
+    width: min(26ch, 24vw);
+    padding: 0;
+  }
+}
+.site-swap {
+  animation: site-swap 220ms var(--ease-out);
+}
+@keyframes site-swap {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Free or Pro: a table without lines; every other row a tone darker, and
+   the Pro column one filled block of ink (the accent is kept for data). */
+.site-plans {
+  border-collapse: collapse;
+}
+.site-plans th,
+.site-plans td {
+  padding: 18px 20px;
+  vertical-align: middle;
+}
+.site-plans thead th {
+  padding-block: 20px 14px;
+}
+.site-plans tbody tr:nth-child(odd) > :not(.is-pro) {
+  background: var(--c-surface-2);
+}
+.site-plans .is-pro {
+  background: var(--c-text);
+  color: var(--c-bg);
+}
+.site-plans thead .is-pro {
+  border-radius: 6px 6px 0 0;
+  padding-top: 32px;
+}
+.site-plans tbody tr:last-child .is-pro {
+  border-radius: 0 0 6px 6px;
+}
+.site-plan-block:nth-child(odd) {
+  background: var(--c-surface-2);
+}
+.site-plan-block:nth-child(even) {
+  background: var(--c-surface);
+}
+
+/* Questions: filled tiles; the open one steps a tone. */
+.site-tile {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  transition: background-color 200ms ease;
+}
+.site-tile[open] {
+  background: var(--c-surface);
+}
+.site-tile[open] summary {
+  color: var(--c-text);
+}
+.site-tile[open] .site-plus {
+  color: var(--c-accent-text);
+}
+.site-plus {
+  position: relative;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.site-plus::before,
+.site-plus::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6.5px;
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 220ms var(--ease-out);
+}
+.site-plus::after {
+  transform: rotate(90deg);
+}
+.site-tile[open] .site-plus::after {
+  transform: rotate(0deg);
+}
+.site-tile summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Motion: the clay opens like a shutter while the picture settles; the
+   first screen's words rise in; each section's parts rise as it arrives.
+   Nothing is hidden unless the script has said it will reveal it, and
+   nothing is ever see-through. */
+@media (prefers-reduced-motion: no-preference) {
+  .site-shutter {
+    animation: site-shutter 1100ms var(--ease-out) both;
+  }
+  .site-shutter .site-stage-img {
+    animation: site-settle 1400ms var(--ease-out) both;
+  }
+  .site-stage-inner {
+    animation: site-lift 700ms var(--ease-out) 300ms both;
+  }
+  /* The first screen's words are never hidden: they only rise. */
+  .site-rise {
+    animation: site-lift 700ms var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 80ms);
+  }
+  /* Revealed by a mask that lifts as the part rises: never see-through,
+     so its contrast holds at every moment. */
+  .site-reveal [data-reveal] {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(24px);
+    transition:
+      clip-path 600ms var(--ease-out),
+      transform 600ms var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 70ms);
+  }
+  .site-reveal [data-reveal].is-in {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+@keyframes site-shutter {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes site-settle {
+  from {
+    transform: scale(1.12);
+  }
+}
+@keyframes site-lift {
+  from {
+    transform: translateY(16px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

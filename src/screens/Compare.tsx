@@ -18,6 +18,7 @@ import { Badge, Button, Card, CardTitle, cx, EmptyState, PageTitle } from '../ui
 import { monthYear, ProList } from '../ui/ProPicker'
 import type { MatchHandoff } from './Match'
 import { useUnits } from '../lib/units'
+import { InfoTip } from '../ui/disclosure'
 
 export function Compare() {
   const t = useT()
@@ -207,7 +208,7 @@ export function CompareView({ a, b, below }: { a: CompareSide; b: CompareSide; b
         {/* Only with something to estimate it from (a pro's stock frame). */}
         {a.feel && b.feel && (
           <Card label={t.calc.feel}>
-            <CardTitle>{t.calc.feel}</CardTitle>
+            <CardTitle info={(a.feelEstimated || b.feelEstimated) && <InfoTip title={t.calc.feel}>{t.compare.feelEstimated}</InfoTip>}>{t.calc.feel}</CardTitle>
             <FeelBars a={a} b={b} />
           </Card>
         )}
@@ -230,7 +231,6 @@ function FeelBars({ a, b }: { a: CompareSide; b: CompareSide }) {
           </li>
         ))}
       </ul>
-      {(a.feelEstimated || b.feelEstimated) && <p className="mb-3 text-xs text-muted">{t.compare.feelEstimated}</p>}
       <div className="space-y-3">
         {FEEL_KEYS.map((k) => (
           <div key={k}>

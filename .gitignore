@@ -37,3 +37,6 @@ replica/
 *.tmp.*
 .vs/
 *.apk
+
+# tasteskill working files (screenshots, direction sheet)
+.taste-skill/

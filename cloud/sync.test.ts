@@ -62,9 +62,22 @@ describe('sync with the real server', () => {
     expect(ca).not.toBeNull()
   })
 
-  it('a free account gets a clear error and keeps its queue', async () => {
-    const remote = await account('nosync', false)
+  it('a free account syncs too: the cloud is everyone\'s backup', async () => {
+    const remote = await account('freesync', false)
     const a = openDb(`cloud-free-${stamp}`)
+    const b = openDb(`cloud-free-b-${stamp}`)
+    trackChanges(a)
+    await a.setups.put(setup('s1', 'Base', 1000))
+    await enqueueAll(a)
+    expect((await syncOnce(a, remote, null)).pushed).toBe(1)
+    expect(await a.outbox.count()).toBe(0)
+    await syncOnce(b, remote, null)
+    expect((await b.setups.get('s1'))?.name).toBe('Base')
+  })
+
+  it('signed out, a write is refused and the queue is kept', async () => {
+    const remote = supabaseRemote(createClient(env.url, env.anonKey, { auth: { persistSession: false } }))
+    const a = openDb(`cloud-anon-${stamp}`)
     trackChanges(a)
     await a.setups.put(setup('s1', 'Base', 1000))
     await enqueueAll(a)

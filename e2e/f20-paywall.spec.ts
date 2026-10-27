@@ -1,4 +1,4 @@
-import { a11y, expect, start, test } from './fixtures'
+import { a11y, expect, pickTarget, start, test } from './fixtures'
 import type { Page } from '@playwright/test'
 
 const DAY = 86_400_000
@@ -50,9 +50,7 @@ test.describe('F20 the paywall with the player’s racket', () => {
     await start(page, { path: '/match' })
     await seedRacket(page, { measured: [300, 32, 300] })
     // Opening a pro in Igualar remembers them.
-    const to = page.getByRole('region', { name: 'Onde queres chegar' })
-    await to.getByRole('radio', { name: 'Profissional' }).click()
-    await to.getByRole('radio', { name: /Jannik Sinner/ }).click()
+    await pickTarget(page, /Jannik Sinner/)
     const d = await openPlans(page)
     await expect(d.getByTestId('preview-title')).toHaveText(/^A tua Aero de jogo a \d+ tiras? de uma raquete do circuito ATP$/)
     // Less motion: the final state straight away, the swingweight up to Sinner's.

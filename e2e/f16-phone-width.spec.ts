@@ -1,4 +1,4 @@
-import { expect, start, test } from './fixtures'
+import { expect, start, tapLead, test } from './fixtures'
 import type { Page } from '@playwright/test'
 
 /** Elements sticking out past the screen's edges (what makes a phone scroll sideways). */
@@ -29,7 +29,7 @@ test.describe('F16 phones never scroll sideways', () => {
 
   test('F16 calculator after saving a setup with a long name', async ({ page }) => {
     await start(page)
-    await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)')
     await page.getByRole('button', { name: 'Guardar setup' }).click()
     await page.getByRole('dialog').getByLabel('Nome do setup').fill('Mais estabilidade e potência no serviço')
     await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()

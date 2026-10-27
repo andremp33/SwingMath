@@ -1,4 +1,4 @@
-import { a11y, expect, saveSetup, start, test } from '../fixtures'
+import { a11y, expect, saveSetup, start, tapLead, test } from '../fixtures'
 import type { Page } from '@playwright/test'
 
 // Setups on an iPhone (WebKit, 390 px).
@@ -7,7 +7,7 @@ async function threeSetups(page: Page) {
   await start(page)
   for (const name of ['Leve', 'Média', 'Pesada']) {
     await saveSetup(page, name)
-    await page.getByRole('button', { name: '+ 0,5 g 12h (ponta)' }).click()
+    await tapLead(page, '12h (ponta)')
   }
   await page.goto('/setups')
   await expect(page.getByRole('article')).toHaveCount(3)
@@ -15,7 +15,7 @@ async function threeSetups(page: Page) {
 
 test('S01 saving suggests a name from the frame and the main change, editable', async ({ page }) => {
   await start(page)
-  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: '+ 0,5 g 3h e 9h' }).click()
+  await tapLead(page, '3h e 9h', 4)
   await page.getByRole('button', { name: 'Guardar setup' }).click()
   const name = page.getByRole('dialog').getByLabel('Nome do setup')
   await expect(name).toHaveValue('Pure Aero 98 · +2 g 3/9h')
@@ -26,7 +26,7 @@ test('S01 saving suggests a name from the frame and the main change, editable', 
 
 test('S02 a card: the numbers, the strings, Open, and the rest under ⋯', async ({ page }) => {
   await start(page)
-  await page.getByRole('button', { name: '+ 0,5 g 3h e 9h' }).click()
+  await tapLead(page, '3h e 9h')
   await saveSetup(page, 'Torneio')
   await page.goto('/setups')
   const card = page.getByRole('article', { name: 'Torneio' })

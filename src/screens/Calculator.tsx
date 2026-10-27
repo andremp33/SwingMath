@@ -10,7 +10,7 @@ import { useStore } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { fmtNum, fmtSigned, LOCALE } from '../lib/format'
 import { Badge, Button, Card, CardTitle, ChoiceChips, cx, IconButton, NumberField, PageTitle, Segmented, Select, TextField, Toggle } from '../ui/basics'
-import { ExtraControl, LeadControl, RacketDiagram } from '../ui/lead'
+import { LeadEditor } from '../ui/lead'
 import { Sheet, useToast } from '../ui/overlay'
 import { MyRacketsRow, useActiveOwned } from '../ui/MyRackets'
 import { useUnits } from '../lib/units'
@@ -79,9 +79,10 @@ export function Calculator() {
   const extra = config.extra ?? []
   const totalLead = POSITIONS.reduce((a, p) => a + config.leadG[p], 0) + extra.reduce((a, e) => a + e.grams, 0)
   const geo = racket ? geometry(racket.lengthCm, racket.headSizeSqIn) : undefined
+  // Picks a spot on the racket and puts the keyboard on it.
   const focusSlider = (id: string) => {
     setSelected(id)
-    document.getElementById(`lead-${id}`)?.querySelector('input')?.focus({ preventScroll: true })
+    document.querySelector<HTMLElement>(`[data-lead="${id}"]`)?.focus({ preventScroll: true })
   }
   const { base, result } = computed
   const play = noLead?.result ?? base
@@ -237,51 +238,33 @@ export function Calculator() {
                 onClose={closeTip}
               />
             ) : (
-              <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
+              // Until the first lead goes on, where to start.
+              totalLead === 0 && <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
             )}
-            <div className="@container"><div className="grid grid-cols-1 items-center gap-4 @lg:grid-cols-[150px_minmax(0,1fr)]">
-              <RacketDiagram
-                sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
-                geometry={geo}
-                pattern={racket.pattern}
-                lead={config.leadG}
-                extra={extra}
-                selected={selected}
-                onSelect={focusSlider}
-                onSelectExtra={focusSlider}
-              />
-              <div className="space-y-1">
-                {POSITIONS.map((p) => (
-                  <LeadControl key={p} position={p} value={config.leadG[p]} onChange={(g) => setLead(p, g)} selected={selected === p} onFocus={() => setSelected(p)} />
-                ))}
-              </div>
-            </div></div>
+            <LeadEditor
+              sweetSpot={{ x: result.sweetSpotCm, g: geo!, from: noLead?.result.sweetSpotCm }}
+              geometry={geo}
+              pattern={racket.pattern}
+              lead={config.leadG}
+              extra={extra}
+              selected={selected}
+              onSelect={setSelected}
+              onLead={setLead}
+              onExtra={(id, grams) => updateExtra(id, { grams })}
+              onRemoveExtra={(id) => {
+                removeExtra(id)
+                setSelected('tip')
+              }}
+            />
 
-            <div className="mt-4 border-t border-border pt-4" role="group" aria-labelledby="custom-title">
-              <div className="flex items-center justify-between gap-2">
-                <h3 id="custom-title" className="text-sm text-muted">
-                  {t.custom.title}
-                </h3>
-                <Button size="sm" icon={Plus} onClick={() => setAddOpen(true)} disabled={extra.length >= 12}>
-                  {t.custom.add}
-                </Button>
-              </div>
-              {extra.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">{t.custom.hint}</p>
-              ) : (
-                <div className="mt-2 space-y-1">
-                  {extra.map((e) => (
-                    <ExtraControl
-                      key={e.id}
-                      item={e}
-                      selected={selected === e.id}
-                      onFocus={() => setSelected(e.id)}
-                      onChange={(grams) => updateExtra(e.id, { grams })}
-                      onRemove={() => removeExtra(e.id)}
-                    />
-                  ))}
-                </div>
-              )}
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3" role="group" aria-labelledby="custom-title">
+              <h3 id="custom-title" className="flex items-center gap-1.5 text-sm text-muted">
+                {t.custom.title}
+                <InfoTip title={t.custom.title}>{t.custom.hint}</InfoTip>
+              </h3>
+              <Button size="sm" icon={Plus} onClick={() => setAddOpen(true)} disabled={extra.length >= 12}>
+                {t.custom.add}
+              </Button>
             </div>
           </Card>
           <div className="order-2 md:order-none">
@@ -310,9 +293,14 @@ export function Calculator() {
               title={t.calc.result}
               openFrom={768}
               summary={`${t.spec.recoil} ${fmtNum(result.recoilWeight, 0, lang)} · ${t.spec.sweetSpot} ${fmtNum(result.sweetSpotCm, 1, lang)} cm`}
+              info={
+                <InfoTip title={t.calc.result}>
+                  {catalog && <p>{t.calc.catalogNote}</p>}
+                  <p>{t.calc.resultNotes}</p>
+                </InfoTip>
+              }
             >
               <SpecTable rows={resultRows} />
-              {catalog && <p className="mt-2 text-xs text-muted">{t.calc.catalogNote}</p>}
             </CollapsibleCard>
           </div>
           {/* Phones have the feel in the result bar, larger and always at hand. */}
@@ -562,7 +550,7 @@ function MiniRing({ label, value, delta, color, lang, mark }: { label: string; v
           </svg>
           <span className="num absolute inset-0 flex items-center justify-center text-xs font-semibold">{Math.round(value)}</span>
         </div>
-        <span className={cx('num w-7 pl-1 text-[11px]', d === 0 ? 'text-muted' : 'font-semibold text-text')}>{d === 0 ? '·' : fmtSigned(d, 0, lang)}</span>
+        <span className={cx('num w-7 pl-1 text-[11px]', d === 0 ? 'text-muted' : 'font-semibold text-text')}>{d === 0 ? '' : fmtSigned(d, 0, lang)}</span>
       </div>
       <span className={cx('max-w-full truncate text-[11px]', mark ? 'font-semibold text-text' : 'text-muted')}>{label}</span>
     </li>
@@ -578,7 +566,8 @@ function Mini({ label, value, unit, delta, digits = 1, lang }: { label: string; 
         {value}
         <span className="ml-0.5 text-[11px] font-normal text-muted">{unit}</span>
       </div>
-      <div className="num text-[11px] text-muted">{d === 0 ? '·' : fmtSigned(delta, digits, lang)}</div>
+      {/* Room kept for the difference, empty until there is one. */}
+      <div className="num min-h-[1lh] text-[11px] text-muted">{d === 0 ? '' : fmtSigned(delta, digits, lang)}</div>
     </div>
   )
 }

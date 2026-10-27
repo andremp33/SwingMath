@@ -1,11 +1,11 @@
-import { a11y, expect, saveSetup, setupAction, start, test } from './fixtures'
+import { a11y, expect, saveSetup, setupAction, start, tapLead, test } from './fixtures'
 
 test.describe('F05 share a setup', () => {
   test('F05-H1 link opens the setup and saves it', async ({ page, context, browserName }) => {
     test.skip(browserName !== 'chromium')
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await start(page)
-    await page.getByRole('button', { name: '+ 0,5 g 3h e 9h' }).click()
+    await tapLead(page, '3h e 9h')
     await saveSetup(page, 'Partilhado')
     await page.goto('/setups')
     await setupAction(page, 'Partilhado', 'Partilhar')

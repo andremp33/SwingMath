@@ -1,11 +1,11 @@
-import { a11y, expect, saveSetup, start, test } from '../fixtures'
+import { a11y, expect, saveSetup, start, tapLead, test } from '../fixtures'
 import type { Page } from '@playwright/test'
 
 // A saved setup next to a pro, on an iPhone (WebKit, 390 px).
 
 async function setupAndPro(page: Page, player: RegExp) {
   await start(page)
-  await page.getByRole('button', { name: '+ 0,5 g 3h e 9h' }).click()
+  await tapLead(page, '3h e 9h')
   await saveSetup(page, 'Torneio')
   await page.goto('/setups')
   await page.getByRole('button', { name: 'Mais ações: Torneio' }).click()
@@ -47,7 +47,10 @@ test('PC02 what the source does not publish is "—"; the feel only with the sto
   await expect(cell(page, 'Twistweight', 2)).toHaveText('—')
   // Sinner's stock frame is in the library: the feel, estimated.
   const feel = page.getByRole('region', { name: 'Sensação' })
-  await expect(feel).toContainText('Estimada a partir da raquete de série.')
+  // "Estimated" is said behind the card's (?).
+  await feel.getByRole('button', { name: 'Informação: Sensação estimada' }).click()
+  await expect(page.getByRole('dialog', { name: 'Sensação estimada' })).toContainText('Estimada a partir da raquete de série.')
+  await page.keyboard.press('Escape')
   await expect(feel.getByRole('meter', { name: 'Potência: Jannik Sinner' })).toBeVisible()
   // Federer's is not: no feel at all.
   await page.getByRole('button', { name: 'Escolher outro profissional' }).click()
@@ -76,7 +79,7 @@ test('PC04 “How to get there” opens Igualar with both sides filled in; Igual
   const from = page.getByRole('region', { name: 'De onde partes' })
   await expect(from.getByLabel('Ponto de partida').locator('option:checked')).toHaveText('Torneio')
   const to = page.getByRole('region', { name: 'Onde queres chegar' })
-  await expect(to.getByRole('radio', { name: /Novak Djokovic/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(to.getByRole('button', { name: /^Igualar a/ })).toContainText('Novak Djokovic')
   await expect(to.getByLabel('Peso', { exact: true })).toHaveValue('353')
   // Solved straight away; a new plan, so one of the three free ones.
   await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toBeVisible()

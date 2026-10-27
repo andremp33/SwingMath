@@ -153,7 +153,12 @@ export function SweetSpotCard({ racket, result, noLead, geo, onAdd }: { racket: 
       id="sweet-spot"
       title={t.sweet.title}
       summary={fmt(t.sweet.summary, { cm: fmtNum(result.sweetSpotCm, 1, lang), d: fmtNum(Math.abs(centre), 1, lang), dir })}
-      info={<InfoTip title={t.sweet.title}>{t.sweet.info}</InfoTip>}
+      info={
+        <InfoTip title={t.sweet.title}>
+          <p>{t.sweet.info}</p>
+          <p>{t.sweet.rule}</p>
+        </InfoTip>
+      }
     >
       <p className="text-sm">
         {fmt(t.sweet.where, { cm: fmtNum(result.sweetSpotCm, 1, lang), d: fmtNum(Math.abs(centre), 1, lang), dir })}
@@ -200,7 +205,6 @@ export function SweetSpotCard({ racket, result, noLead, geo, onAdd }: { racket: 
           )
         })}
       </ul>
-      <p className="mt-3 text-sm text-muted">{t.sweet.rule}</p>
     </CollapsibleCard>
   )
 }

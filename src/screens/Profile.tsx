@@ -19,6 +19,7 @@ import { AccountEnd, AccountGroup } from './AccountCard'
 import { FleetGroup } from './Fleet'
 import { LifeBar } from './JournalSheets'
 import { PlanGroup } from './Settings'
+import { InfoTip } from '../ui/disclosure'
 
 /**
  * The player's page: who they are and how much they play at a glance, their
@@ -120,6 +121,7 @@ function GameGroup() {
   return (
     <SettingsGroup
       title={t.profile.game}
+      info={<InfoTip title={t.profile.game}>{t.profile.gameUses}</InfoTip>}
       action={
         !empty && (
           <Button variant="ghost" size="sm" icon={Pencil} onClick={() => setEditing(true)}>
@@ -148,7 +150,6 @@ function GameGroup() {
             </ul>
           )}
           {line.length > 0 && <p className="text-sm">{line.join(' · ')}</p>}
-          <p className="text-xs text-muted">{t.profile.gameUses}</p>
         </div>
       )}
       {editing && <GameSheet onClose={() => setEditing(false)} />}

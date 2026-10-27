@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { PRO_TARGETS, type ProTarget } from '../data/pros'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
-import { fmtNum, LOCALE } from '../lib/format'
+import { fmtNum, fold, LOCALE } from '../lib/format'
 import { Badge, Button, cx, TextField } from './basics'
 import { useUnits } from '../lib/units'
 
@@ -11,11 +11,62 @@ import { useUnits } from '../lib/units'
 export const monthYear = (ym: string, lang: string) =>
   new Date(`${ym}-15T12:00:00Z`).toLocaleDateString(LOCALE[lang] ?? 'en-GB', { month: 'long', year: 'numeric' })
 
-const fold = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
+/** A pro's name and racquet, searched without accents or case. */
+const proMatches = (p: ProTarget, q: string) => fold(`${p.player} ${p.racket}`).includes(fold(q.trim()))
+
+/** A pro as a row: the player, measured or reported, the racquet and its numbers. */
+export function ProRow({ p }: { p: ProTarget }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const u = useUnits()
+  return (
+    <>
+      <span className="min-w-0">
+        <span className="flex items-center gap-2">
+          <span className="truncate font-medium">{p.player}</span>
+          <Badge tone={p.evidence === 'measured' ? 'accent' : 'neutral'}>{t.match.evidence[p.evidence]}</Badge>
+        </span>
+        <span className="block truncate text-muted">{p.racket}</span>
+      </span>
+      <span className="num shrink-0 text-right text-xs text-muted">
+        {u.weight(p.weightG)} {u.weightUnit} · SW {fmtNum(p.swingweight, 0, lang)}
+        <span className="block">{p.strung ? t.match.strungShort : t.match.unstrungShort}</span>
+      </span>
+    </>
+  )
+}
+
+/** The picked pro: the note, where the numbers come from, the strings. */
+export function ProDetails({ p, fromStrung, onStock }: { p: ProTarget; fromStrung: boolean; onStock?: (p: ProTarget) => void }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const notes = t.match.pros as Record<string, string>
+  return (
+    <div className="space-y-1.5 rounded-md bg-surface-2 px-3 py-2.5 text-sm">
+      {notes[p.id] && <p>{notes[p.id]}</p>}
+      <p className="text-muted">
+        <span className="font-medium text-text">{t.match.evidence[p.evidence]}:</span> {t.match.evidenceHint[p.evidence]}
+      </p>
+      <p>
+        <a href={p.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2">
+          {fmt(t.match.proSource, { source: p.source, date: monthYear(p.date, lang) })} <ExternalLink className="size-3.5" aria-hidden />
+        </a>
+      </p>
+      {p.strings && <p className="num">{fmt(t.match.proStrings, { s: [p.strings.name, p.strings.tension].filter(Boolean).join(' · ') })}</p>}
+      {p.strung !== fromStrung && (
+        <p className="font-medium">
+          {fmt(t.match.converted, { from: p.strung ? t.match.strungShort : t.match.unstrungShort, to: fromStrung ? t.match.strungShort : t.match.unstrungShort })}
+        </p>
+      )}
+      {p.baseRacketId && onStock && (
+        <Button size="sm" icon={Play} onClick={() => onStock(p)}>
+          {t.match.fromStock}
+        </Button>
+      )}
+      <p className="text-xs text-muted">{t.match.proDisclaimer}</p>
+    </div>
+  )
+}
 
 /**
  * Pro targets: searchable, ATP and WTA apart. Each says whether it was
@@ -23,12 +74,9 @@ const fold = (s: string) =>
  */
 export function ProList({ selected, fromStrung, onPick, onStock }: { selected: string; fromStrung: boolean; onPick: (p: ProTarget) => void; onStock?: (p: ProTarget) => void }) {
   const t = useT()
-  const lang = useStore((s) => s.lang)
-  const u = useUnits()
   const [q, setQ] = useState('')
   const picked = PRO_TARGETS.find((p) => p.id === selected)
-  const shown = PRO_TARGETS.filter((p) => fold(`${p.player} ${p.racket}`).includes(fold(q.trim())))
-  const notes = t.match.pros as Record<string, string>
+  const shown = PRO_TARGETS.filter((p) => proMatches(p, q))
   return (
     <div className="space-y-3">
       <TextField label={t.match.proSearch} value={q} onChange={setQ} />
@@ -49,48 +97,14 @@ export function ProList({ selected, fromStrung, onPick, onStock }: { selected: s
                   onClick={() => onPick(p)}
                   className={cx('flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors', selected === p.id ? 'bg-surface-2' : 'hover:bg-surface-2/60')}
                 >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate font-medium">{p.player}</span>
-                      <Badge tone={p.evidence === 'measured' ? 'accent' : 'neutral'}>{t.match.evidence[p.evidence]}</Badge>
-                    </span>
-                    <span className="block truncate text-muted">{p.racket}</span>
-                  </span>
-                  <span className="num shrink-0 text-right text-xs text-muted">
-                    {u.weight(p.weightG)} {u.weightUnit} · SW {fmtNum(p.swingweight, 0, lang)}
-                    <span className="block">{p.strung ? t.match.strungShort : t.match.unstrungShort}</span>
-                  </span>
+                  <ProRow p={p} />
                 </button>
               ))}
             </div>
           </div>
         )
       })}
-      {picked && (
-        <div className="space-y-1.5 rounded-md bg-surface-2 px-3 py-2.5 text-sm">
-          {notes[picked.id] && <p>{notes[picked.id]}</p>}
-          <p className="text-muted">
-            <span className="font-medium text-text">{t.match.evidence[picked.evidence]}:</span> {t.match.evidenceHint[picked.evidence]}
-          </p>
-          <p>
-            <a href={picked.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2">
-              {fmt(t.match.proSource, { source: picked.source, date: monthYear(picked.date, lang) })} <ExternalLink className="size-3.5" aria-hidden />
-            </a>
-          </p>
-          {picked.strings && <p className="num">{fmt(t.match.proStrings, { s: [picked.strings.name, picked.strings.tension].filter(Boolean).join(' · ') })}</p>}
-          {picked.strung !== fromStrung && (
-            <p className="font-medium">
-              {fmt(t.match.converted, { from: picked.strung ? t.match.strungShort : t.match.unstrungShort, to: fromStrung ? t.match.strungShort : t.match.unstrungShort })}
-            </p>
-          )}
-          {picked.baseRacketId && onStock && (
-            <Button size="sm" icon={Play} onClick={() => onStock(picked)}>
-              {t.match.fromStock}
-            </Button>
-          )}
-        </div>
-      )}
-      <p className="text-xs text-muted">{t.match.proDisclaimer}</p>
+      {picked ? <ProDetails p={picked} fromStrung={fromStrung} onStock={onStock} /> : <p className="text-xs text-muted">{t.match.proDisclaimer}</p>}
     </div>
   )
 }

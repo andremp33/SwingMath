@@ -1,4 +1,4 @@
-import { a11y, expect, start, test } from '../fixtures'
+import { a11y, expect, pickTarget, start, test } from '../fixtures'
 import type { Page } from '@playwright/test'
 
 // Igualar on an iPhone (WebKit, 390 px).
@@ -39,9 +39,7 @@ test('M02 the library is the alternative; a target of the other kind is converte
   const from = step(page, 'De onde partes')
   const to = step(page, 'Onde queres chegar')
   // A library frame (unstrung) as the target of a strung starting point.
-  await to.getByRole('button', { name: /Igualar a outra raquete/ }).click()
-  await page.getByRole('dialog').getByRole('searchbox').fill('blade 98 16x19 v9')
-  await page.getByRole('dialog').getByRole('listitem').first().getByRole('button').click()
+  await pickTarget(page, /Blade 98 16x19 v9/i, 'blade 98 16x19 v9')
   await expect(to).toContainText('Medida sem cordas; convertemos para com cordas, como o teu ponto de partida.')
   const strungWeight = Number(await to.getByLabel('Peso', { exact: true }).inputValue())
   // The library's frame as the starting point: no conversion, 16 g less.
@@ -55,8 +53,7 @@ test('M02 the library is the alternative; a target of the other kind is converte
 test('M03 whole numbers in every field', async ({ page }) => {
   await start(page, { path: '/match' })
   await step(page, 'De onde partes').getByRole('button', { name: 'Ajustar valores' }).click()
-  await step(page, 'Onde queres chegar').getByRole('radio', { name: 'Profissional' }).click()
-  await page.getByRole('radio', { name: /Novak Djokovic/ }).click()
+  await pickTarget(page, /Novak Djokovic/)
   for (const name of ['De onde partes', 'Onde queres chegar'])
     for (const field of ['Peso', 'Equilíbrio', 'Swingweight']) await expect(step(page, name).getByLabel(field, { exact: true })).toHaveValue(/^\d+$/)
 })

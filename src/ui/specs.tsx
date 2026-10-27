@@ -45,9 +45,9 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
     {
       key: 'tw',
       label: t.spec.twistweight,
-      value: fmtNum(s.twistweight, 1, lang),
+      // Estimated from the head size: "≈", explained in the result's (?).
+      value: `${s.twistweightEstimated ? '≈' : ''}${fmtNum(s.twistweight, 1, lang)}`,
       unit: t.units.kgcm2,
-      sub: s.twistweightEstimated ? t.common.estimated : undefined,
       delta: from && s.twistweight !== undefined && from.twistweight !== undefined ? s.twistweight - from.twistweight : undefined,
       deltaDigits: 1,
       muted: s.twistweightEstimated,
@@ -60,7 +60,6 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
       label: t.spec.sweetSpot,
       value: u.length(s.sweetSpotCm),
       unit: u.imperial ? u.lengthUnit : t.units.cm,
-      sub: t.spec.sweetSpotUnit,
       delta: from && (s.sweetSpotCm - from.sweetSpotCm) / (u.imperial ? 2.54 : 1),
     })
   }
