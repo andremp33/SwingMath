@@ -349,6 +349,8 @@ export const pt = {
     unitOptions: { metric: 'Métricas (g, mm)', imperial: 'Imperiais (oz, in)' },
     theme: 'Tema',
     themes: { system: 'Automático', dark: 'Escuro', light: 'Claro' },
+    court: 'Piso',
+    courts: { clay: 'Terra batida', hard: 'Rápido', grass: 'Relva' },
     masses: 'Massas dos acessórios',
     massesHint: 'Ajusta ao que usas. O grip de couro é a diferença para um grip sintético.',
     tape: 'A tua fita de chumbo',

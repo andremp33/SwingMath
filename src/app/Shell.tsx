@@ -23,6 +23,7 @@ const TABS = [
 
 export function useApplyTheme() {
   const theme = useStore((s) => s.theme)
+  const court = useStore((s) => s.court)
   const lang = useStore((s) => s.lang)
   useEffect(() => {
     document.documentElement.lang = LOCALE[lang] ?? 'en'
@@ -32,12 +33,14 @@ export function useApplyTheme() {
     const apply = () => {
       const resolved = theme === 'system' ? (mq.matches ? 'light' : 'dark') : theme
       document.documentElement.dataset.theme = resolved
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'light' ? '#f5f3ee' : '#141312')
+      document.documentElement.dataset.court = court
+      // The status bar takes the page's own ground, whichever court it is.
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--c-bg').trim())
     }
     apply()
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
-  }, [theme])
+  }, [theme, court])
 }
 
 /** Inside the app the scroller is #app-scroll, not the window. */

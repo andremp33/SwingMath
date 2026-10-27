@@ -7,8 +7,8 @@ export function Logo({ className }: { className?: string }) {
   return (
     <svg viewBox="151 146 722 722" className={className} aria-hidden>
       <path d={S} fill="currentColor" />
-      <circle cx="707" cy="335" r="66.5" fill="var(--c-accent)" />
-      <circle cx="318" cy="681" r="66.5" fill="var(--c-accent)" />
+      <circle cx="707" cy="335" r="66.5" fill="var(--c-brand)" />
+      <circle cx="318" cy="681" r="66.5" fill="var(--c-brand)" />
     </svg>
   )
 }

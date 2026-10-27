@@ -17,6 +17,8 @@ import { withPlan } from '../domain/freePlans'
 import { freeProActive } from '../domain/trial'
 
 export type Theme = 'system' | 'dark' | 'light'
+/** The app's ground and accent: clay (the brand's), hard court or grass. */
+export type Court = 'clay' | 'hard' | 'grass'
 
 export interface License {
   /** 'store': App Store or Google Play, through RevenueCat; 'dev': development and tests. */
@@ -86,6 +88,7 @@ export type UnitSystem = 'metric' | 'imperial'
 interface State {
   lang: Lang
   theme: Theme
+  court: Court
   units: UnitSystem
   masses: AccessoryMasses
   /** Mass of 10 cm of the player's lead tape, to show how much to cut. */
@@ -129,6 +132,7 @@ interface State {
 
   setLang: (l: Lang) => void
   setTheme: (t: Theme) => void
+  setCourt: (c: Court) => void
   setUnits: (u: UnitSystem) => void
   setMasses: (m: Partial<AccessoryMasses>) => void
   setTape: (g: number | undefined) => void
@@ -174,6 +178,7 @@ export const useStore = create<State>()(
     (set) => ({
       lang: browserLang(),
       theme: 'system',
+      court: 'clay',
       units: browserUnits(),
       masses: DEFAULT_ACCESSORY_MASSES,
       license: null,
@@ -198,6 +203,7 @@ export const useStore = create<State>()(
 
       setLang: (lang) => set({ lang }),
       setTheme: (theme) => set({ theme }),
+      setCourt: (court) => set({ court }),
       setUnits: (units) => set({ units }),
       setMasses: (m) => set((s) => ({ masses: { ...s.masses, ...m } })),
       setTape: (tapeGPer10cm) => set({ tapeGPer10cm }),
