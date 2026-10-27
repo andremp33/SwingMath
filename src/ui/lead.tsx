@@ -314,6 +314,7 @@ export function LeadEditor({
   sweetSpot,
   geometry,
   pattern,
+  frameClassName = 'max-w-[170px]',
 }: {
   lead: LeadMap
   extra?: ExtraLead[]
@@ -325,6 +326,8 @@ export function LeadEditor({
   sweetSpot?: { x: number; g: Geometry; from?: number }
   geometry?: Geometry
   pattern?: string
+  /** The frame's width (the website shows it larger). */
+  frameClassName?: string
 }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
@@ -370,7 +373,7 @@ export function LeadEditor({
 
   return (
     <div>
-      <div className="relative mx-auto w-full max-w-[170px]" style={{ aspectRatio: `${f.box.w} / ${f.box.h}` }}>
+      <div className={cx('relative mx-auto w-full', frameClassName)} style={{ aspectRatio: `${f.box.w} / ${f.box.h}` }}>
         <svg viewBox={`${f.box.x} ${f.box.y} ${f.box.w} ${f.box.h}`} className="absolute inset-0 size-full overflow-visible" aria-hidden>
           <RacketArt g={g} pattern={pattern} />
           {sweetSpot?.from !== undefined && Math.abs(sweetSpot.from - sweetSpot.x) >= 0.05 && (

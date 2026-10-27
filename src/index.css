@@ -406,6 +406,8 @@ input[type='range'].range:disabled {
 .site-stage {
   position: relative;
   overflow: hidden;
+  /* The clay's own colour, under the picture while it opens or loads. */
+  background: #a4502e;
   clip-path: polygon(72px 0, 100% 0, 100% 100%, 0 100%, 0 72px);
 }
 @media (min-width: 1024px) {
@@ -437,7 +439,7 @@ input[type='range'].range:disabled {
 }
 @media (min-width: 1024px) {
   .site-stage-inner {
-    padding: 64px 56px 120px;
+    padding: 56px 56px 72px;
   }
 }
 .site-stage-label {
@@ -515,7 +517,7 @@ input[type='range'].range:disabled {
 }
 
 /* Free or Pro: a table without lines; every other row a tone darker, and
-   the Pro column one filled block of the accent. */
+   the Pro column one filled block of ink (the accent is kept for data). */
 .site-plans {
   border-collapse: collapse;
 }
@@ -531,8 +533,8 @@ input[type='range'].range:disabled {
   background: var(--c-surface-2);
 }
 .site-plans .is-pro {
-  background: var(--c-accent);
-  color: var(--c-on-accent);
+  background: var(--c-text);
+  color: var(--c-bg);
 }
 .site-plans thead .is-pro {
   border-radius: 6px 6px 0 0;
@@ -548,14 +550,20 @@ input[type='range'].range:disabled {
   background: var(--c-surface);
 }
 
-/* Questions: filled tiles; the open one takes the accent. */
+/* Questions: filled tiles; the open one steps a tone. */
 .site-tile {
   background: var(--c-surface-2);
+  color: var(--c-text);
   transition: background-color 200ms ease;
 }
 .site-tile[open] {
-  background: var(--c-accent);
-  color: var(--c-on-accent);
+  background: var(--c-surface);
+}
+.site-tile[open] summary {
+  color: var(--c-text);
+}
+.site-tile[open] .site-plus {
+  color: var(--c-accent-text);
 }
 .site-plus {
   position: relative;
@@ -587,7 +595,8 @@ input[type='range'].range:disabled {
 
 /* Motion: the clay opens like a shutter while the picture settles; the
    first screen's words rise in; each section's parts rise as it arrives.
-   Nothing is hidden unless the script has said it will reveal it. */
+   Nothing is hidden unless the script has said it will reveal it, and
+   nothing is ever see-through. */
 @media (prefers-reduced-motion: no-preference) {
   .site-shutter {
     animation: site-shutter 1100ms var(--ease-out) both;
@@ -596,22 +605,25 @@ input[type='range'].range:disabled {
     animation: site-settle 1400ms var(--ease-out) both;
   }
   .site-stage-inner {
-    animation: site-rise 700ms var(--ease-out) 450ms both;
+    animation: site-lift 700ms var(--ease-out) 300ms both;
   }
+  /* The first screen's words are never hidden: they only rise. */
   .site-rise {
-    animation: site-rise 700ms var(--ease-out) both;
+    animation: site-lift 700ms var(--ease-out) both;
     animation-delay: calc(var(--i, 0) * 80ms);
   }
+  /* Revealed by a mask that lifts as the part rises: never see-through,
+     so its contrast holds at every moment. */
   .site-reveal [data-reveal] {
-    opacity: 0;
+    clip-path: inset(0 0 100% 0);
     transform: translateY(24px);
     transition:
-      opacity 700ms var(--ease-out),
-      transform 700ms var(--ease-out);
+      clip-path 600ms var(--ease-out),
+      transform 600ms var(--ease-out);
     transition-delay: calc(var(--i, 0) * 70ms);
   }
   .site-reveal [data-reveal].is-in {
-    opacity: 1;
+    clip-path: inset(0 0 0 0);
     transform: none;
   }
 }
@@ -628,10 +640,9 @@ input[type='range'].range:disabled {
     transform: scale(1.12);
   }
 }
-@keyframes site-rise {
+@keyframes site-lift {
   from {
-    opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(16px);
   }
 }
 

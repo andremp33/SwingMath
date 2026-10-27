@@ -1,9 +1,10 @@
-import { ArrowLeft, ArrowRight, Mail, Smartphone } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Mail, Minus, Smartphone } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { STOCK_RACKETS } from '../data/rackets'
 import { defaultConfig, useStore } from '../data/store'
 import { compute } from '../domain/physics'
+import { sweetSpotEffects, type ProbeKey } from '../domain/sweetSpot'
 import { emptyLead } from '../domain/types'
 import type { Lang } from '../i18n'
 import { fmt, loadLang, useT } from '../i18n'
@@ -60,7 +61,7 @@ function useReveal() {
           io.unobserve(e.target)
         }
       },
-      { rootMargin: '0px 0px -10% 0px' },
+      { rootMargin: '0px 0px 10% 0px' },
     )
     document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el))
     return () => {
@@ -228,7 +229,10 @@ function HowItWorks() {
   const units = useUnits()
   const pa = DEMO_RACKETS[0]
   const run = (leadG: ReturnType<typeof emptyLead>) => compute({ spec: pa, ...defaultConfig(pa.id), leadG, masses }).result
-  const tip = { base: run(emptyLead()), result: run({ ...emptyLead(), tip: 4 }) }
+  // What 5 g more at each spot would do, as the app's sweet spot card says it.
+  const effects = sweetSpotEffects({ spec: pa, ...defaultConfig(pa.id), masses }).sort((a, b) => b.mm - a.mm)
+  const most = Math.max(4, ...effects.map((e) => Math.abs(e.mm)))
+  const probe = (k: ProbeKey) => (k === 'fourEight' ? fmt(ta.custom.hoopBoth, { a: ta.custom.hour(4), b: ta.custom.hour(8) }) : ta.pos[k])
   const checked = run({ ...emptyLead(), tip: 2, threeNine: 2 })
   // A measurement as a player might bring back from the scale and the machine.
   const measured = { weightG: Math.round(checked.weightG) + 1, balanceCm: Math.round(checked.balanceCm * 10 - 1) / 10, swingweight: Math.round(checked.swingweight) + 2 }
@@ -255,24 +259,35 @@ function HowItWorks() {
         ))}
       </ul>
     </Fragment>,
-    <Fragment key="tip">
+    <Fragment key="effects">
       <p className="font-semibold">
-        {pa.brand} {pa.model} · {t.sweetTitle}
+        {ta.sweet.effectsTitle} <span className="font-normal text-muted">· {pa.brand} {pa.model}</span>
       </p>
-      <dl className="mt-3 grid grid-cols-3 gap-3">
-        {[
-          [ta.spec.sweetSpot, units.balanceDelta(tip.result.sweetSpotCm - tip.base.sweetSpotCm, 0), units.balanceUnit],
-          [ta.spec.swingweight, fmtSigned(tip.result.swingweight - tip.base.swingweight, 1, lang), ''],
-          [ta.spec.balance, units.balanceDelta(tip.result.balanceCm - tip.base.balanceCm), units.balanceUnit],
-        ].map(([k, v, u]) => (
-          <div key={k}>
-            <dt className="text-[13px] text-muted">{k}</dt>
-            <dd className="readout text-[20px] text-accent-text">
-              {v} <span className="text-[13px] font-normal text-muted">{u}</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <ul className="mt-1 divide-y divide-border">
+        {effects.map((e) => {
+          const up = e.mm >= 0.25
+          const down = e.mm <= -0.25
+          const Icon = up ? ArrowUp : down ? ArrowDown : Minus
+          return (
+            <li key={e.key} className="grid grid-cols-[minmax(0,1fr)_6rem_5.5rem] items-center gap-3 py-2">
+              <span>{probe(e.key)}</span>
+              {/* A bar either side of the centre line: up the frame to the right. */}
+              <span aria-hidden className="relative h-1.5 rounded-full bg-surface-2">
+                <span className="absolute inset-y-0 left-1/2 w-px bg-border-input" />
+                <span
+                  className="absolute inset-y-0 rounded-full"
+                  style={{ background: up ? 'var(--c-power)' : 'var(--c-stability)', left: e.mm >= 0 ? '50%' : `${50 - (Math.abs(e.mm) / most) * 50}%`, width: `${(Math.abs(e.mm) / most) * 50}%` }}
+                />
+              </span>
+              <span className={cx('num flex items-center justify-end gap-1 font-semibold', !up && !down && 'text-muted')}>
+                <Icon className="size-3.5" aria-hidden />
+                {fmtSigned(e.mm, 1, lang)} mm
+                <span className="sr-only">{up ? ta.sweet.up : down ? ta.sweet.down : ''}</span>
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </Fragment>,
     <Fragment key="check">
       <p className="font-semibold">{t.checkTitle}</p>
@@ -465,7 +480,7 @@ function Plans() {
             <h3 className="text-[22px] font-semibold leading-snug">{what}</h3>
             <dl className="mt-2 space-y-1 text-[16px]">
               {cells.map((c, i) => (
-                <div key={i} className={cx('flex justify-between gap-4', i === last && '-mx-4 -mb-4 mt-2 rounded-b-md bg-accent px-4 py-2 text-on-accent')}>
+                <div key={i} className={cx('flex justify-between gap-4', i === last && '-mx-4 -mb-4 mt-2 rounded-b-md bg-text px-4 py-2 text-bg')}>
                   <dt className={i === last ? '' : 'text-muted'}>{t.planCols[i]}</dt>
                   <dd className="text-right font-medium">{c}</dd>
                 </div>
