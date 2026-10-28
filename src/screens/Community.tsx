@@ -50,7 +50,7 @@ import {
   type Style,
 } from '../lib/community'
 import { fmtDate, fmtNum, leadParts } from '../lib/format'
-import { Badge, Button, Card, CardTitle, ChoiceChips, IconButton, MultiChoiceChips, Segmented, Select, TextField, Toggle } from '../ui/basics'
+import { Badge, Button, Card, CardTitle, ChoiceChips, cx, IconButton, MultiChoiceChips, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { CollapsibleCard, InfoTip } from '../ui/disclosure'
 import { Sheet, useToast } from '../ui/overlay'
 import { bedLabel } from '../lib/bedLabel'
@@ -69,6 +69,21 @@ export function useSetupCounts() {
     }
   }, [])
   return counts
+}
+
+/** "You need an account", with the way to the profile, where the account is.
+ *  In place, not a toast: inside a sheet a toast sits under it, out of reach. */
+function SignInPrompt() {
+  const t = useT()
+  const nav = useNavigate()
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md bg-surface-2 p-3 text-sm">
+      <p className="min-w-0 flex-1">{t.community.needAccount}</p>
+      <Button size="sm" variant="primary" onClick={() => nav('/perfil')}>
+        {t.community.signIn}
+      </Button>
+    </div>
+  )
 }
 
 const OPEN_RECIPES = 'swingmath:open-recipes'
@@ -96,6 +111,33 @@ export function CommunityLink({ racket }: { racket: Racket }) {
       {n === 1 ? t.community.forRacketOne : fmt(t.community.forRacket, { n })}
       <ArrowRight className="size-4 shrink-0" aria-hidden />
     </button>
+  )
+}
+
+type RecipesView = 'list' | 'grid'
+
+/** The layout for this many recipes: the player's choice, or squares from four up. */
+function useRecipesView(n: number): [RecipesView, (v: RecipesView) => void] {
+  const chosen = useStore((s) => s.recipesView)
+  const set = useStore((s) => s.setRecipesView)
+  return [chosen === 'auto' ? (n > 3 ? 'grid' : 'list') : chosen, set]
+}
+
+/** List (each recipe whole) or grid (squares that open). */
+function ViewToggle({ view, onChange }: { view: RecipesView; onChange: (v: RecipesView) => void }) {
+  const t = useT()
+  return (
+    <div className="w-44 shrink-0">
+      <Segmented<RecipesView>
+        label={t.community.view}
+        value={view}
+        onChange={onChange}
+        options={[
+          { value: 'list', label: t.community.viewList },
+          { value: 'grid', label: t.community.viewGrid },
+        ]}
+      />
+    </div>
   )
 }
 
@@ -147,6 +189,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
   const { list, siblings } = useRecipes(racket, version)
   const [sheet, setSheet] = useState(false)
   const holds = useHolds()
+  const [view, setView] = useRecipesView(Math.min(list?.length ?? 0, SHOWN))
 
   useEffect(() => {
     let alive = true
@@ -220,10 +263,13 @@ export function CommunityCard({ racket }: { racket: Racket }) {
           )}
         </div>
 
-        <h3 className="mb-1 mt-4 text-sm font-medium">{t.community.setups}</h3>
+        <div className="mb-2 mt-4 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-medium">{t.community.setups}</h3>
+          {first.length > 1 && <ViewToggle view={view} onChange={setView} />}
+        </div>
         {list === undefined ? null : (
           <>
-            {list.length === 0 ? <p className="text-sm text-muted">{t.community.noSetups}</p> : <RecipeList list={first} racket={racket} onChange={changed} />}
+            {list.length === 0 ? <p className="text-sm text-muted">{t.community.noSetups}</p> : <RecipeList list={first} racket={racket} onChange={changed} view={view} />}
             <Button icon={Users} className="mt-2 w-full" onClick={() => setSheet(true)}>
               {list.length ? fmt(t.community.seeRecipes, { n: list.length }) : t.community.seeSimilar}
             </Button>
@@ -290,6 +336,7 @@ function RecipesSheet({
   const frameOf = (p: PublicSetup) => findRacket(p.racket_id, custom) ?? p.racket ?? undefined
   // Only recipes whose numbers hold are offered as a start.
   const similar = empty && top ? similarRecipes(top.filter((p) => !hidden.includes(p.author_key) && holds(p)), racket, siblings, frameOf) : []
+  const [view, setView] = useRecipesView(empty ? similar.length : shown.length)
   const clear = () => {
     setGoal('all')
     setLevel('')
@@ -323,7 +370,7 @@ function RecipesSheet({
               <section className="space-y-1" aria-label={t.community.similarTitle}>
                 <h3 className="text-sm font-medium">{t.community.similarTitle}</h3>
                 <p className="text-sm text-muted">{t.community.similarHint}</p>
-                <RecipeList list={similar} racket={racket} onChange={onChange} onDone={onClose} />
+                <RecipeList list={similar} racket={racket} onChange={onChange} onDone={onClose} view={view} />
               </section>
             )}
           </div>
@@ -335,7 +382,15 @@ function RecipesSheet({
             </button>
           </p>
         ) : (
-          <RecipeList list={shown} racket={racket} onChange={onChange} onDone={onClose} />
+          <div className="space-y-3">
+            {shown.length > 1 && (
+              <div className="flex items-center justify-between gap-3">
+                <p className="num text-sm text-muted">{fmt(t.community.count, { n: shown.length })}</p>
+                <ViewToggle view={view} onChange={setView} />
+              </div>
+            )}
+            <RecipeList list={shown} racket={racket} onChange={onChange} onDone={onClose} view={view} />
+          </div>
         )}
       </div>
     </Sheet>
@@ -384,7 +439,21 @@ function ProsOnFrame({ ids }: { ids: string[] }) {
  * for. A recipe for this frame is tried on; one for another frame is reached
  * from the player's own with Planear, or tried on that frame.
  */
-function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicSetup[]; racket: Racket; onChange: () => void; onDone?: () => void; preview?: boolean }) {
+function RecipeList({
+  list,
+  racket,
+  onChange,
+  onDone,
+  preview,
+  view = 'list',
+}: {
+  list: PublicSetup[]
+  racket: Racket
+  onChange: () => void
+  onDone?: () => void
+  preview?: boolean
+  view?: RecipesView
+}) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const u = useUnits()
@@ -406,6 +475,8 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
   const [reason, setReason] = useState<ReportReason>('offensive')
   // Notes shown whole; the others show two lines.
   const [open, setOpen] = useState<string[]>([])
+  // In the grid, the square opened into a whole recipe.
+  const [unfolded, setUnfolded] = useState<string | null>(null)
 
   const signedIn = (fn: () => Promise<void>) => async () => {
     if (!account) return toast(t.community.needAccount)
@@ -469,7 +540,7 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
   }
 
   return (
-    <ul className="divide-y divide-border">
+    <ul className={view === 'grid' ? 'grid grid-cols-2 gap-2 sm:grid-cols-3' : 'space-y-2'}>
       {list.map((p) => {
         const mine = p.mine
         const local = mine && p.setup_ref ? mySetups?.find((x) => x.id === p.setup_ref) : undefined
@@ -482,8 +553,47 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
           p.style && t.community.styles[p.style],
           p.config.baseMode === 'measured' ? t.community.baseMeasured : t.community.baseCatalog,
         ].filter(Boolean) as string[]
+        // A square: what it is and what it changes; tapped, it opens whole.
+        if (view === 'grid' && unfolded !== p.id)
+          return (
+            <li key={p.id} className="min-w-0">
+              <button
+                type="button"
+                aria-expanded={false}
+                onClick={() => setUnfolded(p.id)}
+                className="press flex h-full w-full flex-col items-start gap-1 rounded-lg bg-bg p-3 text-left text-sm hover:bg-surface-2"
+              >
+                <span className="line-clamp-2 font-medium">{p.name}</span>
+                <span className="w-full truncate text-xs text-muted">
+                  {p.partner ? fmt(t.community.partner, { name: p.partner }) : p.author || t.community.anon}
+                  {elsewhere && frame ? ` · ${frame.model}${frame.year ? ` ${frame.year}` : ''}` : ''}
+                </span>
+                <span className="readout line-clamp-2">
+                  {lead.length
+                    ? lead.map((x, i) => (
+                        // Each spot whole: "3/9h 4,0 g" never splits before its unit.
+                        <span key={x} className="whitespace-nowrap">
+                          {i ? ' · ' : ''}
+                          {x}
+                        </span>
+                      ))
+                    : t.setups.noLead}
+                </span>
+                <span className="num mt-auto pt-1 text-xs text-muted">
+                  {u.weight(p.specs.weightG)} {u.weightUnit} · SW {fmtNum(p.specs.swingweight, 0, lang)}
+                </span>
+                {!holds(p) ? (
+                  <span className="text-xs text-danger">{t.community.specsOff}</span>
+                ) : measuredHolds(p) ? (
+                  <span className="text-xs text-accent-text">{t.community.measuredAfter}</span>
+                ) : p.copies > 0 ? (
+                  <span className="num text-xs text-muted">{p.copies === 1 ? t.community.copyOne : fmt(t.community.copies, { n: p.copies })}</span>
+                ) : null}
+              </button>
+            </li>
+          )
         return (
-          <li key={p.id} className="flex flex-col gap-2 py-3">
+          <li key={p.id} className={cx('flex flex-col gap-2 rounded-lg bg-bg p-3', view === 'grid' && 'col-span-full')}>
             <div className="min-w-0 space-y-1 text-sm">
               <p className="font-medium">
                 {p.name}{' '}
@@ -533,7 +643,8 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
                 </p>
               )}
               {mine && p.hidden && <p className="text-danger">{t.community.hiddenMine}</p>}
-              {reporting === p.id && (
+              {reporting === p.id && !account && <SignInPrompt />}
+              {reporting === p.id && account && (
                 <form
                   className="space-y-3 rounded-md bg-surface-2 p-3"
                   onSubmit={(e) => {
@@ -609,7 +720,6 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
                         active={reporting === p.id}
                         aria-expanded={reporting === p.id}
                         onClick={() => {
-                          if (!account) return toast(t.community.needAccount)
                           setReason('offensive')
                           setReporting((id) => (id === p.id ? null : p.id))
                         }}
@@ -618,6 +728,16 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
                   )}
                 </span>
               </div>
+            )}
+            {view === 'grid' && (
+              <button
+                type="button"
+                aria-expanded
+                onClick={() => setUnfolded(null)}
+                className="self-start text-xs text-muted underline underline-offset-2 hover:text-text"
+              >
+                {t.community.fold}
+              </button>
             )}
           </li>
         )
@@ -756,11 +876,14 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
     plays: 0,
     note: note.trim() || null,
   }
-  if (!open)
+  if (!open || !account)
     return (
-      <Button icon={Users} className="w-full" onClick={() => (account ? setOpen(true) : toast(t.community.needAccount))}>
-        {label}
-      </Button>
+      <div className="space-y-3">
+        <Button icon={Users} className="w-full" onClick={() => setOpen(true)}>
+          {label}
+        </Button>
+        {open && <SignInPrompt />}
+      </div>
     )
   return (
     <form
@@ -837,9 +960,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
       {measured && <p className="text-sm text-muted">{fmt(t.community.measuredIncluded, { date: fmtDate(measured.date, lang) })}</p>}
       <section className="space-y-1" aria-label={t.community.preview}>
         <h3 className="text-sm font-medium">{t.community.preview}</h3>
-        <div className="rounded-md border border-border px-3">
-          <RecipeList list={[previewRow]} racket={racket} onChange={() => {}} preview />
-        </div>
+        <RecipeList list={[previewRow]} racket={racket} onChange={() => {}} preview />
       </section>
       <Button type="submit" variant="primary" icon={Upload} loading={busy} className="w-full">
         {label}
@@ -853,6 +974,7 @@ export function ShareMeasurement({ racket, weightG, balanceCm, swingweight }: { 
   const t = useT()
   const toast = useToast()
   const account = useStore((s) => s.account)
+  const [asked, setAsked] = useState(false)
   const [strung, setStrung] = useState(true)
   const [unit, setUnit] = useState<'1' | '2' | '3' | '4'>('1')
   const [busy, setBusy] = useState(false)
@@ -891,7 +1013,7 @@ export function ShareMeasurement({ racket, weightG, balanceCm, swingweight }: { 
             icon={Send}
             loading={busy}
             onClick={async () => {
-              if (!account) return toast(t.community.needAccount)
+              if (!account) return setAsked(true)
               setBusy(true)
               try {
                 await submitMeasurement({
@@ -912,6 +1034,7 @@ export function ShareMeasurement({ racket, weightG, balanceCm, swingweight }: { 
           >
             {t.community.share}
           </Button>
+          {asked && !account && <SignInPrompt />}
         </div>
       )}
     </Card>

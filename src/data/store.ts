@@ -148,6 +148,9 @@ interface State {
   onboarded: boolean
   /** Community authors the player chose not to see (their author keys). */
   hiddenAuthors: string[]
+  /** How community recipes are laid out: blocks in a list, squares in a
+   *  grid, or 'auto' (squares from four recipes up). */
+  recipesView: 'auto' | 'list' | 'grid'
   /** Saved setups the journal already asked to publish, once each. */
   publishInvited: string[]
   /** String names the player used last, newest first (the name field's suggestions). */
@@ -186,6 +189,7 @@ interface State {
   setOnboarded: (v: boolean) => void
   hideAuthor: (authorKey: string) => void
   markInvited: (setupId: string) => void
+  setRecipesView: (v: 'list' | 'grid') => void
   noteString: (name: string) => void
   showAuthor: (authorKey: string) => void
   showAllAuthors: () => void
@@ -228,6 +232,7 @@ export const useStore = create<State>()(
       onboarded: false,
       hiddenAuthors: [],
       publishInvited: [],
+      recipesView: 'auto',
       recentStrings: [],
       account: null,
       accountPro: null,
@@ -275,6 +280,7 @@ export const useStore = create<State>()(
         }),
       showAuthor: (id) => set((s) => ({ hiddenAuthors: s.hiddenAuthors.filter((x) => x !== id) })),
       showAllAuthors: () => set({ hiddenAuthors: [] }),
+      setRecipesView: (recipesView) => set({ recipesView }),
       markInvited: (id) => set((s) => ({ publishInvited: [...new Set([...s.publishInvited, id])].slice(-200) })),
       markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),
     }),

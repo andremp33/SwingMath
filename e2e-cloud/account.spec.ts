@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { env, REVIEW_EMAIL } from '../cloud/env'
 
@@ -183,11 +183,25 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   await expect(row).toContainText('guardado por 1')
   // Reporting needs an account.
   await row.getByRole('button', { name: /Denunciar/ }).click()
-  await expect(visitor.getByText('Precisas de conta para isto.')).toBeVisible()
+  await expect(row.getByRole('status')).toContainText('Precisas de conta para isto. Entra no Perfil.')
+  await expect(row.getByRole('button', { name: 'Entrar', exact: true })).toBeVisible()
   // Hiding an author needs none, and keeps their setups out of sight.
   await row.getByRole('button', { name: 'Esconder este autor: Ana' }).click()
   await expect(visitor.getByText('Não vais ver mais setups deste autor.')).toBeVisible()
-  await expect(card.getByRole('listitem').filter({ hasText: 'Plow extra' })).toHaveCount(0)
+  await expect(card.getByRole('listitem').filter({ hasText: 'Plow extra' })).toHaveCount(0)  // Publishing asks for an account too, and takes the player to it.
+  await visitor.goto('/')
+  await visitor.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
+  await visitor.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await expect(visitor.getByText('A editar:', { exact: false })).toBeVisible()
+  await visitor.goto('/setups')
+  await share(visitor)
+  await visitor.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  const dialog = visitor.getByRole('dialog')
+  await expect(dialog.getByRole('status')).toContainText('Precisas de conta para isto. Entra no Perfil.')
+  await a11y(visitor, 'dialog[open]')
+  await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await expect(visitor).toHaveURL(/\/perfil$/)
+  await expect(visitor.getByRole('region', { name: 'Conta', exact: true })).toBeVisible()
 })
 
 test('a report says why, and three of them hide the recipe from everyone but its author', async ({ browser }) => {
@@ -448,6 +462,43 @@ test('a recipe carries a short note: two lines, the rest on request; an insult i
   await a11y(visitor, '#card-community')
 })
 
+test('recipes are blocks, in a list or in squares that open; the choice is kept', async ({ browser }) => {
+  test.setTimeout(90_000)
+  const page = await open(browser)
+  const names: string[] = []
+  for (const n of ['g1', 'g2']) {
+    const author = await open(browser)
+    await signIn(author, emailOf(`grid-${n}`))
+    const name = `Quadrado ${n} ${stamp}`
+    names.push(name)
+    await saveSetup(author, name)
+    await author.goto('/setups')
+    await share(author, name)
+    await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+    await author.getByRole('dialog').getByRole('checkbox', { name: 'Spin' }).click()
+    await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+    await expect(author.getByText('Setup publicado')).toBeVisible()
+  }
+  await page.goto('/')
+  const card = await openCommunity(page)
+  const views = card.getByRole('radiogroup', { name: 'Ver como' })
+  await views.getByRole('radio', { name: 'Grelha' }).click()
+  const row = card.getByRole('listitem').filter({ hasText: names[0] })
+  // A square: no buttons until it opens.
+  await expect(row.getByRole('button', { name: 'Experimentar' })).toHaveCount(0)
+  await row.getByRole('button', { name: new RegExp(`^${names[0]}`), expanded: false }).click()
+  await expect(row.getByRole('button', { name: 'Experimentar' })).toBeVisible()
+  await row.getByRole('button', { name: 'Fechar' }).click()
+  await expect(row.getByRole('button', { name: 'Experimentar' })).toHaveCount(0)
+  await a11y(page, '#card-community')
+  // Kept: the sheet opens in squares too, and the list is a click away.
+  await card.getByRole('button', { name: /^Ver as receitas/ }).click()
+  const sheet = page.getByRole('dialog', { name: 'Receitas para a Babolat Pure Aero 98' })
+  await expect(sheet.getByRole('radiogroup', { name: 'Ver como' }).getByRole('radio', { name: 'Grelha' })).toHaveAttribute('aria-checked', 'true')
+  await sheet.getByRole('radiogroup', { name: 'Ver como' }).getByRole('radio', { name: 'Lista' }).click()
+  await expect(sheet.getByRole('listitem').filter({ hasText: names[1] }).getByRole('button', { name: 'Experimentar' })).toBeVisible()
+})
+
 test('a name with an insult is not published', async ({ browser }) => {
   const author = await open(browser)
   await signIn(author, emailOf('rude'))
@@ -465,6 +516,13 @@ test('a name with an insult is not published', async ({ browser }) => {
 async function a11y(page: Page, selector: string) {
   const r = await new AxeBuilder({ page }).include(selector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
   expect(r.violations.map((x) => `${x.id}: ${x.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`)).toEqual([])
+}
+
+/** A recipe's row, whole: in the grid it is a square until tapped. */
+async function openRecipe(row: Locator, name: string) {
+  await expect(row).toBeVisible()
+  const square = row.getByRole('button', { name: new RegExp(`^${name}`), expanded: false })
+  if (await square.count()) await square.click()
 }
 
 /** The calculator's community card, opened. */
@@ -512,6 +570,7 @@ test('a recipe says what it is for, filters by goal, and republishing updates it
   await sheet.getByLabel('Objetivo').selectOption({ label: 'Estabilidade' })
   await sheet.getByLabel('Nível').selectOption({ label: 'Avançado' })
   const row = sheet.getByRole('listitem').filter({ hasText: `Estável ${stamp}` })
+  await openRecipe(row, `Estável ${stamp}`)
   await expect(row).toContainText('Avançado')
   await expect(row).toContainText('Base de catálogo')
   await a11y(visitor, 'dialog[open]')
@@ -553,6 +612,7 @@ test('a racket without recipes shows those of similar rackets, and Planear reach
   const sheet = visitor.getByRole('dialog', { name: 'Receitas para a Yonex VCORE 98' })
   const similar = sheet.getByRole('region', { name: 'Receitas em raquetes parecidas' })
   const row = similar.getByRole('listitem').filter({ hasText: name })
+  await openRecipe(row, name)
   await expect(row).toContainText('na Babolat Pure Aero 98 (2026)')
   await a11y(visitor, 'dialog[open]')
 
