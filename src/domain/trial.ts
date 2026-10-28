@@ -1,20 +1,10 @@
 /**
- * Pro free until the next restring: given once, when the first launch's
- * walkthrough ends. No payment and no store: it ends on its own, and the
- * player's data stays where it is.
+ * The free Pro that versions before 28 October 2026 gave when the first
+ * launch's walkthrough ended. No new player gets it (Pro is tried through
+ * the store's free trial); those who have it keep it until its date, and
+ * then hear once that it ended. No payment and no store: the player's data
+ * stays where it is.
  */
-
-const DAY = 86_400_000
-export const FREE_PRO_MIN_DAYS = 14
-export const FREE_PRO_MAX_DAYS = 30
-
-/** Until the strings' predicted restring, kept between 14 and 30 days;
- *  without strings yet, 14 days. */
-export function freeProEnd(now: number, restringAt?: number): number {
-  const lo = now + FREE_PRO_MIN_DAYS * DAY
-  const hi = now + FREE_PRO_MAX_DAYS * DAY
-  return restringAt === undefined ? lo : Math.min(hi, Math.max(lo, restringAt))
-}
 
 export const freeProActive = (until: number | null | undefined, now = Date.now()) => until != null && now < until
 

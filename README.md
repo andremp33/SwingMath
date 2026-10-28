@@ -109,6 +109,16 @@ the web checkout.
    In RevenueCat → Integrations → Webhooks, point at
    `https://<ref>.supabase.co/functions/v1/rc-webhook` with the Authorization
    header set to the same `RC_WEBHOOK_AUTH` value.
+5. In both stores' listings, the support and privacy contact is
+   `swing.math@outlook.com` (also the app's default for `VITE_SUPPORT_EMAIL`).
+
+Pro is tried through the store's free trial only; the app gives no free Pro
+of its own any more (those who got it before 28 October 2026 keep it until
+its date). The trial shows wherever Pro is offered (the plans, the locks, the
+Profile's plan row, the walkthrough's last screen) only when the store says
+this player may still take it. Two days before a trial turns into the plan,
+the app reminds the player with a local notification (if notifications are
+on); after a trial purchase it asks for them.
 
 Signed in, the RevenueCat user is the account id; a purchase made signed out
 moves to the account when the player signs in.

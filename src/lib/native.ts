@@ -70,10 +70,11 @@ export async function initNative() {
     openPath('/perfil')
   })
 
-  // A tap on a restring reminder opens it in the journal.
+  // A tap on a restring reminder opens it in the journal; any other, its page.
   LocalNotifications.addListener('localNotificationActionPerformed', ({ notification }) => {
-    const id = (notification.extra as { stringingId?: string } | undefined)?.stringingId
-    if (id) openPath(reminderPath(id))
+    const extra = notification.extra as { stringingId?: string; path?: string } | undefined
+    if (extra?.stringingId) openPath(reminderPath(extra.stringingId))
+    else if (extra?.path) openPath(extra.path)
   })
 }
 
@@ -107,7 +108,18 @@ export async function shareText(title: string, text: string, url: string) {
 export async function scheduleRestrings(items: { id: number; at: Date; title: string; body: string; stringingId: string }[]) {
   const { display } = await LocalNotifications.checkPermissions()
   if (display !== 'granted') return
+  // Only restring reminders: the trial's own reminder stays.
   const { notifications } = await LocalNotifications.getPending()
-  if (notifications.length) await LocalNotifications.cancel({ notifications: notifications.map((n) => ({ id: n.id })) })
+  const old = notifications.filter((n) => (n.extra as { stringingId?: string } | undefined)?.stringingId)
+  if (old.length) await LocalNotifications.cancel({ notifications: old.map((n) => ({ id: n.id })) })
   if (items.length) await LocalNotifications.schedule({ notifications: items.map((i) => ({ id: i.id, title: i.title, body: i.body, schedule: { at: i.at, allowWhileIdle: true }, extra: { stringingId: i.stringingId } })) })
+}
+
+/** One reminder at a time, its tap opening `path`; null `at` drops it. */
+export async function scheduleReminder(id: number, at: Date | null, title: string, body: string, path: string) {
+  await LocalNotifications.cancel({ notifications: [{ id }] }).catch(() => {})
+  if (!at) return
+  const { display } = await LocalNotifications.checkPermissions()
+  if (display !== 'granted') return
+  await LocalNotifications.schedule({ notifications: [{ id, title, body, schedule: { at, allowWhileIdle: true }, extra: { path } }] })
 }

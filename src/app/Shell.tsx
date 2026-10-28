@@ -12,7 +12,7 @@ import { Logo } from '../ui/Logo'
 import { Avatar } from '../ui/Avatar'
 import { useFreeProEnd } from '../screens/freeProEnd'
 import { useProNudge } from '../screens/proNudge'
-import { useRestringReminders } from '../screens/reminders'
+import { useRestringReminders, useTrialEndReminder } from '../screens/reminders'
 
 const TABS = [
   { to: '/', icon: Calculator, key: 'calc', color: 'var(--c-accent)' },
@@ -55,6 +55,7 @@ export function Shell() {
   const t = useT()
   const loc = useLocation()
   const due = useRestringReminders()
+  useTrialEndReminder()
   useFreeProEnd()
   useProNudge()
   useEffect(() => {

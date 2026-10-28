@@ -33,6 +33,23 @@ export function savingPct(annual: number | undefined, monthly: number | undefine
   return pct > 0 ? pct : null
 }
 
+/** Days before a free trial ends that the app reminds the player. */
+export const TRIAL_REMIND_DAYS = 2
+
+/** The trial day by day, for the paywall: today, the reminder, the day the
+ *  plan starts (day 1 is the first day after today). */
+export function trialSteps(days: number): { kind: 'today' | 'remind' | 'charge'; day: number }[] {
+  const remind = days - TRIAL_REMIND_DAYS
+  return [{ kind: 'today', day: 0 }, ...(remind > 0 ? [{ kind: 'remind' as const, day: remind }] : []), { kind: 'charge', day: days }]
+}
+
+/** When to remind that a trial ends: two days before, at the same time of
+ *  day; null when that has passed. */
+export function trialReminderAt(expiresAt: number, now = Date.now()): number | null {
+  const at = expiresAt - TRIAL_REMIND_DAYS * DAY
+  return at > now ? at : null
+}
+
 /** One plan as the store sells it to this player. */
 export interface PlanOffer {
   plan: Plan

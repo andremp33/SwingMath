@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { isPro, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import type { Plan } from '../lib/entitlement'
-import { offerCopy, savingPct, type PaywallReason } from '../lib/paywall'
+import { offerCopy, savingPct, trialSteps, type PaywallReason } from '../lib/paywall'
 import { IS_PREVIEW } from '../lib/platform'
 import type { StorePlan } from '../lib/purchases'
 import { Badge, Button, Card, cx } from '../ui/basics'
@@ -11,6 +11,8 @@ import { Sheet, useToast } from '../ui/overlay'
 import { AppOnly } from '../preview/text'
 import { PaywallTop } from './PaywallPreview'
 import { LegalSheet, type LegalKind } from './Legal'
+import { useReminders } from './reminders'
+import { forgetPlans, loadPlans, useTrialDays } from './storePlans'
 
 type OpenPaywall = (reason: PaywallReason, opts?: { asked?: boolean }) => void
 const PaywallCtx = createContext<OpenPaywall>(() => {})
@@ -52,7 +54,7 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
 /** Pro as the player has it, or the plans to get it (the stores' own). */
 export function ProPanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => void }) {
   const t = useT()
-  // The free days after the walkthrough are Pro, but the plans are still for sale.
+  // The free days a walkthrough gave before are Pro, but the plans are still for sale.
   const paid = useStore((s) => isPro({ ...s, freeProUntil: null }))
   if (paid) {
     return (
@@ -83,13 +85,11 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
   const [plan, setPlan] = useState<Plan>('annual')
   const [busy, setBusy] = useState<'buy' | 'restore' | null>(null)
   const [legal, setLegal] = useState<LegalKind | null>(null)
+  const reminders = useReminders()
 
   useEffect(() => {
     let live = true
-    // The app's preview in a browser sells nothing.
-    ;(IS_PREVIEW ? Promise.resolve<StorePlan[]>([]) : import('../lib/purchases').then((m) => m.storePlans()))
-      .catch(() => [])
-      .then((p) => live && setPlans(p))
+    void loadPlans().then((p) => live && setPlans(p))
     return () => {
       live = false
     }
@@ -105,8 +105,11 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
       const m = await import('../lib/purchases')
       if (kind === 'buy') {
         if ((await m.buy(chosen!.pkg)) === 'done') {
+          forgetPlans()
           toast(t.pro.active)
           onDone?.()
+          // The trial's end is a reminder; it needs the notifications.
+          if (chosen!.trialDays && reminders.supported && reminders.permission === 'default') void reminders.enable()
         }
       } else if (await m.restore()) {
         toast(t.pro.restored)
@@ -144,6 +147,7 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
         )
       ) : (
         <>
+          {chosen.trialDays && <TrialSteps days={chosen.trialDays} />}
           <fieldset>
             <legend className="sr-only">{t.pro.title}</legend>
             <div className="space-y-2">
@@ -203,6 +207,29 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
   )
 }
 
+/** The trial, day by day: what it gives, when we remind, when the plan
+ *  starts. Said before the button, so nothing about it is a surprise. */
+function TrialSteps({ days }: { days: number }) {
+  const t = useT()
+  const p = t.paywall
+  const text = { today: p.trialTodayText, remind: p.trialRemindText, charge: fmt(p.trialChargeText, { store: storeName() }) }
+  return (
+    <section aria-labelledby="trial-title" className="rounded-lg bg-surface-2 px-4 py-3" data-testid="trial-steps">
+      <h3 id="trial-title" className="font-semibold">
+        {fmt(p.trialTitle, { days })}
+      </h3>
+      <ol className="mt-2 space-y-2">
+        {trialSteps(days).map((s) => (
+          <li key={s.kind} className="flex gap-3 text-sm">
+            <span className="num w-14 shrink-0 font-medium text-accent-text">{s.day === 0 ? p.trialToday : fmt(p.trialDay, { n: s.day })}</span>
+            <span>{text[s.kind]}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 /**
  * Pro content, or for everyone else the lock (in a card, unless `bare`:
  * already inside one). With `preview`, the lock sits over that, blurred:
@@ -213,6 +240,7 @@ export function ProGate({ children, title, reason, bare, preview }: { children: 
   const pro = useStore(isPro)
   const paywall = usePaywall()
   const t = useT()
+  const trialDays = useTrialDays()
   if (pro) return <>{children}</>
   const body = (
     <>
@@ -222,7 +250,7 @@ export function ProGate({ children, title, reason, bare, preview }: { children: 
         <p className="text-sm text-muted">{t.pro.locked}</p>
       </div>
       <Button variant="primary" icon={Sparkles} onClick={() => paywall(reason, { asked: true })}>
-        {t.pro.unlock}
+        {trialDays ? fmt(t.pro.unlockTrial, { days: trialDays }) : t.pro.unlock}
       </Button>
     </>
   )

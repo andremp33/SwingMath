@@ -98,8 +98,8 @@ test.describe('A01 first launch', () => {
 const DAY = 86_400_000
 const stored = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('swingmath')!).state as { freeProUntil: number | null; freeProEndTold: boolean })
 
-test.describe('A02 Pro free until the next restring', () => {
-  test('A02-H1 finishing the walkthrough unlocks Pro until the strings’ predicted restring', async ({ page }) => {
+test.describe('A02 no free Pro: the store trial instead', () => {
+  test('A02-H1 finishing the walkthrough leaves the plan free; no store here, so no trial is promised', async ({ page }) => {
     await firstLaunch(page)
     await page.getByRole('button', { name: 'Começar' }).click()
     await page.getByRole('radio', { name: /Pure Aero 98 \(2026\)/ }).click()
@@ -110,33 +110,27 @@ test.describe('A02 Pro free until the next restring', () => {
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByRole('button', { name: 'Continuar' }).click()
     await page.getByRole('button', { name: 'Agora não' }).click()
-    const note = page.getByTestId('free-pro')
-    await expect(note).toHaveText(/^Desbloqueámos o Pro até .+\. Não pagas nada e não renova\.$/)
-    const date = (await note.textContent())!.match(/até (.+)\. Não/)![1]
+    await expect(page.getByText(/^Grátis: calculadora/)).toBeVisible()
+    await expect(page.getByTestId('pro-trial')).toHaveCount(0)
+    await expect(page.getByText(/Desbloqueámos o Pro/)).toHaveCount(0)
     await a11y(page)
     await page.getByRole('button', { name: 'Abrir na calculadora' }).click()
-    const { freeProUntil } = await stored(page)
-    // Between 14 and 30 days, by the strings put in a week ago.
-    expect(freeProUntil! - Date.now()).toBeGreaterThan(13.9 * DAY)
-    expect(freeProUntil! - Date.now()).toBeLessThan(30.1 * DAY)
+    expect((await stored(page)).freeProUntil).toBeNull()
     await page.goto('/perfil')
-    const plan = page.getByRole('region', { name: 'Plano' })
-    await expect(plan).toContainText(`Pro grátis até ${date}`)
-    await expect(plan).toContainText('Não pagas nada e não renova.')
-    // Pro views are open; the plans are still for sale.
+    await expect(page.getByRole('region', { name: 'Plano' })).toContainText('Grátis')
+    // Pro views stay locked.
     await page.goto('/diario')
-    await expect(page.getByRole('region', { name: 'O que joga melhor' }).getByRole('button', { name: 'Experimentar o Pro' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'O que joga melhor' }).getByRole('button', { name: 'Experimentar o Pro' })).toBeVisible()
   })
 
-  test('A02-E1 skipping the walkthrough still gives it: 14 days without strings', async ({ page }) => {
+  test('A02-E1 skipping the walkthrough gives nothing either', async ({ page }) => {
     await firstLaunch(page)
     await page.getByRole('button', { name: 'Saltar' }).click()
     await expect(page.getByRole('heading', { name: 'Calculadora' })).toBeVisible()
-    const { freeProUntil } = await stored(page)
-    expect(Math.abs(freeProUntil! - (Date.now() + 14 * DAY))).toBeLessThan(60_000)
+    expect((await stored(page)).freeProUntil).toBeNull()
   })
 
-  test('A02-H2 once it ends: the paywall on their own report, once; nothing of theirs hidden', async ({ page }) => {
+  test('A02-H2 a free Pro given before ends: the paywall on their own report, once; nothing of theirs hidden', async ({ page }) => {
     await start(page, { path: '/diario' })
     await page.evaluate(async (DAY) => {
       const dbUrl = '/src/data/db.ts'
