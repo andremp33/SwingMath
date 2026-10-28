@@ -39,6 +39,16 @@ export function providers(): Record<Provider, boolean> {
   return { apple: p === 'ios' || (p === 'web' && !!APPLE_WEB), google: !!GOOGLE_WEB && (p !== 'ios' || !!GOOGLE_IOS) }
 }
 
+const EMAIL_CODE = import.meta.env.VITE_EMAIL_SIGN_IN === 'true'
+
+/** The code by email: only once the app sends email of its own (custom SMTP,
+ *  then VITE_EMAIL_SIGN_IN=true), or when this build has neither Apple nor
+ *  Google (development, the tests), so there is always a way in. */
+export function emailSignIn() {
+  const p = providers()
+  return EMAIL_CODE || (!p.apple && !p.google)
+}
+
 /** Closed without choosing an account: not an error. */
 export class Cancelled extends Error {}
 

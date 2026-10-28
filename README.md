@@ -76,26 +76,29 @@ app). App Links and Universal Links (`.well-known`) wait for a domain.
 **Accounts (Supabase), optional.**
 
 1. Create a project in an EU region. Set the site URL and allow
-   `<site>/**` as a redirect URL. Sign-in works with the default email (a
-   link, from Supabase's own sender). For a code from the app's own address,
-   set up custom SMTP first (the free tier only allows template changes with
-   it), then the templates: see "Email (custom SMTP)" below.
+   `<site>/**` as a redirect URL. Players sign in with Apple and Google (see
+   below); keep the Email provider enabled all the same, for the stores'
+   review account and its password. The code by email stays off until the
+   app sends email of its own: see "Email (custom SMTP), optional".
 2. `npx supabase link --project-ref <ref>` then `npx supabase db push`.
 3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository variables.
 
 The `subscriptions` table (web subscriptions, from an earlier version) stays
 in the database and `has_pro` still reads it; nothing writes to it any more.
 
-**Sign in with Apple and Google.** Above the email code on the sign-in
-screen: on the iPhone, Apple and Google; on Android, Google; in a browser
-(the preview, `dev:app`), Apple's popup and Google's own button. Each gives
-an ID token that the app hands to Supabase (`signInWithIdToken`, with a
-nonce), so no screen shows Supabase's address. A button only shows once its
-ID is set (Apple on the iPhone always: App Store guideline 4.8 asks for it
-wherever Google is). With the same email, Apple, Google and the code reach
-the same account (Supabase links them by verified email), so the account ID,
-which is the RevenueCat user, does not change. Someone who hides their email
-from Apple gets a new account, with the relay address.
+**Sign in with Apple and Google.** The way into an account: on the iPhone,
+Apple and Google; on Android, Google; in a browser (the preview, `dev:app`),
+Apple's popup and Google's own button. Each gives an ID token that the app
+hands to Supabase (`signInWithIdToken`, with a nonce), so no screen shows
+Supabase's address, and no email of ours is needed. A button only shows once
+its ID is set (Apple on the iPhone always: App Store guideline 4.8 asks for
+it wherever Google is). The code by email shows only with
+`VITE_EMAIL_SIGN_IN=true` (once there is custom SMTP), or in a build with
+neither Apple nor Google (development, the tests). With the same email,
+Apple, Google and the code reach the same account (Supabase links them by
+verified email), so the account ID, which is the RevenueCat user, does not
+change. Someone who hides their email from Apple gets an account of its own,
+with the relay address.
 
 *Apple Developer* (Certificates, Identifiers & Profiles):
 
@@ -116,10 +119,11 @@ from Apple gets a new account, with the relay address.
    account should revoke Apple's tokens with it (not done yet, see below),
    and Supabase would need it only for Apple's redirect flow, which the app
    does not use.
-4. Services → Sign in with Apple for Email Communication → Configure: add
-   the domain (`swingmath.app`) and the sender `noreply@swingmath.app`, once
-   its SPF passes (see the email section). Without this, codes sent to
-   `@privaterelay.appleid.com` addresses never arrive.
+4. Only with the email code on: Services → Sign in with Apple for Email
+   Communication → Configure: add the domain (`swingmath.app`) and the
+   sender `noreply@swingmath.app`, once its SPF passes (see the email
+   section). Without this, codes sent to `@privaterelay.appleid.com`
+   addresses never arrive.
 
 *Google Cloud* (one project, console.cloud.google.com):
 
@@ -156,8 +160,7 @@ from Apple gets a new account, with the relay address.
    first. The client secret is for the redirect flow only: if the form
    insists, paste the web client's. Keep "Skip nonce checks" off: the app
    sends a nonce.
-3. Nothing else changes: the review account and the email code keep
-   working.
+3. Nothing else changes: the review account keeps its password.
 
 *Locally*, against `npx supabase start`: in `supabase/config.toml`, under
 `[auth.external.apple]` and `[auth.external.google]`, set `enabled = true`
@@ -232,9 +235,13 @@ to unblock). Reviewed reports stop counting and are purged 12 months after
 review by a nightly `pg_cron` job. Each account publishes at most 5 recipes
 a day: `update public.community_settings set publish_per_day = <n>;`.
 
-**Email (custom SMTP).** Supabase's built-in sender is for testing only (a
-few emails an hour, from Supabase's address). The code should come from the
-app's own address, through a provider, on a domain the app owns.
+**Email (custom SMTP), optional.** The app needs no email today: Apple and
+Google sign players in. Supabase's built-in sender only reaches the project's
+team (a few emails an hour, from Supabase's address), which is why the code
+by email is off. To bring it back, the code has to come from the app's own
+address, through a provider, on a domain the app owns: the steps below, then
+`VITE_EMAIL_SIGN_IN=true` for the builds (and the repository variable for
+the preview).
 
 `swing.math@outlook.com` cannot be the sender. Outlook.com no longer accepts
 SMTP with a password (basic authentication, app passwords included) for
@@ -273,9 +280,10 @@ from a domain of ours:
    subject `SwingMath: {{ .Token }}` (as `supabase/config.toml` sets them
    locally).
 6. Send yourself a code and check its headers: `dkim=pass`, `spf=pass` and
-   `dmarc=pass` for `swingmath.app`. Then name the provider (Resend, Inc.,
-   in the US, under the standard contractual clauses) in the privacy
-   policy's account section, which today says "an email delivery provider".
+   `dmarc=pass` for `swingmath.app`. Then put the email code back in the
+   privacy policy's account section (`src/i18n/legal.ts`): the code sent to
+   the email, and the provider (Resend, Inc., in the US, under the standard
+   contractual clauses), which only receives the address and the message.
 7. With Sign in with Apple, a player may hide their email behind an Apple
    relay address, which only takes mail from registered senders: see step 4
    of Apple above.
@@ -286,8 +294,10 @@ our sign-in emails, so one account signs in with a password instead:
 1. In Supabase → Authentication → Users → Add user, create it with an email
    you control (for example `review@yourdomain`), a strong password, and
    "Auto confirm user" on.
-2. Set `VITE_REVIEW_EMAIL` to that email for the app builds. Only that email
-   shows the password field; everyone else signs in with a code.
+2. Set `VITE_REVIEW_EMAIL` to that email for the app builds. Under Apple and
+   Google, "Entrar com a conta de revisão das lojas" then opens the email
+   and password fields (with the email code on, that email shows the
+   password field instead). No other email signs in with a password.
 3. Give the email and password to the reviewers in App Store Connect (App
    Review Information) and Play Console (App access). Keep the password out
    of the repository.

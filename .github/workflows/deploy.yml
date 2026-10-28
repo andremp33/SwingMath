@@ -39,6 +39,8 @@ jobs:
           # Sign in with Google and Apple in the preview (no button until set).
           VITE_GOOGLE_WEB_CLIENT_ID: ${{ vars.VITE_GOOGLE_WEB_CLIENT_ID }}
           VITE_APPLE_SERVICE_ID: ${{ vars.VITE_APPLE_SERVICE_ID }}
+          # The code by email, once Supabase sends through an SMTP of ours.
+          VITE_EMAIL_SIGN_IN: ${{ vars.VITE_EMAIL_SIGN_IN }}
           VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL || secrets.VITE_SUPPORT_EMAIL }}
           VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME || secrets.VITE_OWNER_NAME }}
           VITE_OWNER_ADDRESS: ${{ vars.VITE_OWNER_ADDRESS || secrets.VITE_OWNER_ADDRESS }}

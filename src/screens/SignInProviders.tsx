@@ -21,10 +21,10 @@ function useDark() {
   return dark
 }
 
-/** Apple and Google, above the email (and the line that leads to it): their
- *  own sheets in the store apps; in a browser, Apple's popup and Google's own
- *  button. Nothing when this build has neither. */
-export function SignInProviders({ onSignedIn }: { onSignedIn: (fresh: boolean, name?: string) => void }) {
+/** Apple and Google, above the email (and, with `divider`, the line that
+ *  leads to it): their own sheets in the store apps; in a browser, Apple's
+ *  popup and Google's own button. Nothing when this build has neither. */
+export function SignInProviders({ onSignedIn, divider }: { onSignedIn: (fresh: boolean, name?: string) => void; divider: boolean }) {
   const t = useT()
   const toast = useToast()
   const [busy, setBusy] = useState<Provider>()
@@ -69,11 +69,13 @@ export function SignInProviders({ onSignedIn }: { onSignedIn: (fresh: boolean, n
           {error}
         </p>
       )}
-      <p className="flex items-center gap-3 pt-2 text-sm text-muted">
-        <span className="h-px flex-1 bg-border" aria-hidden />
-        {t.account.orEmail}
-        <span className="h-px flex-1 bg-border" aria-hidden />
-      </p>
+      {divider && (
+        <p className="flex items-center gap-3 pt-2 text-sm text-muted">
+          <span className="h-px flex-1 bg-border" aria-hidden />
+          {t.account.orEmail}
+          <span className="h-px flex-1 bg-border" aria-hidden />
+        </p>
+      )}
     </div>
   )
 }

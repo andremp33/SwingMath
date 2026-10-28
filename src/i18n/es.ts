@@ -699,6 +699,7 @@ export const es: Dict = {
     continueApple: 'Continuar con Apple',
     continueGoogle: 'Continuar con Google',
     orEmail: 'o con tu email',
+    reviewAccount: 'Entrar con la cuenta de revisión de las tiendas',
     errors: {
       offline: 'Sin internet.',
       invalid: 'Código incorrecto o caducado.',
@@ -706,7 +707,7 @@ export const es: Dict = {
       config: 'Las cuentas aún no están configuradas en esta versión.',
       email: 'Escribe un email válido.',
       taken: 'Ese email ya tiene una cuenta.',
-      provider: 'No se pudo entrar. Inténtalo de nuevo o usa tu email.',
+      provider: 'No se pudo entrar. Inténtalo de nuevo.',
     },
   },
   community: {

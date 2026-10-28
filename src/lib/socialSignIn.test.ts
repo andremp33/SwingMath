@@ -25,4 +25,11 @@ describe('sign in with Apple and Google', () => {
     expect((await load({ VITE_GOOGLE_WEB_CLIENT_ID: 'web.apps.googleusercontent.com' })).providers()).toEqual({ apple: false, google: true })
     expect((await load({ VITE_APPLE_SERVICE_ID: 'app.swingmath.web', VITE_GOOGLE_WEB_CLIENT_ID: ' ' })).providers()).toEqual({ apple: true, google: false })
   })
+
+  it('offers the email code only when switched on, or when there is no other way in', async () => {
+    const google = { VITE_GOOGLE_WEB_CLIENT_ID: 'web.apps.googleusercontent.com' }
+    expect((await load({})).emailSignIn()).toBe(true)
+    expect((await load(google)).emailSignIn()).toBe(false)
+    expect((await load({ ...google, VITE_EMAIL_SIGN_IN: 'true' })).emailSignIn()).toBe(true)
+  })
 })
