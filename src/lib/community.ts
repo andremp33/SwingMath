@@ -364,6 +364,21 @@ export class BlockedWordsError extends Error {
   }
 }
 
+/** The server refused: too many recipes today, too many in all, or the
+ *  account was blocked by a moderator. */
+export class PublishLimitError extends Error {
+  kind: 'rate' | 'total' | 'blocked'
+  constructor(kind: PublishLimitError['kind']) {
+    super(kind)
+    this.kind = kind
+  }
+}
+
+const LIMITS: Record<string, PublishLimitError['kind']> = { 'publish rate': 'rate', 'public setup limit reached': 'total', 'publishing blocked': 'blocked' }
+
+/** The server's refusal as an error the app can explain. */
+const refusal = (e: { message?: string }) => (e.message && LIMITS[e.message] ? new PublishLimitError(LIMITS[e.message]) : e)
+
 /** A recipe hidden by reports cannot be published again: that would undo moderation. */
 export class HiddenRecipeError extends Error {
   constructor() {
@@ -423,7 +438,7 @@ export async function publishSetup(p: PublishInput): Promise<'created' | 'update
   topCache = undefined
   if (plan === 'update') {
     const { error } = await cl.from('public_setups').update({ ...row, updated_at: new Date().toISOString() }).eq('id', prev!.id)
-    if (error) throw error
+    if (error) throw refusal(error)
     return 'updated'
   }
   // The unique (user, setup_ref) means the old row must go before the new one.
@@ -432,7 +447,7 @@ export async function publishSetup(p: PublishInput): Promise<'created' | 'update
     if (error) throw error
   }
   const { error } = await cl.from('public_setups').insert({ ...row, racket_id: racketId, setup_ref: p.setupRef ?? null })
-  if (error) throw error
+  if (error) throw refusal(error)
   return plan === 'replace' ? 'moved' : 'created'
 }
 

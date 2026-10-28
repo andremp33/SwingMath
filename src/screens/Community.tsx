@@ -24,6 +24,7 @@ import {
   BlockedWordsError,
   GOALS,
   HiddenRecipeError,
+  PublishLimitError,
   LEVELS,
   publicSetups,
   myRecipe,
@@ -405,7 +406,7 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
     try {
       await fn()
     } catch (err) {
-      toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : err instanceof BlockedWordsError ? t.community.blockedWords : t.community.error)
+      toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : err instanceof BlockedWordsError ? t.community.blockedWords : err instanceof PublishLimitError ? t.community.limits[err.kind] : t.community.error)
     }
   }
 
@@ -761,7 +762,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
           setOpen(false)
           setPublishedAs((id) => id ?? 'yes')
         } catch (err) {
-          toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : err instanceof BlockedWordsError ? t.community.blockedWords : t.community.error)
+          toast(err instanceof HiddenRecipeError ? t.community.hiddenRecipe : err instanceof BlockedWordsError ? t.community.blockedWords : err instanceof PublishLimitError ? t.community.limits[err.kind] : t.community.error)
         } finally {
           setBusy(false)
         }

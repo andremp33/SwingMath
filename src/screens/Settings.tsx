@@ -1,6 +1,7 @@
 import { Bell, Download, ExternalLink, RotateCcw, Sparkles, Trash2, Upload } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { signOut } from '../app/account'
 import { deleteAll, exportAll, importAll } from '../data/db'
 import { accountProActive, isPro, useStore, type Court, type Theme, type UnitSystem } from '../data/store'
@@ -8,6 +9,7 @@ import { freeProActive } from '../domain/trial'
 import { DEFAULT_ACCESSORY_MASSES } from '../domain/types'
 import { fmt, loadLang, useT, type Lang } from '../i18n'
 import { PRO_BETA } from '../lib/entitlement'
+import { isModerator, moderationQueue } from '../lib/moderation'
 import { fmtDate } from '../lib/format'
 import { IS_APP, IS_NATIVE } from '../lib/platform'
 import { Badge, Button, NumberField, Segmented, SettingsGroup, SettingsRow } from '../ui/basics'
@@ -207,6 +209,33 @@ function RestoreRow() {
   )
 }
 
+/** For moderators only: how many hidden recipes wait, and the way there. */
+function ModerationRow() {
+  const t = useT()
+  const nav = useNavigate()
+  const account = useStore((s) => s.account)
+  const [waiting, setWaiting] = useState<number | null>(null)
+  useEffect(() => {
+    let alive = true
+    if (account)
+      isModerator()
+        .then((yes) => (yes ? moderationQueue().then((q) => q.length) : null))
+        .then((n) => alive && setWaiting(n))
+        .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [account])
+  if (waiting === null) return null
+  return (
+    <SettingsRow label={t.moderation.title} hint={fmt(t.moderation.toReview, { n: waiting })}>
+      <Button variant="secondary" size="sm" onClick={() => nav('/moderar')}>
+        {t.moderation.open}
+      </Button>
+    </SettingsRow>
+  )
+}
+
 function DataGroup() {
   const hiddenAuthors = useStore((s) => s.hiddenAuthors)
   const showAllAuthors = useStore((s) => s.showAllAuthors)
@@ -216,6 +245,7 @@ function DataGroup() {
   const fileRef = useRef<HTMLInputElement>(null)
   return (
     <SettingsGroup title={t.settings.data} info={<InfoTip title={t.settings.data}>{t.settings.dataHint}</InfoTip>}>
+      <ModerationRow />
       {hiddenAuthors.length > 0 && (
         <SettingsRow label={fmt(t.community.hiddenCount, { n: hiddenAuthors.length })}>
           <Button variant="secondary" size="sm" onClick={showAllAuthors}>

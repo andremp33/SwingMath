@@ -122,6 +122,17 @@ function is deployed the app falls back to deleting in the database alone.
 Deleting an account does not cancel a store subscription; the app says so
 and links to the store's page.
 
+**Community moderation.** Three reports from different players (or one in
+ten of those who saved a recipe, when more) hide it until someone reviews it.
+To review, make your account a moderator: in Supabase Studio, SQL editor,
+`insert into public.moderators (user_id) select id from auth.users where email = '<you>';`.
+The app then shows **Moderação** in Settings, with how many wait, and the
+queue at `/moderar`: each hidden recipe is shown again, kept hidden, or kept
+hidden with its author blocked (`public.blocked_publishers`; delete the row
+to unblock). Reviewed reports stop counting and are purged 12 months after
+review by a nightly `pg_cron` job. Each account publishes at most 5 recipes
+a day: `update public.community_settings set publish_per_day = <n>;`.
+
 **Email (custom SMTP).** The sign-in code is an email, and Supabase's
 built-in sender is only for testing (a few emails an hour, to team
 addresses). In Supabase → Authentication → Emails → SMTP settings, fill in

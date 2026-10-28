@@ -357,6 +357,64 @@ test('a player who saved a recipe and plays it counts as a play', async ({ brows
   await expect.poll(async () => (await admin.from('recipe_plays').select('user_id').eq('setup_id', data!.id)).data?.length).toBe(1)
 })
 
+test('a moderator reviews the queue: shown again, or hidden with its author blocked', async ({ browser }) => {
+  test.setTimeout(120_000)
+  const author = await open(browser)
+  await signIn(author, emailOf('mod-author'))
+  for (const name of [`Revista ${stamp}`, `Bloqueada ${stamp}`]) {
+    await saveSetup(author, name)
+    await author.goto('/setups')
+    await share(author, name)
+    await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+    await author.getByRole('dialog').getByRole('checkbox', { name: 'Spin' }).click()
+    await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+    await expect(author.getByText('Setup publicado')).toBeVisible()
+    await author.keyboard.press('Escape')
+  }
+  const ids: Record<string, string> = {}
+  for (const name of [`Revista ${stamp}`, `Bloqueada ${stamp}`]) {
+    ids[name] = (await admin.from('public_setups').select('id').eq('name', name).single()).data!.id
+    for (const n of ['m1', 'm2', 'm3']) {
+      const { data: u } = await admin.auth.admin.createUser({ email: emailOf(`${n}-${ids[name].slice(0, 6)}`), email_confirm: true })
+      await admin.from('reports').insert({ setup_id: ids[name], user_id: u.user!.id, reason: n === 'm1' ? 'false' : 'spam' })
+    }
+  }
+
+  // Not a moderator: nothing to see.
+  const mod = await open(browser)
+  await signIn(mod, emailOf('moderator'))
+  await mod.goto('/moderar')
+  await expect(mod.getByText('Esta página é só para moderadores.')).toBeVisible()
+  await admin.from('moderators').insert({ user_id: (await userByEmail(emailOf('moderator'))).id })
+
+  // From Settings to the queue.
+  await mod.goto('/perfil/definicoes')
+  await mod.getByRole('button', { name: 'Abrir' }).click()
+  await expect(mod).toHaveURL(/\/moderar$/)
+  const shown = mod.getByRole('region', { name: `Revista ${stamp}` })
+  await expect(shown).toContainText('3 denúncias')
+  await expect(shown).toContainText('Publicidade ou spam × 2')
+  await a11y(mod, 'main')
+  await shown.getByRole('button', { name: 'Mostrar de novo' }).click()
+  await expect(mod.getByText('Visível de novo')).toBeVisible()
+  await expect(shown).toHaveCount(0)
+  expect((await admin.from('public_setups').select('hidden').eq('id', ids[`Revista ${stamp}`]).single()).data?.hidden).toBe(false)
+
+  const blocked = mod.getByRole('region', { name: `Bloqueada ${stamp}` })
+  await blocked.getByRole('button', { name: 'Bloquear o autor' }).click()
+  await blocked.getByRole('button', { name: 'Confirmar o bloqueio' }).click()
+  await expect(mod.getByText('Autor bloqueado; o setup fica escondido')).toBeVisible()
+
+  // The blocked author is told why they cannot publish.
+  await saveSetup(author, `Depois ${stamp}`)
+  await author.goto('/setups')
+  await share(author, `Depois ${stamp}`)
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Spin' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('A tua conta já não pode publicar na comunidade', { exact: false })).toBeVisible()
+})
+
 test('a name with an insult is not published', async ({ browser }) => {
   const author = await open(browser)
   await signIn(author, emailOf('rude'))
