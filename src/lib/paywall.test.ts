@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { pt } from '../i18n/pt'
-import { nudgeDue, offerCopy, orderPlans, savingPct } from './paywall'
+import { nudgeDue, offerCopy, orderPlans, savingPct, trialReminderAt, trialSteps } from './paywall'
 
 const t = pt.paywall
 
@@ -54,5 +54,24 @@ describe('paywall', () => {
     expect(c.line).toBe('3,99 €/mês')
     expect(c.cta).toBe('Subscrever por 3,99 €/mês')
     expect(c.legal).toContain('3,99 €/mês. Renova automaticamente')
+  })
+})
+
+describe('free trial', () => {
+  it('day by day: today, the reminder two days before, the day the plan starts', () => {
+    expect(trialSteps(7)).toEqual([
+      { kind: 'today', day: 0 },
+      { kind: 'remind', day: 5 },
+      { kind: 'charge', day: 7 },
+    ])
+    // Too short for a reminder before the end.
+    expect(trialSteps(2).map((s) => s.kind)).toEqual(['today', 'charge'])
+  })
+
+  it('reminds two days before it ends, never in the past', () => {
+    const end = 50 * DAY
+    expect(trialReminderAt(end, 40 * DAY)).toBe(48 * DAY)
+    expect(trialReminderAt(end, 48 * DAY)).toBeNull()
+    expect(trialReminderAt(end, 49 * DAY)).toBeNull()
   })
 })

@@ -4,6 +4,7 @@ import { useStore } from '../data/store'
 import { currentStringings, dueForRestring, hoursOn, isDormant, lifeOf, restringDue } from '../domain/journal'
 import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
+import { trialReminderAt } from '../lib/paywall'
 import { IS_NATIVE, IS_PREVIEW, openPath, reminderPath } from '../lib/platform'
 import { bedLabel } from '../ui/strings'
 
@@ -128,4 +129,34 @@ export function useRestringReminders(): number {
   }, [key])
 
   return due.length
+}
+
+/**
+ * The store's free trial, two days before it ends: a local notification
+ * saying when, and how to cancel. Only while the trial will turn into the
+ * plan; cancelled (or over), it is dropped. Store apps only.
+ */
+export function useTrialEndReminder() {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const l = useStore((s) => s.license)
+  const expires = l?.provider === 'store' && l.status === 'active' && l.trial && l.willRenew !== false && l.expiresAt ? Date.parse(l.expiresAt) : null
+  useEffect(() => {
+    if (!IS_NATIVE) return
+    const at = expires === null ? null : trialReminderAt(expires)
+    const store = /iPhone|iPad|Mac/.test(navigator.userAgent) ? 'App Store' : 'Google Play'
+    void import('../lib/native')
+      .then((n) =>
+        n.scheduleReminder(
+          numberFor('trial-end'),
+          at === null ? null : new Date(at),
+          fmt(t.pro.trialEndTitle, { date: fmtDate(expires!, lang) }),
+          fmt(t.pro.trialEndBody, { store }),
+          '/perfil',
+        ),
+      )
+      .catch(() => {})
+    // `t` follows `lang`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expires, lang])
 }

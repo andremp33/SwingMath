@@ -16,6 +16,7 @@ import { Badge, Button, NumberField, Segmented, SettingsGroup, SettingsRow } fro
 import { BackTitle } from '../ui/BackTitle'
 import { useToast } from '../ui/overlay'
 import { usePaywall } from './Pro'
+import { useTrialDays } from './storePlans'
 import { useReminders } from './reminders'
 import { InfoTip } from '../ui/disclosure'
 
@@ -107,6 +108,7 @@ export function PlanGroup() {
   const s = useStore()
   const pro = useStore(isPro)
   const paywall = usePaywall()
+  const trialDays = useTrialDays()
   const l = s.license
   // Pro may come from a key on this device or from the account.
   const keyActive = l !== null && (l.status ?? 'active') === 'active'
@@ -123,14 +125,14 @@ export function PlanGroup() {
       <SettingsGroup title={t.profile.plan}>
         <SettingsRow label={t.profile.free} hint={t.paywall.free}>
           <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('profile', { asked: true })}>
-            {t.settings.seePlans}
+            {trialDays ? fmt(t.pro.unlockTrial, { days: trialDays }) : t.settings.seePlans}
           </Button>
         </SettingsRow>
         {IS_NATIVE && <RestoreRow />}
       </SettingsGroup>
     )
   }
-  // Pro only from the free days after the walkthrough: what it costs (nothing)
+  // Pro only from the free days a walkthrough gave before 28 October 2026: what it costs (nothing)
   // and the plans, for after.
   if (!keyActive && !accountProActive(s.accountPro) && freeProActive(s.freeProUntil)) {
     return (
