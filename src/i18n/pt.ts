@@ -370,6 +370,7 @@ export const pt = {
     terms: 'Termos',
     version: 'Versão {v}',
     prefs: 'Preferências',
+    look: 'Aspeto',
     equipment: 'O teu material',
     free: 'Versão grátis',
     seePlans: 'Ver planos',
@@ -378,9 +379,6 @@ export const pt = {
     exportHint: 'Raquetes, setups e diário num ficheiro, para guardares ou mudares de dispositivo.',
     importHint: 'Junta ao que já tens uma cópia exportada antes.',
     deleteAllHint: 'Apaga tudo deste dispositivo. Não dá para desfazer.',
-    exportShort: 'Exportar',
-    importShort: 'Importar',
-    deleteShort: 'Apagar',
   },
   sources: {
     title: 'De onde vêm estes números',
@@ -815,7 +813,6 @@ export const pt = {
   moderation: {
     title: 'Moderação',
     toReview: '{n} por rever',
-    open: 'Abrir',
     onlyModerators: 'Esta página é só para moderadores.',
     empty: 'Nada por rever.',
     reports: '{n} denúncias, a última a {date}',

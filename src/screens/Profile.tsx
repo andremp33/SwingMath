@@ -1,5 +1,5 @@
-import { ChevronRight, FileText, LifeBuoy, Pencil, RotateCw, Shield, SlidersHorizontal, type LucideIcon } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { FileText, LifeBuoy, Pencil, RotateCw, Shield, SlidersHorizontal } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { syncMe, useMeSync } from '../app/account'
 import { saveStringing, uid } from '../data/db'
@@ -13,7 +13,7 @@ import { GOALS, LEVELS, STYLES } from '../lib/community'
 import { fmtDate, fmtNum, LOCALE } from '../lib/format'
 import { SUPPORT_EMAIL } from '../lib/owner'
 import { Avatar } from '../ui/Avatar'
-import { Button, ChoiceChips, MultiChoiceChips, NumberField, SettingsGroup } from '../ui/basics'
+import { ActionRow, Button, ChoiceChips, MultiChoiceChips, NumberField, SettingsGroup } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { bedLabel } from '../ui/strings'
 import { AccountEnd, AccountGroup } from './AccountCard'
@@ -36,18 +36,17 @@ export function Profile() {
     <div className="max-w-2xl">
       <ProfileHeader />
       <Stats />
-      <div className="mt-8 space-y-8">
+      <div className="mt-8 space-y-7">
         <GameGroup />
         <RacketsGroup />
         <FleetGroup />
         <PlanGroup />
         {cloudConfigured() && <AccountGroup entry />}
-        <SettingsGroup title={t.profile.more}>
-          <MenuRow to="/perfil/definicoes" icon={SlidersHorizontal} label={t.profile.settings} hint={t.profile.settingsHint} />
-          {SUPPORT_EMAIL && <MenuRow href={`mailto:${SUPPORT_EMAIL}`} icon={LifeBuoy} label={t.profile.support} />}
-          <MenuRow to="/termos" icon={FileText} label={t.settings.terms} />
-          <MenuRow to="/privacidade" icon={Shield} label={t.settings.privacy} />
-          <p className="num py-3.5 text-xs text-muted">{fmt(t.settings.version, { v: __APP_VERSION__ })}</p>
+        <SettingsGroup title={t.profile.more} footer={<span className="num">{fmt(t.settings.version, { v: __APP_VERSION__ })}</span>}>
+          <ActionRow to="/perfil/definicoes" icon={SlidersHorizontal} label={t.profile.settings} hint={t.profile.settingsHint} />
+          {SUPPORT_EMAIL && <ActionRow href={`mailto:${SUPPORT_EMAIL}`} icon={LifeBuoy} label={t.profile.support} />}
+          <ActionRow to="/termos" icon={FileText} label={t.settings.terms} />
+          <ActionRow to="/privacidade" icon={Shield} label={t.settings.privacy} />
         </SettingsGroup>
         {account && <AccountEnd />}
       </div>
@@ -301,29 +300,5 @@ function RacketsGroup() {
         })
       )}
     </SettingsGroup>
-  )
-}
-
-/** A row that goes somewhere: an icon, a name, an optional line, a chevron. */
-function MenuRow({ to, href, icon: Icon, label, hint }: { to?: string; href?: string; icon: LucideIcon; label: string; hint?: string }) {
-  const body: ReactNode = (
-    <>
-      <Icon className="size-5 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">{label}</span>
-        {hint && <span className="block text-sm text-muted">{hint}</span>}
-      </span>
-      <ChevronRight className="size-5 shrink-0 text-muted" aria-hidden />
-    </>
-  )
-  const cls = '-mx-1 flex min-h-12 items-center gap-3 rounded-md px-1 py-3 hover:bg-surface-2'
-  return to ? (
-    <Link to={to} className={cls}>
-      {body}
-    </Link>
-  ) : (
-    <a href={href} className={cls}>
-      {body}
-    </a>
   )
 }
