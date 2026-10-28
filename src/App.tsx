@@ -25,6 +25,7 @@ const Journal = lazy(() => import('./screens/Journal').then((m) => ({ default: m
 const Library = lazy(() => import('./screens/Library').then((m) => ({ default: m.Library })))
 const Match = lazy(() => import('./screens/Match').then((m) => ({ default: m.Match })))
 const Measure = lazy(() => import('./screens/Measure').then((m) => ({ default: m.Measure })))
+const Moderation = lazy(() => import('./screens/Moderation').then((m) => ({ default: m.Moderation })))
 const RacketForm = lazy(() => import('./screens/RacketForm').then((m) => ({ default: m.RacketForm })))
 const Settings = lazy(() => import('./screens/Settings').then((m) => ({ default: m.Settings })))
 const Profile = lazy(() => import('./screens/Profile').then((m) => ({ default: m.Profile })))
@@ -58,6 +59,7 @@ const APP_ROUTES = [
       { path: '/cordas', element: L(<StringCalc />) },
       { path: '/perfil', element: L(<Profile />) },
       { path: '/perfil/definicoes', element: L(<Settings />) },
+      { path: '/moderar', element: L(<Moderation />) },
       // Settings live in the profile now; old links land there.
       { path: '/settings', element: <Navigate to="/perfil/definicoes" replace /> },
       { path: '/s/:data', element: L(<SharedSetup />) },

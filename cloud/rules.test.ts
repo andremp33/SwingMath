@@ -31,6 +31,8 @@ let pro: Awaited<ReturnType<typeof user>>
 beforeAll(async () => {
   // These rules are about selling Pro; the beta switch is tested on its own.
   await admin.from('app_flags').update({ enabled: false }).eq('name', 'pro_beta')
+  // These tests publish many recipes from one account; the daily limit is tested on its own.
+  await admin.from('community_settings').update({ publish_per_day: 1000 }).eq('id', true)
   free = await user('free')
   pro = await user('pro')
   const { error } = await admin.from('subscriptions').insert({ email: pro.email, status: 'active' })
@@ -39,6 +41,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await admin.from('app_flags').update({ enabled: true }).eq('name', 'pro_beta')
+  await admin.from('community_settings').update({ publish_per_day: 5 }).eq('id', true)
   for (const id of made) await admin.auth.admin.deleteUser(id)
   await admin.from('subscriptions').delete().like('email', `%-${stamp}@example.test`)
 })
@@ -256,6 +259,76 @@ describe('why to trust a recipe', () => {
   it('plays cannot be written by hand', async () => {
     const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'À mão' }).select('id').single()
     expect((await pro.db.from('recipe_plays').insert({ setup_id: data!.id, user_id: pro.id })).error).not.toBeNull()
+  })
+})
+
+describe('moderation', () => {
+  const setup = { racket_id: 'stock-x', name: 'Moderada', config: { leadG: { tip: 2 } }, specs: { weightG: 330, balanceCm: 32, swingweight: 330 } }
+  const hideWith = async (id: string, names: string[]) => {
+    for (const n of names) await (await user(n)).db.from('reports').insert({ setup_id: id, reason: 'spam' })
+  }
+
+  it('publishing is limited per day', async () => {
+    await admin.from('community_settings').update({ publish_per_day: 2 }).eq('id', true)
+    try {
+      const p = await user('daily')
+      expect((await p.db.from('public_setups').insert(setup)).error).toBeNull()
+      expect((await p.db.from('public_setups').insert(setup)).error).toBeNull()
+      expect((await p.db.from('public_setups').insert(setup)).error?.message).toBe('publish rate')
+    } finally {
+      await admin.from('community_settings').update({ publish_per_day: 1000 }).eq('id', true)
+    }
+  })
+
+  it('only moderators read the queue and act on it', async () => {
+    expect((await free.db.rpc('is_moderator')).data).toBe(false)
+    expect((await free.db.rpc('moderation_list')).error?.message).toBe('not a moderator')
+    const { data } = await free.db.from('public_setups').insert(setup).select('id').single()
+    expect((await free.db.rpc('moderate', { setup_id: data!.id, action: 'show' })).error?.message).toBe('not a moderator')
+    expect((await free.db.from('moderators').insert({ user_id: free.id })).error).not.toBeNull()
+  })
+
+  it('shown again: visible, its reports reviewed, and new reports start from zero', async () => {
+    const mod = await user('mod')
+    await admin.from('moderators').insert({ user_id: mod.id })
+    const { data } = await free.db.from('public_setups').insert(setup).select('id').single()
+    await hideWith(data!.id, ['h1', 'h2', 'h3'])
+    const queue = (await mod.db.rpc('moderation_list')).data as { id: string; reports: number; reasons: string[] }[]
+    expect(queue.find((q) => q.id === data!.id)).toMatchObject({ reports: 3, reasons: ['spam', 'spam', 'spam'] })
+    expect((await mod.db.rpc('moderate', { setup_id: data!.id, action: 'show' })).error).toBeNull()
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toHaveLength(1)
+    expect(((await mod.db.rpc('moderation_list')).data as { id: string }[]).some((q) => q.id === data!.id)).toBe(false)
+    // The reviewed reports are kept, and no longer count.
+    expect((await admin.from('reports').select('reviewed_at').eq('setup_id', data!.id)).data?.every((r) => r.reviewed_at)).toBe(true)
+    await hideWith(data!.id, ['h4'])
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toHaveLength(1)
+  })
+
+  it('blocked: the setup stays hidden and its author publishes and edits nothing more', async () => {
+    const mod = await user('mod2')
+    await admin.from('moderators').insert({ user_id: mod.id })
+    const author = await user('blocked')
+    const { data } = await author.db.from('public_setups').insert(setup).select('id').single()
+    const other = (await author.db.from('public_setups').insert({ ...setup, name: 'Outra' }).select('id').single()).data!.id
+    await hideWith(data!.id, ['b1', 'b2', 'b3'])
+    expect((await mod.db.rpc('moderate', { setup_id: data!.id, action: 'block' })).error).toBeNull()
+    expect((await anon.from('community_setups').select('id').eq('id', data!.id)).data).toEqual([])
+    expect((await author.db.from('public_setups').insert(setup)).error?.message).toBe('publishing blocked')
+    expect((await author.db.from('public_setups').update({ name: 'Mudada' }).eq('id', other)).error?.message).toBe('publishing blocked')
+    // Others still copy what stays visible.
+    await anon.rpc('count_copy', { setup_id: other })
+    expect((await anon.from('community_setups').select('copies').eq('id', other).single()).data?.copies).toBe(1)
+  })
+
+  it('reports reviewed over a year ago are purged', async () => {
+    const { data } = await free.db.from('public_setups').insert(setup).select('id').single()
+    const r = await user('old')
+    await r.db.from('reports').insert({ setup_id: data!.id, reason: 'false' })
+    await admin.from('reports').update({ reviewed_at: new Date(Date.now() - 400 * 86_400_000).toISOString() }).eq('setup_id', data!.id)
+    // As the nightly job does; only the service role may.
+    expect((await free.db.rpc('purge_reviewed_reports')).error).not.toBeNull()
+    expect((await admin.rpc('purge_reviewed_reports')).error).toBeNull()
+    expect((await admin.from('reports').select('setup_id').eq('setup_id', data!.id)).data).toEqual([])
   })
 })
 
