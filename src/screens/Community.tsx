@@ -71,6 +71,21 @@ export function useSetupCounts() {
   return counts
 }
 
+/** "You need an account", with the way to the profile, where the account is.
+ *  In place, not a toast: inside a sheet a toast sits under it, out of reach. */
+function SignInPrompt() {
+  const t = useT()
+  const nav = useNavigate()
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md bg-surface-2 p-3 text-sm">
+      <p className="min-w-0 flex-1">{t.community.needAccount}</p>
+      <Button size="sm" variant="primary" onClick={() => nav('/perfil')}>
+        {t.community.signIn}
+      </Button>
+    </div>
+  )
+}
+
 const OPEN_RECIPES = 'swingmath:open-recipes'
 let recipesAsked = false
 
@@ -533,7 +548,8 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
                 </p>
               )}
               {mine && p.hidden && <p className="text-danger">{t.community.hiddenMine}</p>}
-              {reporting === p.id && (
+              {reporting === p.id && !account && <SignInPrompt />}
+              {reporting === p.id && account && (
                 <form
                   className="space-y-3 rounded-md bg-surface-2 p-3"
                   onSubmit={(e) => {
@@ -609,7 +625,6 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
                         active={reporting === p.id}
                         aria-expanded={reporting === p.id}
                         onClick={() => {
-                          if (!account) return toast(t.community.needAccount)
                           setReason('offensive')
                           setReporting((id) => (id === p.id ? null : p.id))
                         }}
@@ -756,11 +771,14 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
     plays: 0,
     note: note.trim() || null,
   }
-  if (!open)
+  if (!open || !account)
     return (
-      <Button icon={Users} className="w-full" onClick={() => (account ? setOpen(true) : toast(t.community.needAccount))}>
-        {label}
-      </Button>
+      <div className="space-y-3">
+        <Button icon={Users} className="w-full" onClick={() => setOpen(true)}>
+          {label}
+        </Button>
+        {open && <SignInPrompt />}
+      </div>
     )
   return (
     <form
@@ -853,6 +871,7 @@ export function ShareMeasurement({ racket, weightG, balanceCm, swingweight }: { 
   const t = useT()
   const toast = useToast()
   const account = useStore((s) => s.account)
+  const [asked, setAsked] = useState(false)
   const [strung, setStrung] = useState(true)
   const [unit, setUnit] = useState<'1' | '2' | '3' | '4'>('1')
   const [busy, setBusy] = useState(false)
@@ -891,7 +910,7 @@ export function ShareMeasurement({ racket, weightG, balanceCm, swingweight }: { 
             icon={Send}
             loading={busy}
             onClick={async () => {
-              if (!account) return toast(t.community.needAccount)
+              if (!account) return setAsked(true)
               setBusy(true)
               try {
                 await submitMeasurement({
@@ -912,6 +931,7 @@ export function ShareMeasurement({ racket, weightG, balanceCm, swingweight }: { 
           >
             {t.community.share}
           </Button>
+          {asked && !account && <SignInPrompt />}
         </div>
       )}
     </Card>
