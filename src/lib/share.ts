@@ -10,7 +10,7 @@ import { IS_NATIVE, IS_PREVIEW } from './platform'
 /** What travels in a share link: the setup and the frame it is built on. */
 const payloadSchema = z.object({
   v: z.literal(1),
-  setup: setupSchema.omit({ id: true, createdAt: true, updatedAt: true, favourite: true }),
+  setup: setupSchema.omit({ id: true, createdAt: true, updatedAt: true, favourite: true, fromRecipe: true }),
   racket: racketSchema.omit({ createdAt: true, updatedAt: true }),
 })
 export type SharePayload = z.infer<typeof payloadSchema>

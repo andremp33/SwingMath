@@ -2,19 +2,24 @@ import { scrollToTop } from '../app/Shell'
 import { ArrowRight, Crosshair, EyeOff, Flag, RefreshCw, Send, Trash2, Upload, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { findRacket } from '../data/db'
+import { db, findRacket } from '../data/db'
 import { useCustomRackets, useOwned, useSessions, useSetups, useStringings } from '../data/hooks'
 import { PRO_TARGETS } from '../data/pros'
 import { STOCK_RACKETS } from '../data/rackets'
 import { isPro, useStore } from '../data/store'
-import { SESSION_RATINGS, setupResults } from '../domain/journal'
+import { SESSION_RATINGS, setupResults, type OwnedRacket, type Session, type Stringing } from '../domain/journal'
 import { compute } from '../domain/physics'
 import type { Racket, Setup } from '../domain/types'
 import { fmt, useT, type Dict } from '../i18n'
 import {
   communityEnabled,
+  countPlay,
   deletePublicSetup,
   filterRecipes,
+  hasLead,
+  holdingFirst,
+  measuredHolds,
+  measurementAfter,
   measurementStats,
   BlockedWordsError,
   GOALS,
@@ -30,6 +35,7 @@ import {
   setupCounts,
   siblingsOf,
   similarRecipes,
+  specsHold,
   STYLES,
   submitMeasurement,
   topSetups,
@@ -41,7 +47,7 @@ import {
   type ReportReason,
   type Style,
 } from '../lib/community'
-import { fmtNum, leadParts } from '../lib/format'
+import { fmtDate, fmtNum, leadParts } from '../lib/format'
 import { Badge, Button, Card, CardTitle, ChoiceChips, IconButton, MultiChoiceChips, Segmented, Select, TextField, Toggle } from '../ui/basics'
 import { CollapsibleCard, InfoTip } from '../ui/disclosure'
 import { Sheet, useToast } from '../ui/overlay'
@@ -94,6 +100,19 @@ export function CommunityLink({ racket }: { racket: Racket }) {
 /** Recipes the card shows; the rest are in the sheet. */
 const SHOWN = 3
 
+/** Plays are shown from this many players up, like the medians. */
+const PLAYS_SHOWN = 3
+
+/** Whether a recipe's numbers are what its lead gives on its frame. A frame
+ *  the app does not know is given the benefit of the doubt. */
+function useHolds() {
+  const custom = useCustomRackets()
+  return (p: PublicSetup) => {
+    const frame = findRacket(p.racket_id, custom) ?? p.racket
+    return !frame || specsHold(p, frame as Racket)
+  }
+}
+
 /** This frame's recipes and its other versions', the authors the player hid
  *  left out. Undefined while loading. */
 function useRecipes(racket: Racket, version: number) {
@@ -122,6 +141,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
   const [version, setVersion] = useState(0)
   const { list, siblings } = useRecipes(racket, version)
   const [sheet, setSheet] = useState(false)
+  const holds = useHolds()
 
   useEffect(() => {
     let alive = true
@@ -146,7 +166,7 @@ export function CommunityCard({ racket }: { racket: Racket }) {
   if (!communityEnabled() || !racket.isStock) return null
 
   const here = (list ?? []).filter((p) => p.racket_id === racket.id)
-  const first = rankPublicSetups(list ?? [], undefined, racket.id).slice(0, SHOWN)
+  const first = holdingFirst(rankPublicSetups(list ?? [], undefined, racket.id), holds).slice(0, SHOWN)
   const measured = (stats ?? []).reduce((n, x) => n + x.n, 0)
   const changed = () => setVersion((v) => v + 1)
   return (
@@ -236,6 +256,7 @@ function RecipesSheet({
   const [level, setLevel] = useState<Level | ''>('')
   const [style, setStyle] = useState<Style | ''>('')
   const [top, setTop] = useState<PublicSetup[]>()
+  const holds = useHolds()
 
   // Each time it opens: the player's goal, if this frame has recipes for it.
   const [wasOpen, setWasOpen] = useState(false)
@@ -260,9 +281,10 @@ function RecipesSheet({
   const goalsHere = GOALS.filter((g) => all.some((p) => p.goals.includes(g)))
   const levelsHere = LEVELS.filter((l) => all.some((p) => p.level === l))
   const stylesHere = STYLES.filter((x) => all.some((p) => p.style === x))
-  const shown = rankPublicSetups(filterRecipes(all, { goal: goal === 'all' ? undefined : goal, level: level || undefined, style: style || undefined }), undefined, racket.id)
+  const shown = holdingFirst(rankPublicSetups(filterRecipes(all, { goal: goal === 'all' ? undefined : goal, level: level || undefined, style: style || undefined }), undefined, racket.id), holds)
   const frameOf = (p: PublicSetup) => findRacket(p.racket_id, custom) ?? p.racket ?? undefined
-  const similar = empty && top ? similarRecipes(top.filter((p) => !hidden.includes(p.author_key)), racket, siblings, frameOf) : []
+  // Only recipes whose numbers hold are offered as a start.
+  const similar = empty && top ? similarRecipes(top.filter((p) => !hidden.includes(p.author_key) && holds(p)), racket, siblings, frameOf) : []
   const clear = () => {
     setGoal('all')
     setLevel('')
@@ -357,7 +379,7 @@ function ProsOnFrame({ ids }: { ids: string[] }) {
  * for. A recipe for this frame is tried on; one for another frame is reached
  * from the player's own with Planear, or tried on that frame.
  */
-function RecipeList({ list, racket, onChange, onDone }: { list: PublicSetup[]; racket: Racket; onChange: () => void; onDone?: () => void }) {
+function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicSetup[]; racket: Racket; onChange: () => void; onDone?: () => void; preview?: boolean }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const u = useUnits()
@@ -373,6 +395,7 @@ function RecipeList({ list, racket, onChange, onDone }: { list: PublicSetup[]; r
   const sessions = useSessions()
   const custom = useCustomRackets()
   const toast = useToast()
+  const holds = useHolds()
   // The recipe whose report form is open, and the reason picked.
   const [reporting, setReporting] = useState<string | null>(null)
   const [reason, setReason] = useState<ReportReason>('offensive')
@@ -392,7 +415,8 @@ function RecipeList({ list, racket, onChange, onDone }: { list: PublicSetup[]; r
       const { result } = compute({ spec: racket, ...local, masses })
       const results = p.results && owned && stringings && sessions ? setupResults(local.id, owned, stringings, sessions) : null
       const done = await publishSetup({
-        name: local.name,
+        // The public name stays the one it was published with.
+        name: p.name,
         author: p.author ?? undefined,
         config: local,
         racket,
@@ -401,6 +425,7 @@ function RecipeList({ list, racket, onChange, onDone }: { list: PublicSetup[]; r
         level: p.level ?? undefined,
         style: p.style ?? undefined,
         results,
+        measuredAfter: owned ? measurementAfter(local, owned, result) : null,
         setupRef: local.id,
       })
       toast(done === 'moved' ? t.community.moved : t.community.updated)
@@ -466,6 +491,13 @@ function RecipeList({ list, racket, onChange, onDone }: { list: PublicSetup[]; r
                 {u.weight(p.specs.weightG)} {u.weightUnit} · {u.balance(p.specs.balanceCm)} {u.balanceUnit} · SW {fmtNum(p.specs.swingweight, 0, lang)}
                 {p.config.strings && ` · ${bedLabel(p.config.strings, t, lang)}`}
               </p>
+              {(measuredHolds(p) || p.plays >= PLAYS_SHOWN || !holds(p)) && (
+                <p className="flex flex-wrap items-center gap-1">
+                  {!holds(p) && <span className="inline-flex items-center rounded-full bg-danger/12 px-2 py-px text-xs font-medium text-danger">{t.community.specsOff}</span>}
+                  {measuredHolds(p) && <Badge tone="accent">{t.community.measuredAfter}</Badge>}
+                  {p.plays >= PLAYS_SHOWN && <Badge tone="accent">{fmt(t.community.plays, { n: p.plays })}</Badge>}
+                </p>
+              )}
               <p className="flex flex-wrap items-center gap-1">
                 {tags.map((x) => (
                   <Badge key={x}>{x}</Badge>
@@ -507,66 +539,103 @@ function RecipeList({ list, racket, onChange, onDone }: { list: PublicSetup[]; r
                 </form>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-1">
-              {elsewhere ? (
-                <>
-                  <Button size="sm" variant="primary" icon={Crosshair} onClick={() => reach(p)} aria-label={`${t.community.reach}: ${p.name}`}>
-                    {t.community.reach}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => tryOn(p)} aria-label={`${t.community.tryOnFrame}: ${p.name}`}>
-                    {t.community.tryOnFrame}
-                  </Button>
-                </>
-              ) : (
-                <Button size="sm" onClick={() => tryOn(p)}>
-                  {t.community.tryIt}
-                </Button>
-              )}
-              {local && !p.hidden && (
-                <Button size="sm" variant="ghost" icon={RefreshCw} onClick={update(p, local)}>
-                  {t.community.updateMine}
-                </Button>
-              )}
-              <span className="ml-auto flex items-center gap-1">
-                {mine ? (
-                  <IconButton
-                    icon={Trash2}
-                    label={`${t.community.remove} ${p.name}`}
-                    onClick={signedIn(async () => {
-                      await deletePublicSetup(p.id)
-                      onChange()
-                    })}
-                  />
-                ) : (
+            {!preview && (
+              <div className="flex flex-wrap items-center gap-1">
+                {elsewhere ? (
                   <>
-                    <IconButton
-                      icon={EyeOff}
-                      label={`${t.community.hideAuthor}: ${p.partner ?? p.author ?? t.community.anon}`}
-                      onClick={() => {
-                        hideAuthor(p.author_key)
-                        toast(t.community.authorHidden, { label: t.common.undo, run: () => showAuthor(p.author_key) })
-                      }}
-                    />
-                    <IconButton
-                      icon={Flag}
-                      label={`${t.community.report} ${p.name}`}
-                      active={reporting === p.id}
-                      aria-expanded={reporting === p.id}
-                      onClick={() => {
-                        if (!account) return toast(t.community.needAccount)
-                        setReason('offensive')
-                        setReporting((id) => (id === p.id ? null : p.id))
-                      }}
-                    />
+                    <Button size="sm" variant="primary" icon={Crosshair} onClick={() => reach(p)} aria-label={`${t.community.reach}: ${p.name}`}>
+                      {t.community.reach}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => tryOn(p)} aria-label={`${t.community.tryOnFrame}: ${p.name}`}>
+                      {t.community.tryOnFrame}
+                    </Button>
                   </>
+                ) : (
+                  <Button size="sm" onClick={() => tryOn(p)}>
+                    {t.community.tryIt}
+                  </Button>
                 )}
-              </span>
-            </div>
+                {local && !p.hidden && (
+                  <Button size="sm" variant="ghost" icon={RefreshCw} onClick={update(p, local)}>
+                    {t.community.updateMine}
+                  </Button>
+                )}
+                <span className="ml-auto flex items-center gap-1">
+                  {mine ? (
+                    <IconButton
+                      icon={Trash2}
+                      label={`${t.community.remove} ${p.name}`}
+                      onClick={signedIn(async () => {
+                        await deletePublicSetup(p.id)
+                        onChange()
+                      })}
+                    />
+                  ) : (
+                    <>
+                      <IconButton
+                        icon={EyeOff}
+                        label={`${t.community.hideAuthor}: ${p.partner ?? p.author ?? t.community.anon}`}
+                        onClick={() => {
+                          hideAuthor(p.author_key)
+                          toast(t.community.authorHidden, { label: t.common.undo, run: () => showAuthor(p.author_key) })
+                        }}
+                      />
+                      <IconButton
+                        icon={Flag}
+                        label={`${t.community.report} ${p.name}`}
+                        active={reporting === p.id}
+                        aria-expanded={reporting === p.id}
+                        onClick={() => {
+                          if (!account) return toast(t.community.needAccount)
+                          setReason('offensive')
+                          setReporting((id) => (id === p.id ? null : p.id))
+                        }}
+                      />
+                    </>
+                  )}
+                </span>
+              </div>
+            )}
           </li>
         )
       })}
     </ul>
   )
+}
+
+/** A setup that plays this well (overall, 1-5) over its sessions is worth sharing. */
+const INVITE_AT = 4
+
+/**
+ * After a session is logged: a play for the community recipe its setup was
+ * saved from, and, once per setup, an invitation to publish one that is
+ * working (3 sessions or more, overall 4 or more, not published yet).
+ */
+export function useAfterSession() {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
+  const toast = useToast()
+  const nav = useNavigate()
+  const account = useStore((s) => s.account)
+  const invited = useStore((s) => s.publishInvited)
+  const markInvited = useStore((s) => s.markInvited)
+  return async (session: Session, owned: OwnedRacket[], stringings: Stringing[]) => {
+    if (!communityEnabled() || !account || !session.stringingId) return
+    const st = stringings.find((x) => x.id === session.stringingId)
+    const setupId = st?.setupId ?? owned.find((o) => o.id === st?.ownedId)?.setupId
+    const setup = setupId ? await db.setups.get(setupId) : undefined
+    if (!setup) return
+    if (setup.fromRecipe) void countPlay(setup.fromRecipe)
+    if (invited.includes(setup.id) || !setup.racketId.startsWith('stock-') || !hasLead(setup)) return
+    const r = setupResults(setup.id, owned, stringings, await db.sessions.toArray())
+    if (!r || (r.avg.overall ?? 0) < INVITE_AT) return
+    markInvited(setup.id)
+    if (await myRecipe(setup.id)) return
+    toast(fmt(t.community.invite, { name: setup.name, n: r.sessions, x: fmtNum(r.avg.overall!, 1, lang) }), {
+      label: t.community.inviteShare,
+      run: () => nav(`/setups?partilhar=${setup.id}`),
+    })
+  }
 }
 
 /** "12 sessions · 9 h · overall 4.3 · comfort 4.1": exactly what is public. */
@@ -602,6 +671,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
   const [tried, setTried] = useState(false)
   const [publishedAs, setPublishedAs] = useState<string | null>(null)
   const [hiddenByReports, setHiddenByReports] = useState(false)
+  const [publicName, setPublicName] = useState(setup.name)
 
   // Already published: the form starts from the recipe as it is now.
   useEffect(() => {
@@ -611,6 +681,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
         if (!alive || !r) return
         setPublishedAs(r.id)
         setHiddenByReports(r.hidden)
+        setPublicName(r.name)
         setGoals(r.goals)
         setLevel(r.level ?? '')
         setStyle(r.style ?? '')
@@ -629,6 +700,35 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
 
   // Hidden by reports: nothing to publish until it is reviewed.
   if (hiddenByReports) return <p className="text-sm text-danger">{t.community.hiddenRecipe}</p>
+  // No lead: the frame as sold, which is no recipe.
+  if (!hasLead(setup)) return <p className="text-sm text-muted">{t.community.noLeadToPublish}</p>
+
+  const { result } = compute({ spec: racket, ...setup, masses })
+  const measured = owned ? measurementAfter(setup, owned, result) : null
+  const now = new Date(setup.updatedAt).toISOString()
+  const previewRow: PublicSetup = {
+    id: 'preview',
+    author_key: '',
+    racket_id: racket.id,
+    name: publicName.trim() || setup.name,
+    author: author.trim() || null,
+    config: setup,
+    racket: null,
+    specs: { weightG: result.weightG, balanceCm: result.balanceCm, swingweight: result.swingweight },
+    copies: 0,
+    created_at: now,
+    goals,
+    level: level || null,
+    style: style || null,
+    results: withResults && results ? roundResults(results) : null,
+    setup_ref: null,
+    partner: null,
+    updated_at: now,
+    mine: true,
+    hidden: false,
+    measured_after: measured,
+    plays: 0,
+  }
   if (!open)
     return (
       <Button icon={Users} className="w-full" onClick={() => (account ? setOpen(true) : toast(t.community.needAccount))}>
@@ -644,9 +744,8 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
         if (!goals.length) return
         setBusy(true)
         try {
-          const { result } = compute({ spec: racket, ...setup, masses })
           const done = await publishSetup({
-            name: setup.name,
+            name: publicName.trim() || setup.name,
             author,
             config: setup,
             racket,
@@ -655,6 +754,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
             level: level || undefined,
             style: style || undefined,
             results: withResults ? results : null,
+            measuredAfter: measured,
             setupRef: setup.id,
           })
           toast(done === 'updated' ? t.community.updated : done === 'moved' ? t.community.moved : t.community.published)
@@ -686,7 +786,15 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
           {withResults && <p className="num mt-1 text-sm text-muted">{fmt(t.community.resultsPublic, { line: resultsLine(roundResults(results), t, lang, { hours: true }) })}</p>}
         </div>
       )}
+      <TextField label={t.community.publicName} value={publicName} onChange={setPublicName} maxLength={60} />
       <TextField label={`${t.community.author} (${t.community.authorHint})`} value={author} onChange={setAuthor} maxLength={30} />
+      {measured && <p className="text-sm text-muted">{fmt(t.community.measuredIncluded, { date: fmtDate(measured.date, lang) })}</p>}
+      <section className="space-y-1" aria-label={t.community.preview}>
+        <h3 className="text-sm font-medium">{t.community.preview}</h3>
+        <div className="rounded-md border border-border px-3">
+          <RecipeList list={[previewRow]} racket={racket} onChange={() => {}} preview />
+        </div>
+      </section>
       <Button type="submit" variant="primary" icon={Upload} loading={busy} className="w-full">
         {label}
       </Button>

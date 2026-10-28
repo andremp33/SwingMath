@@ -1,6 +1,6 @@
 import { Calculator, ClipboardList, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2, UserRound, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { OwnedRacket } from '../domain/journal'
 import { STROKES, type Setup } from '../domain/types'
 import { db, saveSetup, uid } from '../data/db'
@@ -31,6 +31,10 @@ export function Setups() {
   const [racketFilter, setRacketFilter] = useState('all')
   const [editing, setEditing] = useState<Setup | null>(null)
   const [sharing, setSharing] = useState<Setup | null>(null)
+  // The journal's invitation to publish opens that setup's share sheet.
+  const [params, setParams] = useSearchParams()
+  const invited = params.get('partilhar')
+  const fromLink = invited ? setups?.find((s) => s.id === invited) : undefined
   // Picking two setups to compare, with a box on each card.
   const [selecting, setSelecting] = useState(false)
 
@@ -131,7 +135,13 @@ export function Setups() {
       )}
 
       <SetupEditSheet setup={editing} onClose={() => setEditing(null)} />
-      <ShareSheet setup={sharing} onClose={() => setSharing(null)} />
+      <ShareSheet
+        setup={sharing ?? fromLink ?? null}
+        onClose={() => {
+          setSharing(null)
+          if (invited) setParams({}, { replace: true })
+        }}
+      />
     </>
   )
 }

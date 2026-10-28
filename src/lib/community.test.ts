@@ -1,7 +1,25 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
-import { emptyLead, type Racket } from '../domain/types'
-import { filterRecipes, frameDistance, parsePublicSetups, rankPublicSetups, republishPlan, roundResults, siblingsOf, SIMILAR_WITHIN, similarRecipes, type PublicSetup } from './community'
+import { STOCK_RACKETS } from '../data/rackets'
+import { compute } from '../domain/physics'
+import { DEFAULT_ACCESSORY_MASSES, emptyLead, type Racket } from '../domain/types'
+import {
+  filterRecipes,
+  frameDistance,
+  hasLead,
+  holdingFirst,
+  measuredHolds,
+  measurementAfter,
+  parsePublicSetups,
+  rankPublicSetups,
+  republishPlan,
+  roundResults,
+  siblingsOf,
+  SIMILAR_WITHIN,
+  similarRecipes,
+  specsHold,
+  type PublicSetup,
+} from './community'
 
 const config = {
   racketId: 'stock-x',
@@ -122,5 +140,46 @@ describe('other versions and similar frames', () => {
     expect(filterRecipes(list, { goal: 'spin', level: 'advanced' }).map((p) => p.id)).toEqual(['a'])
     expect(filterRecipes(list, { style: 'baseline' }).map((p) => p.id)).toEqual(['a'])
     expect(filterRecipes(list, {})).toHaveLength(3)
+  })
+})
+
+describe('trust in a recipe', () => {
+  const frame = STOCK_RACKETS[0]
+  const cfg = { ...config, racketId: frame.id, leadG: { ...emptyLead(), threeNine: 4 } } as PublicSetup['config']
+  const { result } = compute({ spec: frame, ...cfg, masses: DEFAULT_ACCESSORY_MASSES })
+  const specs = { weightG: result.weightG, balanceCm: result.balanceCm, swingweight: result.swingweight }
+
+  it('numbers that are the recipe’s own hold; made-up ones do not', () => {
+    expect(specsHold({ config: cfg, specs }, frame)).toBe(true)
+    // An overgrip of another weight is still the same recipe.
+    expect(specsHold({ config: cfg, specs: { ...specs, weightG: specs.weightG + 3 } }, frame)).toBe(true)
+    expect(specsHold({ config: cfg, specs: { ...specs, swingweight: specs.swingweight + 20 } }, frame)).toBe(false)
+  })
+
+  it('a measurement after the lead counts when it agrees, in the same state, since the setup changed', () => {
+    const setup = { id: 's', updatedAt: 1000, accessories: { strings: true } }
+    const m = (o: object) => ({ date: 2000, weightG: specs.weightG + 1, balanceCm: specs.balanceCm, swingweight: specs.swingweight - 2, strung: true, ...o })
+    expect(measurementAfter(setup, [{ setupId: 's', measurements: [m({})] }], specs)).toMatchObject({ date: 2000, strung: true })
+    expect(measurementAfter(setup, [{ setupId: 's', measurements: [m({ date: 500 })] }], specs)).toBeNull()
+    expect(measurementAfter(setup, [{ setupId: 's', measurements: [m({ strung: false })] }], specs)).toBeNull()
+    expect(measurementAfter(setup, [{ setupId: 's', measurements: [m({ weightG: specs.weightG + 15 })] }], specs)).toBeNull()
+    expect(measurementAfter(setup, [{ setupId: 'other', measurements: [m({})] }], specs)).toBeNull()
+  })
+
+  it('the badge shows only while the measurement agrees with the published numbers', () => {
+    const after = { weightG: specs.weightG, balanceCm: specs.balanceCm, swingweight: specs.swingweight, strung: true, date: 1 }
+    expect(measuredHolds({ config: cfg, specs, measured_after: after })).toBe(true)
+    expect(measuredHolds({ config: cfg, specs, measured_after: { ...after, swingweight: after.swingweight + 15 } })).toBe(false)
+    expect(measuredHolds({ config: cfg, specs, measured_after: null })).toBe(false)
+  })
+
+  it('a setup without lead is no recipe', () => {
+    expect(hasLead({ leadG: emptyLead() })).toBe(false)
+    expect(hasLead({ leadG: { ...emptyLead(), handle: 2 } })).toBe(true)
+    expect(hasLead({ leadG: emptyLead(), extra: [{ id: 'x', kind: 'hoop', hour: 4, sides: 2, grams: 1 }] })).toBe(true)
+  })
+
+  it('recipes whose numbers hold come first, in their order', () => {
+    expect(holdingFirst(['a', 'b', 'c', 'd'], (x) => x !== 'b' && x !== 'c')).toEqual(['a', 'd', 'b', 'c'])
   })
 })

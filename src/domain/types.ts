@@ -114,6 +114,8 @@ export interface Setup extends SetupConfig {
   favourite: boolean
   ratings: Partial<Record<Stroke, number>>
   notes?: string
+  /** The community recipe it was saved from: sessions with it count as plays. */
+  fromRecipe?: string
   createdAt: number
   updatedAt: number
 }

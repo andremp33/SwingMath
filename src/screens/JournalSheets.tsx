@@ -25,6 +25,7 @@ import { Sheet, useToast } from '../ui/overlay'
 import { RacketPicker } from '../ui/RacketPicker'
 import { bedLabel, StringbedEditor } from '../ui/strings'
 import { useUnits } from '../lib/units'
+import { useAfterSession } from './Community'
 
 const DAY = 86_400_000
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -315,6 +316,7 @@ export function SessionSheet({ value, stringings, owned, onClose }: { value: Ses
   const lang = useStore((s) => s.lang)
   const toast = useToast()
   const [draft, setDraft] = useState<Session | null>(value)
+  const afterSession = useAfterSession()
   const [more, setMore] = useState(false)
   const [otherLength, setOtherLength] = useState(false)
   // A new session to edit starts a new draft, with "More details" open if it has any.
@@ -331,9 +333,12 @@ export function SessionSheet({ value, stringings, owned, onClose }: { value: Ses
   const isEdit = value !== null && value.updatedAt !== value.createdAt
   const set = (p: Partial<Session>) => setDraft({ ...draft, ...p })
   const save = async () => {
-    await saveSession({ ...draft, notes: draft.notes?.trim() || undefined, updatedAt: Date.now() + (isEdit ? 0 : 1) })
+    const saved = { ...draft, notes: draft.notes?.trim() || undefined, updatedAt: Date.now() + (isEdit ? 0 : 1) }
+    await saveSession(saved)
     toast(t.journal.sessionSaved)
     onClose()
+    // A play for the recipe it came from; maybe an invitation to publish it.
+    if (!isEdit) void afterSession(saved, owned, stringings)
   }
 
   // Each active racket by its current stringing, plus the older stringing an

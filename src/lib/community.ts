@@ -2,7 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { racketSchema, setupSchema } from '../data/db'
 import { SESSION_RATINGS, type SessionRating } from '../domain/journal'
-import type { Racket, SetupConfig, Specs } from '../domain/types'
+import { compute } from '../domain/physics'
+import { DEFAULT_ACCESSORY_MASSES, type Racket, type SetupConfig, type Specs } from '../domain/types'
 import { cloudConfigured, getCloud } from './cloud'
 import { hasBlockedWords } from './wordFilter'
 
@@ -111,6 +112,20 @@ export interface PublicSetup {
   /** Mine, and hidden by reports (only my own hidden recipes reach me). */
   mine: boolean
   hidden: boolean
+  /** The author's racket measured after the lead went on (see measuredHolds). */
+  measured_after: MeasuredAfter | null
+  /** Other players who saved it and logged sessions with it. */
+  plays: number
+}
+
+/** What the author's own racket measured, built to the recipe. */
+export interface MeasuredAfter {
+  weightG: number
+  balanceCm: number
+  swingweight: number
+  strung: boolean
+  /** Day of the measurement (ms). */
+  date: number
 }
 
 const score = z.number().finite().min(1).max(5)
@@ -142,6 +157,11 @@ const rowSchema = z.object({
   updated_at: z.string(),
   mine: z.boolean().default(false),
   hidden: z.boolean().default(false),
+  measured_after: z
+    .object({ weightG: finite, balanceCm: finite, swingweight: finite, strung: z.boolean(), date: finite })
+    .nullable()
+    .default(null),
+  plays: z.number().int().min(0).default(0),
 })
 
 /** Keeps the rows that pass the schema; drops the rest without a fuss. */
@@ -152,7 +172,7 @@ export function parsePublicSetups(rows: unknown[]): PublicSetup[] {
   })
 }
 
-const COLUMNS = 'id, author_key, racket_id, name, author, config, racket, specs, copies, created_at, goals, level, style, results, setup_ref, partner, updated_at, mine, hidden'
+const COLUMNS = 'id, author_key, racket_id, name, author, config, racket, specs, copies, created_at, goals, level, style, results, setup_ref, partner, updated_at, mine, hidden, measured_after, plays'
 
 /** How many recipes per frame the app asks for, in the order it shows. */
 const FETCHED = 100
@@ -251,6 +271,56 @@ export function rankPublicSetups(list: PublicSetup[], goal?: Goal, racketId?: st
     )
 }
 
+type Numbers = Pick<Specs, 'weightG' | 'balanceCm' | 'swingweight'>
+
+/** How far published numbers may be from the recipe's own: the author's
+ *  accessory masses (an overgrip, a dampener) differ from the defaults. */
+export const RECIPE_TOLERANCE: Numbers = { weightG: 5, balanceCm: 0.5, swingweight: 8 }
+/** How far a scale and a pendulum at home may be from the numbers. */
+export const MEASURE_TOLERANCE: Numbers = { weightG: 4, balanceCm: 0.4, swingweight: 7 }
+
+const within = (a: Numbers, b: Numbers, tol: Numbers) =>
+  Math.abs(a.weightG - b.weightG) <= tol.weightG && Math.abs(a.balanceCm - b.balanceCm) <= tol.balanceCm && Math.abs(a.swingweight - b.swingweight) <= tol.swingweight
+
+/** The recipe's published numbers are what its own lead, strings and base
+ *  give on its frame: recomputed here, so made-up numbers show. */
+export function specsHold(p: Pick<PublicSetup, 'config' | 'specs'>, frame: Racket): boolean {
+  const { result } = compute({ spec: frame, ...p.config, masses: DEFAULT_ACCESSORY_MASSES })
+  return within(result, p.specs, RECIPE_TOLERANCE)
+}
+
+/** The author's measurement agrees with the recipe: the "measured after" badge. */
+export const measuredHolds = (p: Pick<PublicSetup, 'measured_after' | 'specs' | 'config'>) =>
+  !!p.measured_after && p.measured_after.strung === p.config.accessories.strings && within(p.measured_after, p.specs, MEASURE_TOLERANCE)
+
+/** Recipes whose numbers hold first, the order otherwise kept. */
+export function holdingFirst<T>(list: T[], holds: (x: T) => boolean): T[] {
+  return [...list.filter(holds), ...list.filter((x) => !holds(x))]
+}
+
+/**
+ * A measurement of the racket built to this setup, taken since the setup
+ * last changed, in the same state (strung or not), that agrees with the
+ * setup's numbers: published with the recipe.
+ */
+export function measurementAfter(
+  setup: { id: string; updatedAt: number; accessories: { strings: boolean } },
+  owned: { setupId?: string; measurements?: { date: number; weightG: number; balanceCm: number; swingweight: number; strung: boolean }[] }[],
+  specs: Numbers,
+): MeasuredAfter | null {
+  const found = owned
+    .filter((o) => o.setupId === setup.id)
+    .flatMap((o) => o.measurements ?? [])
+    .filter((m) => m.date >= setup.updatedAt && m.strung === setup.accessories.strings && within(m, specs, MEASURE_TOLERANCE))
+    .sort((a, b) => b.date - a.date)[0]
+  if (!found) return null
+  const r1 = (x: number) => Math.round(x * 10) / 10
+  return { weightG: r1(found.weightG), balanceCm: Math.round(found.balanceCm * 100) / 100, swingweight: r1(found.swingweight), strung: found.strung, date: found.date }
+}
+
+/** A recipe with no lead is the frame as sold: nothing to publish. */
+export const hasLead = (c: Pick<SetupConfig, 'leadG' | 'extra'>) => Object.values(c.leadG).some((g) => g > 0) || (c.extra ?? []).some((e) => e.grams > 0)
+
 /** Published averages to a tenth, hours to the half hour. */
 export function roundResults(r: PublicResults): PublicResults {
   const avg: PublicResults['avg'] = {}
@@ -322,6 +392,7 @@ export interface PublishInput {
   level?: Level
   style?: Style
   results?: PublicResults | null
+  measuredAfter?: MeasuredAfter | null
   setupRef?: string
 }
 
@@ -343,6 +414,7 @@ export async function publishSetup(p: PublishInput): Promise<'created' | 'update
     level: p.level ?? null,
     style: p.style ?? null,
     results: p.results ? roundResults(p.results) : null,
+    measured_after: p.measuredAfter ?? null,
   }
   const prev = p.setupRef ? await published(cl, p.setupRef) : null
   const plan = republishPlan(prev, racketId)
@@ -378,6 +450,13 @@ export function setupCounts(): Promise<Map<string, number>> {
       return new Map<string, number>()
     })
   return countsCache
+}
+
+/** A player logged a session with a recipe they saved: one play, once per
+ *  account, never the author's (count_play). */
+export async function countPlay(id: string) {
+  const c = cloud()
+  if (c) await (await c).rpc('count_play', { setup_id: id })
 }
 
 /** A player saved a recipe as a setup of their own: one copy, once per

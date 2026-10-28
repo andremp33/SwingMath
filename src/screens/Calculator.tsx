@@ -652,6 +652,7 @@ function SaveSetupSheet({ open, onClose, count }: { open: boolean; onClose: () =
       name: name.trim() || fallback,
       favourite: false,
       ratings: {},
+      fromRecipe: triedRecipe ?? undefined,
       createdAt: now,
       updatedAt: now,
     }
