@@ -696,6 +696,9 @@ export const es: Dict = {
     addMe: 'Pon tu nombre y una foto',
     addMeHint: 'Se quedan en la cuenta y aparecen en todos tus dispositivos.',
     add: 'Añadir',
+    continueApple: 'Continuar con Apple',
+    continueGoogle: 'Continuar con Google',
+    orEmail: 'o con tu email',
     errors: {
       offline: 'Sin internet.',
       invalid: 'Código incorrecto o caducado.',
@@ -703,6 +706,7 @@ export const es: Dict = {
       config: 'Las cuentas aún no están configuradas en esta versión.',
       email: 'Escribe un email válido.',
       taken: 'Ese email ya tiene una cuenta.',
+      provider: 'No se pudo entrar. Inténtalo de nuevo o usa tu email.',
     },
   },
   community: {

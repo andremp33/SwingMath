@@ -7,16 +7,17 @@ import { enqueueAll, supabaseRemote, SyncError, syncOnce, trackChanges } from '.
 import { cloudConfigured, getCloud, sessionLikely, whenCloud } from '../lib/cloud'
 import { photoBlob, photoDataUrl } from '../lib/photo'
 import { IS_NATIVE, IS_PREVIEW } from '../lib/platform'
+import { appleWebIdToken, Cancelled, nativeIdToken, platform, type IdToken, type Provider } from '../lib/socialSignIn'
 
 /**
- * Optional account: sign-in with a code by email, the subscription the
- * server knows about, and sync (one device at a time without Pro). Nothing
- * here runs unless the cloud is configured.
+ * Optional account: sign-in with Apple, Google or a code by email, the
+ * subscription the server knows about, and sync (one device at a time
+ * without Pro). Nothing here runs unless the cloud is configured.
  */
 const store = () => useStore.getState()
 
 export class AccountError extends Error {
-  kind: 'offline' | 'invalid' | 'rate' | 'config' | 'taken'
+  kind: 'offline' | 'invalid' | 'rate' | 'config' | 'taken' | 'provider'
   constructor(kind: AccountError['kind']) {
     super(kind)
     this.kind = kind
@@ -46,6 +47,35 @@ export async function verifyCode(email: string, code: string): Promise<boolean> 
   const { data, error } = await c.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' }).catch(() => ({ data: { user: null }, error: { status: 0 } }))
   if (error) throw new AccountError(kindOf(error))
   return !cloudMe(data.user?.user_metadata)
+}
+
+/** Signs in with Apple's or Google's token (the same account as the email
+ *  code when the email is the same). `fresh`: as verifyCode; `name`: the one
+ *  they shared, for the welcome to offer. */
+export async function signInWithIdToken({ provider, token, nonce, name }: IdToken): Promise<{ fresh: boolean; name?: string }> {
+  const c = await client()
+  const { data, error } = await c.auth.signInWithIdToken({ provider, token, nonce }).catch(() => ({ data: { user: null }, error: { status: 0 } }))
+  if (error) {
+    const kind = kindOf(error)
+    throw new AccountError(kind === 'invalid' ? 'provider' : kind)
+  }
+  return { fresh: !cloudMe(data.user?.user_metadata), name }
+}
+
+/** Apple's or Google's sheet (the store apps) or Apple's popup (a browser;
+ *  Google's is its own button), then the account. Null: closed without
+ *  choosing. */
+export async function signInWithProvider(provider: Provider) {
+  let t: IdToken
+  try {
+    if (platform() !== 'web') t = await nativeIdToken(provider)
+    else if (provider === 'apple') t = await appleWebIdToken()
+    else throw new Error('Google has its own button in a browser')
+  } catch (e) {
+    if (e instanceof Cancelled) return null
+    throw new AccountError(navigator.onLine ? 'provider' : 'offline')
+  }
+  return signInWithIdToken(t)
 }
 
 /** Asks for a new email: a code goes to it and, with secure email change

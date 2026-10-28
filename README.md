@@ -45,8 +45,9 @@ npm run app:assets  # regenerate icons and splash screens from the logo
 ```
 
 In the apps: native status bar and back button, restring reminders as
-local notifications, and the sign-in link opens the app
-(`app.swingmath://auth`, allowed in Supabase's redirect URLs).
+local notifications, Sign in with Apple (iPhone) and Google in their native
+sheets (`@capgo/capacitor-social-login`), and the sign-in email's link opens
+the app (`app.swingmath://auth`, allowed in Supabase's redirect URLs).
 
 ### Private preview (until TestFlight)
 
@@ -76,15 +77,103 @@ app). App Links and Universal Links (`.well-known`) wait for a domain.
 
 1. Create a project in an EU region. Set the site URL and allow
    `<site>/**` as a redirect URL. Sign-in works with the default email (a
-   link). For a code instead (better in the installed app), set up custom SMTP
-   first (the free tier only allows template changes with it), then set the
-   "Magic Link" and "Confirm signup" templates to `supabase/templates/code.html`
-   with the subject `SwingMath: {{ .Token }}`.
+   link, from Supabase's own sender). For a code from the app's own address,
+   set up custom SMTP first (the free tier only allows template changes with
+   it), then the templates: see "Email (custom SMTP)" below.
 2. `npx supabase link --project-ref <ref>` then `npx supabase db push`.
 3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository variables.
 
 The `subscriptions` table (web subscriptions, from an earlier version) stays
 in the database and `has_pro` still reads it; nothing writes to it any more.
+
+**Sign in with Apple and Google.** Above the email code on the sign-in
+screen: on the iPhone, Apple and Google; on Android, Google; in a browser
+(the preview, `dev:app`), Apple's popup and Google's own button. Each gives
+an ID token that the app hands to Supabase (`signInWithIdToken`, with a
+nonce), so no screen shows Supabase's address. A button only shows once its
+ID is set (Apple on the iPhone always: App Store guideline 4.8 asks for it
+wherever Google is). With the same email, Apple, Google and the code reach
+the same account (Supabase links them by verified email), so the account ID,
+which is the RevenueCat user, does not change. Someone who hides their email
+from Apple gets a new account, with the relay address.
+
+*Apple Developer* (Certificates, Identifiers & Profiles):
+
+1. Identifiers → the App ID `app.swingmath` → Capabilities → Sign in with
+   Apple (as a primary App ID). The app already asks for it
+   (`ios/App/App/App.entitlements`); with automatic signing, Xcode updates
+   the profile (Signing & Capabilities shows "Sign in with Apple").
+2. For browsers: Identifiers → + → Services IDs, `app.swingmath.web`,
+   "SwingMath (web)". Enable Sign in with Apple → Configure: primary App ID
+   `app.swingmath`, domain `andremp33.github.io`, return URL
+   `https://andremp33.github.io/SwingMath/preview/` (each page that shows the
+   button needs its own; Apple takes no `localhost`, so Apple in a browser
+   cannot be tried locally). Set the repository variable
+   `VITE_APPLE_SERVICE_ID=app.swingmath.web`.
+3. Keys → + → Sign in with Apple, primary App ID `app.swingmath`. Download
+   the `.p8` (it can be downloaded once) and note its Key ID and the Team
+   ID; keep it out of the repository. Sign-in does not use it. Deleting an
+   account should revoke Apple's tokens with it (not done yet, see below),
+   and Supabase would need it only for Apple's redirect flow, which the app
+   does not use.
+4. Services → Sign in with Apple for Email Communication → Configure: add
+   the domain (`swingmath.app`) and the sender `ola@swingmath.app`, once its
+   SPF passes (see the email section). Without this, codes sent to
+   `@privaterelay.appleid.com` addresses never arrive.
+
+*Google Cloud* (one project, console.cloud.google.com):
+
+1. Google Auth Platform → Branding: app name SwingMath, support email
+   `swing.math@outlook.com`, logo, home page
+   `https://andremp33.github.io/SwingMath/`, privacy `…/privacidade`, terms
+   `…/termos`. Audience: External, then Publish app. Data access: only
+   `openid`, `email` and `profile`, which need no verification.
+2. Clients → Create client:
+   - **Web application** "SwingMath web": authorized JavaScript origins
+     `https://andremp33.github.io`, `http://localhost`,
+     `http://localhost:5173` and `http://localhost:5177` (Google's button
+     needs the exact origin; no redirect URIs). Its ID is
+     `VITE_GOOGLE_WEB_CLIENT_ID`: a repository variable for the preview, and
+     in `.env.local` for the store builds (Android's sheet signs in for this
+     client too).
+   - **iOS**: bundle ID `app.swingmath`, your Team ID. Its ID is
+     `VITE_GOOGLE_IOS_CLIENT_ID` (in `.env.local`). Add its "iOS URL scheme"
+     (`com.googleusercontent.apps.…`, the ID reversed) to
+     `ios/App/App/Info.plist`, as a second string under the existing
+     `CFBundleURLSchemes`; Google's sheet will not open without it.
+   - **Android**, twice, package `app.swingmath`: one with the SHA-1 of the
+     debug key (`cd android && gradlew signingReport`, variant debug), one
+     with the SHA-1 of the Play App Signing key (Play Console → Test and
+     release → App integrity → App signing; add the upload key's too if you
+     install release builds yourself). The app never uses these IDs: Google
+     matches the package and the signature.
+
+*Supabase* → Authentication → Sign In / Providers:
+
+1. **Apple**: enable; Client IDs `app.swingmath,app.swingmath.web`. Leave
+   the OAuth secret empty.
+2. **Google**: enable; Client IDs `<web client ID>,<iOS client ID>`, web
+   first. The client secret is for the redirect flow only: if the form
+   insists, paste the web client's. Keep "Skip nonce checks" off: the app
+   sends a nonce.
+3. Nothing else changes: the review account and the email code keep
+   working.
+
+*Locally*, against `npx supabase start`: in `supabase/config.toml`, under
+`[auth.external.apple]` and `[auth.external.google]`, set `enabled = true`
+and the same `client_id` lists (they are public), restart Supabase, and put
+the IDs in `.env.local`. Supabase checks the tokens against Apple's and
+Google's public keys, so real accounts sign in to a local database. Google
+works in a browser at `localhost:5173`; Apple only in an iPhone build.
+
+Only a phone shows Apple's and Google's native sheets: they need a build
+with the IDs (the e2e tests have none, so no button there). Apple in a
+browser needs the Services ID and the deployed preview.
+
+Not done yet: deleting an account does not revoke Apple's tokens (Apple
+asks apps to, with the key of step 3: `delete-account` would exchange the
+sign-in's authorization code and revoke it), and Android has no Apple
+button (it would need a return page and a function).
 
 **Store subscriptions in the apps (RevenueCat).** Apple and Google require
 their own billing for subscriptions bought in the apps, so the apps sell Pro
@@ -143,13 +232,54 @@ to unblock). Reviewed reports stop counting and are purged 12 months after
 review by a nightly `pg_cron` job. Each account publishes at most 5 recipes
 a day: `update public.community_settings set publish_per_day = <n>;`.
 
-**Email (custom SMTP).** The sign-in code is an email, and Supabase's
-built-in sender is only for testing (a few emails an hour, to team
-addresses). In Supabase → Authentication → Emails → SMTP settings, fill in
-a provider's host, port, user and password (for example Brevo, Resend,
-Postmark or Amazon SES, with SPF and DKIM set on your domain), then set the
-templates as in step 1 of the accounts above. Name the provider in the
-privacy policy if you want to be specific.
+**Email (custom SMTP).** Supabase's built-in sender is for testing only (a
+few emails an hour, from Supabase's address). The code should come from the
+app's own address, through a provider, on a domain the app owns.
+
+`swing.math@outlook.com` cannot be the sender. Outlook.com no longer accepts
+SMTP with a password (basic authentication, app passwords included) for
+personal accounts, only OAuth, which Supabase's SMTP settings do not do; it
+also caps sending at a few hundred a day and is not meant for automated
+mail. Nor can a provider send *as* @outlook.com: Resend only sends from a
+domain you verify, Brevo rewrites a free-mail sender to its own domain, and
+mail from @outlook.com sent by anyone but Microsoft fails DMARC alignment
+and lands in spam. So that address stays the contact, and the code comes
+from a domain of ours:
+
+1. **A domain** (about €10–15 a year; Cloudflare Registrar sells at cost),
+   for example `swingmath.app`. The same domain can later carry the website,
+   App Links and Universal Links.
+2. **Resend** (free: 3,000 emails a month, 100 a day, one domain): Domains →
+   Add `swingmath.app` (region EU, Ireland) and add the DNS records it shows:
+   the DKIM TXT record, and the SPF TXT and MX records on the `send`
+   subdomain it uses for bounces. Then add a DMARC record yourself:
+   `_dmarc` TXT `v=DMARC1; p=none; rua=mailto:swing.math@outlook.com`
+   (move to `p=quarantine` once the reports look clean). API Keys → create
+   one with "Sending access" for that domain only. (Brevo works the same
+   way, with 300 emails a day free: authenticate the domain, then use its
+   SMTP key.)
+3. **Replies.** Supabase's SMTP has no Reply-To field, so make the sender an
+   address that forwards: Cloudflare → Email → Email Routing, route
+   `ola@swingmath.app` to `swing.math@outlook.com` (free; its MX records go
+   on the root and do not clash with Resend's on `send`). The templates also
+   name `swing.math@outlook.com` for questions.
+4. **Supabase** → Authentication → Emails → SMTP Settings → Enable custom
+   SMTP: sender email `ola@swingmath.app`, sender name `SwingMath`, host
+   `smtp.resend.com`, port `465`, username `resend`, password the API key.
+   Authentication → Rate Limits then allows 30 emails an hour by default,
+   plenty for now.
+5. **Templates** (Authentication → Emails → Templates): "Magic Link" and
+   "Confirm signup" from `supabase/templates/code.html`, "Change Email
+   Address" from `supabase/templates/email-change.html`, each with the
+   subject `SwingMath: {{ .Token }}` (as `supabase/config.toml` sets them
+   locally).
+6. Send yourself a code and check its headers: `dkim=pass`, `spf=pass` and
+   `dmarc=pass` for `swingmath.app`. Then name the provider (Resend, Inc.,
+   in the US, under the standard contractual clauses) in the privacy
+   policy's account section, which today says "an email delivery provider".
+7. With Sign in with Apple, a player may hide their email behind an Apple
+   relay address, which only takes mail from registered senders: see step 4
+   of Apple above.
 
 **The stores' review account.** Apple and Google reviewers cannot receive
 our sign-in emails, so one account signs in with a password instead:

@@ -696,6 +696,9 @@ export const en: Dict = {
     addMe: 'Add your name and a photo',
     addMeHint: 'They stay on the account and show on all your devices.',
     add: 'Add',
+    continueApple: 'Continue with Apple',
+    continueGoogle: 'Continue with Google',
+    orEmail: 'or with your email',
     errors: {
       offline: 'No internet.',
       invalid: 'Wrong or expired code.',
@@ -703,6 +706,7 @@ export const en: Dict = {
       config: 'Accounts are not set up in this build yet.',
       email: 'Enter a valid email.',
       taken: 'That email already has an account.',
+      provider: "Couldn't sign in. Try again, or use your email.",
     },
   },
   community: {

@@ -335,8 +335,14 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+# Sign in with Apple and Google: the app sends their ID token
+# (signInWithIdToken), so only the client IDs are needed, no secret. To try
+# them against this local Supabase, set enabled = true and the IDs (they are
+# public): Apple, the bundle ID and the Services ID; Google, the web and the
+# iOS client IDs. Then restart (`npx supabase stop && npx supabase start`).
 [auth.external.apple]
 enabled = false
+# client_id = "app.swingmath,app.swingmath.web"
 client_id = ""
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
 secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
@@ -349,6 +355,12 @@ url = ""
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
+
+[auth.external.google]
+enabled = false
+# client_id = "<web client ID>,<iOS client ID>"
+client_id = ""
+skip_nonce_check = false
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.

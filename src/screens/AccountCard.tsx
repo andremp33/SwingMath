@@ -11,6 +11,7 @@ import { Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { MeSheet } from './MeEditor'
 import { usePaywall } from './Pro'
+import { SignInProviders } from './SignInProviders'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -27,8 +28,9 @@ export function AccountGroup({ entry }: { entry?: boolean }) {
   const t = useT()
   const account = useStore((s) => s.account)
   const [open, setOpen] = useState(!entry)
-  // A new account, on a device without a name or photo: ask for them.
-  const [welcome, setWelcome] = useState(false)
+  // A new account, on a device without a name or photo: ask for them (with
+  // the name Apple or Google shared, if any, already written).
+  const [welcome, setWelcome] = useState<{ name?: string }>()
   if (!cloudConfigured()) return entry ? <p className="text-sm text-muted">{t.profile.noAccount}</p> : null
   return (
     <SettingsGroup title={t.account.title} action={!account && <span className="text-sm text-muted">{t.account.optional}</span>}>
@@ -36,9 +38,9 @@ export function AccountGroup({ entry }: { entry?: boolean }) {
         <SignedIn />
       ) : open ? (
         <SignInForm
-          onSignedIn={(fresh) => {
+          onSignedIn={(fresh, name) => {
             const { me } = useStore.getState()
-            if (fresh && !me.name && !me.photo) setWelcome(true)
+            if (fresh && !me.name && !me.photo) setWelcome({ name })
           }}
         />
       ) : (
@@ -48,12 +50,12 @@ export function AccountGroup({ entry }: { entry?: boolean }) {
           </Button>
         </SettingsRow>
       )}
-      {welcome && <MeSheet title={t.me.welcome} onClose={() => setWelcome(false)} />}
+      {welcome && <MeSheet title={t.me.welcome} name={welcome.name} onClose={() => setWelcome(undefined)} />}
     </SettingsGroup>
   )
 }
 
-function SignInForm({ onSignedIn }: { onSignedIn: (fresh: boolean) => void }) {
+function SignInForm({ onSignedIn }: { onSignedIn: (fresh: boolean, name?: string) => void }) {
   const t = useT()
   const toast = useToast()
   const [email, setEmail] = useState('')
@@ -84,40 +86,43 @@ function SignInForm({ onSignedIn }: { onSignedIn: (fresh: boolean) => void }) {
   const review = isReviewEmail(email)
   if (!sent) {
     return (
-      <form
-        className="space-y-3 py-3.5"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (!EMAIL.test(email.trim())) {
-            setError(t.account.errors.email)
-            return
-          }
-          if (review)
-            void run(async () => {
-              await signInWithPassword(email, password)
-              toast(t.account.signedIn)
-            })
-          else void send()
-        }}
-      >
+      <div className="space-y-3 py-3.5">
         <p className="text-sm text-muted">{t.account.intro}</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-          <TextField label={t.account.email} value={email} onChange={setEmail} error={error} placeholder="nome@exemplo.com" maxLength={120} />
-          {!review && (
-            <Button type="submit" variant="primary" icon={UserRound} loading={busy} disabled={!email.trim()} className="h-11">
-              {t.account.sendCode}
-            </Button>
+        <SignInProviders onSignedIn={onSignedIn} />
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!EMAIL.test(email.trim())) {
+              setError(t.account.errors.email)
+              return
+            }
+            if (review)
+              void run(async () => {
+                await signInWithPassword(email, password)
+                toast(t.account.signedIn)
+              })
+            else void send()
+          }}
+        >
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <TextField label={t.account.email} value={email} onChange={setEmail} error={error} placeholder="nome@exemplo.com" maxLength={120} />
+            {!review && (
+              <Button type="submit" variant="primary" icon={UserRound} loading={busy} disabled={!email.trim()} className="h-11">
+                {t.account.sendCode}
+              </Button>
+            )}
+          </div>
+          {review && (
+            <>
+              <TextField label={t.account.password} hint={t.account.passwordHint} type="password" value={password} onChange={setPassword} maxLength={200} />
+              <Button type="submit" variant="primary" loading={busy} disabled={!password}>
+                {t.account.signIn}
+              </Button>
+            </>
           )}
-        </div>
-        {review && (
-          <>
-            <TextField label={t.account.password} hint={t.account.passwordHint} type="password" value={password} onChange={setPassword} maxLength={200} />
-            <Button type="submit" variant="primary" loading={busy} disabled={!password}>
-              {t.account.signIn}
-            </Button>
-          </>
-        )}
-      </form>
+        </form>
+      </div>
     )
   }
   return (
