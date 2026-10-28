@@ -26,6 +26,7 @@ const itemSchema = z.object({
   reasons: z.array(z.string()),
   last_report: z.string(),
   author_blocked: z.boolean(),
+  note: z.string().nullable(),
 })
 export type QueueItem = z.infer<typeof itemSchema>
 

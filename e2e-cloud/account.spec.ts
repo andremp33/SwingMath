@@ -415,6 +415,39 @@ test('a moderator reviews the queue: shown again, or hidden with its author bloc
   await expect(author.getByText('A tua conta já não pode publicar na comunidade', { exact: false })).toBeVisible()
 })
 
+test('a recipe carries a short note: two lines, the rest on request; an insult in it is not published', async ({ browser }) => {
+  test.setTimeout(90_000)
+  const name = `Com nota ${stamp}`
+  const long = 'Mais estável nas devoluções e nos voleios, sem perder a cabeça rápida no serviço. Para quem joga do fundo e quer segurar bolas pesadas sem cansar o braço.'
+  const author = await open(browser)
+  await signIn(author, emailOf('note'))
+  await saveSetup(author, name)
+  await author.goto('/setups')
+  await share(author, name)
+  const d = author.getByRole('dialog')
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await d.getByRole('checkbox', { name: 'Estabilidade' }).click()
+  // An insult in the note: refused, like in the name.
+  await d.getByLabel('O que mudou na sensação? Para quem é?', { exact: false }).fill('Esta raquete é uma merda')
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('têm palavras que não publicamos.', { exact: false })).toBeVisible()
+  await d.getByLabel('O que mudou na sensação? Para quem é?', { exact: false }).fill(long)
+  await expect(d.getByText(`${long.length}/200`)).toBeVisible()
+  await expect(d.getByRole('region', { name: 'Assim aparece na comunidade' })).toContainText('Mais estável nas devoluções')
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+
+  const visitor = await open(browser)
+  await visitor.goto('/')
+  const row = (await openCommunity(visitor)).getByRole('listitem').filter({ hasText: name })
+  await expect(row).toContainText('Mais estável nas devoluções')
+  const more = row.getByRole('button', { name: 'Ver mais' })
+  await expect(more).toHaveAttribute('aria-expanded', 'false')
+  await more.click()
+  await expect(row.getByRole('button', { name: 'Ver menos' })).toHaveAttribute('aria-expanded', 'true')
+  await a11y(visitor, '#card-community')
+})
+
 test('a name with an insult is not published', async ({ browser }) => {
   const author = await open(browser)
   await signIn(author, emailOf('rude'))
@@ -424,7 +457,7 @@ test('a name with an insult is not published', async ({ browser }) => {
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
   await author.getByRole('dialog').getByRole('checkbox', { name: 'Potência' }).click()
   await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
-  await expect(author.getByText('O nome ou a assinatura têm palavras que não publicamos.', { exact: false })).toBeVisible()
+  await expect(author.getByText('têm palavras que não publicamos.', { exact: false })).toBeVisible()
   expect((await admin.from('public_setups').select('id').eq('name', `Setup de merda ${stamp}`)).data).toEqual([])
 })
 

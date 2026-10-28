@@ -332,6 +332,31 @@ describe('moderation', () => {
   })
 })
 
+describe('a recipe’s note', () => {
+  const setup = { racket_id: 'stock-x', name: 'Com nota', config: { leadG: { tip: 2 } }, specs: { weightG: 330, balanceCm: 32, swingweight: 330 } }
+
+  it('up to 200 characters, never blank, read by anyone', async () => {
+    const { data, error } = await free.db.from('public_setups').insert({ ...setup, note: 'Mais estável nas devoluções.' }).select('id').single()
+    expect(error).toBeNull()
+    expect((await anon.from('community_setups').select('note').eq('id', data!.id).single()).data?.note).toBe('Mais estável nas devoluções.')
+    expect((await free.db.from('public_setups').insert({ ...setup, note: 'x'.repeat(201) })).error).not.toBeNull()
+    expect((await free.db.from('public_setups').insert({ ...setup, note: '   ' })).error).not.toBeNull()
+    expect((await free.db.from('public_setups').update({ note: 'Agora para quem joga à rede.' }).eq('id', data!.id)).error).toBeNull()
+  })
+
+  it('a blocked author cannot change it, and moderators read it in the queue', async () => {
+    const mod = await user('notemod')
+    await admin.from('moderators').insert({ user_id: mod.id })
+    const author = await user('noteauthor')
+    const { data } = await author.db.from('public_setups').insert({ ...setup, note: 'Compra na minha loja!' }).select('id').single()
+    for (const n of ['n1', 'n2', 'n3']) await (await user(n)).db.from('reports').insert({ setup_id: data!.id, reason: 'spam' })
+    const queue = (await mod.db.rpc('moderation_list')).data as { id: string; note: string | null }[]
+    expect(queue.find((q) => q.id === data!.id)?.note).toBe('Compra na minha loja!')
+    await mod.db.rpc('moderate', { setup_id: data!.id, action: 'block' })
+    expect((await author.db.from('public_setups').update({ note: 'Outra coisa' }).eq('id', data!.id)).error?.message).toBe('publishing blocked')
+  })
+})
+
 describe('community recipes', () => {
   const rid = `stock-recipe-${stamp}`
   const recipe = { racket_id: rid, name: 'Estável', config: { leadG: { threeNine: 4 } }, specs: { weightG: 332 } }
