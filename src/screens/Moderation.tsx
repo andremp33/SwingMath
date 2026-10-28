@@ -91,6 +91,7 @@ function QueueCard({ item: q, onDone }: { item: QueueItem; onDone: () => void })
         <p className="num text-muted">
           {u.weight(q.specs.weightG)} {u.weightUnit} · {u.balance(q.specs.balanceCm)} {u.balanceUnit} · SW {fmtNum(q.specs.swingweight, 0, lang)}
         </p>
+        {q.note && <blockquote className="border-l-2 border-border pl-3 text-muted">{q.note}</blockquote>}
       </div>
       <div className="space-y-1.5 text-sm">
         <p>{fmt(q.reports === 1 ? t.moderation.reportOne : t.moderation.reports, { n: q.reports, date: fmtDate(Date.parse(q.last_report), lang) })}</p>

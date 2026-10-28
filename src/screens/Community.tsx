@@ -1,6 +1,6 @@
 import { scrollToTop } from '../app/Shell'
 import { ArrowRight, Crosshair, EyeOff, Flag, RefreshCw, Send, Trash2, Upload, Users } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db, findRacket } from '../data/db'
 import { useCustomRackets, useOwned, useSessions, useSetups, useStringings } from '../data/hooks'
@@ -24,6 +24,7 @@ import {
   BlockedWordsError,
   GOALS,
   HiddenRecipeError,
+  NOTE_MAX,
   PublishLimitError,
   LEVELS,
   publicSetups,
@@ -100,6 +101,9 @@ export function CommunityLink({ racket }: { racket: Racket }) {
 
 /** Recipes the card shows; the rest are in the sheet. */
 const SHOWN = 3
+
+/** A note longer than this may not fit its two lines: it can be opened. */
+const NOTE_FOLD = 90
 
 /** Plays are shown from this many players up, like the medians. */
 const PLAYS_SHOWN = 3
@@ -400,6 +404,8 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
   // The recipe whose report form is open, and the reason picked.
   const [reporting, setReporting] = useState<string | null>(null)
   const [reason, setReason] = useState<ReportReason>('offensive')
+  // Notes shown whole; the others show two lines.
+  const [open, setOpen] = useState<string[]>([])
 
   const signedIn = (fn: () => Promise<void>) => async () => {
     if (!account) return toast(t.community.needAccount)
@@ -427,6 +433,7 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
         style: p.style ?? undefined,
         results,
         measuredAfter: owned ? measurementAfter(local, owned, result) : null,
+        note: p.note ?? undefined,
         setupRef: local.id,
       })
       toast(done === 'moved' ? t.community.moved : t.community.updated)
@@ -488,6 +495,21 @@ function RecipeList({ list, racket, onChange, onDone, preview }: { list: PublicS
               </p>
               {elsewhere && frame && <p className="text-muted">{fmt(t.community.onFrame, { name: `${frame.brand} ${frame.model}${frame.year ? ` (${frame.year})` : ''}` })}</p>}
               <p className="readout">{lead.length ? lead.join(' · ') : t.setups.noLead}</p>
+              {p.note && (
+                <div>
+                  <p className={open.includes(p.id) ? 'whitespace-pre-line' : 'line-clamp-2 whitespace-pre-line'}>{p.note}</p>
+                  {p.note.length > NOTE_FOLD && (
+                    <button
+                      type="button"
+                      className="text-xs text-muted underline underline-offset-2 hover:text-text"
+                      aria-expanded={open.includes(p.id)}
+                      onClick={() => setOpen((o) => (o.includes(p.id) ? o.filter((x) => x !== p.id) : [...o, p.id]))}
+                    >
+                      {open.includes(p.id) ? t.community.noteLess : t.community.noteMore}
+                    </button>
+                  )}
+                </div>
+              )}
               <p className="num text-muted">
                 {u.weight(p.specs.weightG)} {u.weightUnit} · {u.balance(p.specs.balanceCm)} {u.balanceUnit} · SW {fmtNum(p.specs.swingweight, 0, lang)}
                 {p.config.strings && ` · ${bedLabel(p.config.strings, t, lang)}`}
@@ -673,6 +695,8 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
   const [publishedAs, setPublishedAs] = useState<string | null>(null)
   const [hiddenByReports, setHiddenByReports] = useState(false)
   const [publicName, setPublicName] = useState(setup.name)
+  const [note, setNote] = useState('')
+  const noteId = useId()
 
   // Already published: the form starts from the recipe as it is now.
   useEffect(() => {
@@ -683,6 +707,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
         setPublishedAs(r.id)
         setHiddenByReports(r.hidden)
         setPublicName(r.name)
+        setNote(r.note ?? '')
         setGoals(r.goals)
         setLevel(r.level ?? '')
         setStyle(r.style ?? '')
@@ -729,6 +754,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
     hidden: false,
     measured_after: measured,
     plays: 0,
+    note: note.trim() || null,
   }
   if (!open)
     return (
@@ -756,6 +782,7 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
             style: style || undefined,
             results: withResults ? results : null,
             measuredAfter: measured,
+            note,
             setupRef: setup.id,
           })
           toast(done === 'updated' ? t.community.updated : done === 'moved' ? t.community.moved : t.community.published)
@@ -789,6 +816,24 @@ export function PublishSetup({ setup, racket }: { setup: Setup; racket: Racket }
       )}
       <TextField label={t.community.publicName} value={publicName} onChange={setPublicName} maxLength={60} />
       <TextField label={`${t.community.author} (${t.community.authorHint})`} value={author} onChange={setAuthor} maxLength={30} />
+      <div>
+        <label htmlFor={noteId} className="mb-1.5 block text-sm">
+          {t.community.noteLabel} <span className="text-muted">({t.common.optional})</span>
+        </label>
+        <textarea
+          id={noteId}
+          rows={3}
+          maxLength={NOTE_MAX}
+          value={note}
+          placeholder={t.community.notePlaceholder}
+          aria-describedby={`${noteId}-count`}
+          onChange={(e) => setNote(e.target.value)}
+          className="w-full rounded-md border border-border-input bg-field px-3 py-2"
+        />
+        <p id={`${noteId}-count`} className="num mt-1 text-right text-xs text-muted">
+          {note.length}/{NOTE_MAX}
+        </p>
+      </div>
       {measured && <p className="text-sm text-muted">{fmt(t.community.measuredIncluded, { date: fmtDate(measured.date, lang) })}</p>}
       <section className="space-y-1" aria-label={t.community.preview}>
         <h3 className="text-sm font-medium">{t.community.preview}</h3>

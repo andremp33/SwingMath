@@ -116,7 +116,12 @@ export interface PublicSetup {
   measured_after: MeasuredAfter | null
   /** Other players who saved it and logged sessions with it. */
   plays: number
+  /** The author's few words on it (at most NOTE_MAX characters). */
+  note: string | null
 }
+
+/** A recipe's note, in characters. */
+export const NOTE_MAX = 200
 
 /** What the author's own racket measured, built to the recipe. */
 export interface MeasuredAfter {
@@ -162,6 +167,7 @@ const rowSchema = z.object({
     .nullable()
     .default(null),
   plays: z.number().int().min(0).default(0),
+  note: z.string().max(NOTE_MAX).nullable().default(null),
 })
 
 /** Keeps the rows that pass the schema; drops the rest without a fuss. */
@@ -172,7 +178,7 @@ export function parsePublicSetups(rows: unknown[]): PublicSetup[] {
   })
 }
 
-const COLUMNS = 'id, author_key, racket_id, name, author, config, racket, specs, copies, created_at, goals, level, style, results, setup_ref, partner, updated_at, mine, hidden, measured_after, plays'
+const COLUMNS = 'id, author_key, racket_id, name, author, config, racket, specs, copies, created_at, goals, level, style, results, setup_ref, partner, updated_at, mine, hidden, measured_after, plays, note'
 
 /** How many recipes per frame the app asks for, in the order it shows. */
 const FETCHED = 100
@@ -357,7 +363,7 @@ async function published(cl: SupabaseClient, setupRef: string): Promise<Publishe
   return (data as Published | null) ?? null
 }
 
-/** A setup's name or signature with an insult in it is not published. */
+/** A setup's name, signature or note with an insult in it is not published. */
 export class BlockedWordsError extends Error {
   constructor() {
     super('blocked words')
@@ -408,13 +414,14 @@ export interface PublishInput {
   style?: Style
   results?: PublicResults | null
   measuredAfter?: MeasuredAfter | null
+  note?: string
   setupRef?: string
 }
 
 /** Publishes a saved setup, or updates my earlier copy of it (found by
  *  setupRef). Updates go by id: upsert and per-column grants do not mix. */
 export async function publishSetup(p: PublishInput): Promise<'created' | 'updated' | 'moved'> {
-  if (hasBlockedWords(p.name) || hasBlockedWords(p.author)) throw new BlockedWordsError()
+  if (hasBlockedWords(p.name) || hasBlockedWords(p.author) || hasBlockedWords(p.note)) throw new BlockedWordsError()
   const cl = await getCloud()!
   const { racketId, baseMode, measured, accessories, leadG, extra, grip, strings } = p.config
   const { createdAt: _c, updatedAt: _u, ...frame } = p.racket
@@ -430,6 +437,7 @@ export async function publishSetup(p: PublishInput): Promise<'created' | 'update
     style: p.style ?? null,
     results: p.results ? roundResults(p.results) : null,
     measured_after: p.measuredAfter ?? null,
+    note: p.note?.trim().slice(0, NOTE_MAX) || null,
   }
   const prev = p.setupRef ? await published(cl, p.setupRef) : null
   const plan = republishPlan(prev, racketId)
