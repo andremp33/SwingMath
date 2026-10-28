@@ -148,6 +148,8 @@ interface State {
   onboarded: boolean
   /** Community authors the player chose not to see (their author keys). */
   hiddenAuthors: string[]
+  /** Saved setups the journal already asked to publish, once each. */
+  publishInvited: string[]
   /** String names the player used last, newest first (the name field's suggestions). */
   recentStrings: string[]
   account: Account | null
@@ -183,6 +185,7 @@ interface State {
   setMe: (m: Partial<Me>, at?: number) => void
   setOnboarded: (v: boolean) => void
   hideAuthor: (authorKey: string) => void
+  markInvited: (setupId: string) => void
   noteString: (name: string) => void
   showAuthor: (authorKey: string) => void
   showAllAuthors: () => void
@@ -224,6 +227,7 @@ export const useStore = create<State>()(
       me: {},
       onboarded: false,
       hiddenAuthors: [],
+      publishInvited: [],
       recentStrings: [],
       account: null,
       accountPro: null,
@@ -271,6 +275,7 @@ export const useStore = create<State>()(
         }),
       showAuthor: (id) => set((s) => ({ hiddenAuthors: s.hiddenAuthors.filter((x) => x !== id) })),
       showAllAuthors: () => set({ hiddenAuthors: [] }),
+      markInvited: (id) => set((s) => ({ publishInvited: [...new Set([...s.publishInvited, id])].slice(-200) })),
       markReminded: (ids) => set((s) => ({ reminded: [...new Set([...s.reminded, ...ids])].slice(-200) })),
     }),
     {

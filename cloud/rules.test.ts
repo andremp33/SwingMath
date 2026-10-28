@@ -226,6 +226,39 @@ describe('who wrote a recipe', () => {
   })
 })
 
+describe('why to trust a recipe', () => {
+  const setup = { racket_id: 'stock-x', name: 'Confiança', config: { leadG: { tip: 2 } }, specs: { weightG: 330, balanceCm: 32, swingweight: 330 } }
+  const after = { weightG: 331, balanceCm: 32.05, swingweight: 328, strung: true, date: 1 }
+
+  it('the author publishes and updates the measurement after the lead', async () => {
+    const { data, error } = await free.db.from('public_setups').insert({ ...setup, measured_after: after }).select('id').single()
+    expect(error).toBeNull()
+    expect((await anon.from('community_setups').select('measured_after').eq('id', data!.id).single()).data?.measured_after).toEqual(after)
+    expect((await free.db.from('public_setups').update({ measured_after: null }).eq('id', data!.id)).error).toBeNull()
+    expect((await anon.from('community_setups').select('measured_after').eq('id', data!.id).single()).data?.measured_after).toBeNull()
+  })
+
+  it('a play counts once per player, never the author’s, never without an account', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'Jogada' }).select('id').single()
+    const plays = async () => (await anon.from('community_setups').select('plays').eq('id', data!.id).single()).data?.plays
+    await free.db.rpc('count_play', { setup_id: data!.id })
+    expect((await anon.rpc('count_play', { setup_id: data!.id })).error).not.toBeNull()
+    expect(await plays()).toBe(0)
+    await pro.db.rpc('count_play', { setup_id: data!.id })
+    await pro.db.rpc('count_play', { setup_id: data!.id })
+    const other = await user('player')
+    await other.db.rpc('count_play', { setup_id: data!.id })
+    expect(await plays()).toBe(2)
+    // Nobody reads who played.
+    expect((await pro.db.from('recipe_plays').select('user_id').eq('setup_id', data!.id)).data ?? []).toEqual([])
+  })
+
+  it('plays cannot be written by hand', async () => {
+    const { data } = await free.db.from('public_setups').insert({ ...setup, name: 'À mão' }).select('id').single()
+    expect((await pro.db.from('recipe_plays').insert({ setup_id: data!.id, user_id: pro.id })).error).not.toBeNull()
+  })
+})
+
 describe('community recipes', () => {
   const rid = `stock-recipe-${stamp}`
   const recipe = { racket_id: rid, name: 'Estável', config: { leadG: { threeNine: 4 } }, specs: { weightG: 332 } }

@@ -86,9 +86,9 @@ async function pickPhoto(page: Page) {
 
 const userByEmail = async (email: string) => (await admin.auth.admin.listUsers({ perPage: 1000 })).data.users.find((u) => u.email === email)!
 
-/** The first setup's share sheet, from its ⋯ menu. */
-async function share(page: Page) {
-  await page.getByRole('button', { name: /^Mais ações:/ }).first().click()
+/** A setup's share sheet (the first one's, unless named), from its ⋯ menu. */
+async function share(page: Page, name?: string) {
+  await page.getByRole('button', { name: name ? `Mais ações: ${name}` : /^Mais ações:/ }).first().click()
   await page.getByRole('menuitem', { name: 'Partilhar' }).click()
 }
 
@@ -227,6 +227,134 @@ test('a report says why, and three of them hide the recipe from everyone but its
   await author.goto('/')
   const mine = (await openCommunity(author)).getByRole('listitem').filter({ hasText: name })
   await expect(mine).toContainText('Escondido depois de denúncias')
+})
+
+test('publishing shows the recipe as others will see it, under a name of its own; a setup without lead is no recipe', async ({ browser }) => {
+  test.setTimeout(90_000)
+  const author = await open(browser)
+  await signIn(author, emailOf('preview'))
+  // Without lead: nothing to publish.
+  await author.goto('/')
+  await author.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
+  await author.getByRole('dialog').getByLabel('Nome do setup').fill(`De fábrica ${stamp}`)
+  await author.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await expect(author.getByText('Guardado', { exact: false }).first()).toBeVisible()
+  await author.goto('/setups')
+  await share(author, `De fábrica ${stamp}`)
+  await expect(author.getByRole('dialog').getByText('Este setup não tem chumbo', { exact: false })).toBeVisible()
+  await expect(author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' })).toHaveCount(0)
+  await author.keyboard.press('Escape')
+
+  // With lead: a public name and a preview.
+  await saveSetup(author, `Privado ${stamp}`)
+  await author.goto('/setups')
+  await share(author, `Privado ${stamp}`)
+  const d = author.getByRole('dialog')
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await d.getByRole('checkbox', { name: 'Potência' }).click()
+  await d.getByLabel('Nome na comunidade').fill(`Público ${stamp}`)
+  const preview = d.getByRole('region', { name: 'Assim aparece na comunidade' })
+  await expect(preview).toContainText(`Público ${stamp}`)
+  await expect(preview).toContainText('12h 0,5 g')
+  await expect(preview.getByRole('button')).toHaveCount(0)
+  await a11y(author, 'dialog[open]')
+  await d.getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+  const rows = await admin.from('public_setups').select('name').eq('name', `Público ${stamp}`)
+  expect(rows.data).toHaveLength(1)
+})
+
+test('badges: measured after the lead, played by others, and numbers that do not match', async ({ browser }) => {
+  const author = await open(browser)
+  await signIn(author, emailOf('badges'))
+  await saveSetup(author, `Selos ${stamp}`)
+  await author.goto('/setups')
+  await share(author)
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Controlo' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+  const { data } = await admin.from('public_setups').select('id, specs').eq('name', `Selos ${stamp}`).single()
+  const specs = data!.specs as { weightG: number; balanceCm: number; swingweight: number }
+  await admin.from('public_setups').update({ measured_after: { ...specs, strung: true, date: Date.now() } }).eq('id', data!.id)
+  for (const n of ['pl1', 'pl2', 'pl3']) {
+    const { data: u } = await admin.auth.admin.createUser({ email: emailOf(n), email_confirm: true })
+    await admin.from('recipe_plays').insert({ setup_id: data!.id, user_id: u.user!.id })
+  }
+
+  const visitor = await open(browser)
+  await visitor.goto('/')
+  const row = (await openCommunity(visitor)).getByRole('listitem').filter({ hasText: `Selos ${stamp}` })
+  await expect(row).toContainText('Medida depois do chumbo')
+  await expect(row).toContainText('Jogada por 3')
+  await expect(row).not.toContainText('Os números não batem')
+
+  // Numbers no lead could give: flagged.
+  await admin.from('public_setups').update({ specs: { ...specs, swingweight: specs.swingweight + 25 } }).eq('id', data!.id)
+  await visitor.reload()
+  const again = (await openCommunity(visitor)).getByRole('listitem').filter({ hasText: `Selos ${stamp}` })
+  await expect(again).toContainText('Os números não batem com a receita')
+  await expect(again).not.toContainText('Medida depois do chumbo')
+})
+
+/** One session in the journal, on the racket's current stringing. */
+async function logSession(page: Page, overall: number) {
+  await page.getByRole('button', { name: 'Registar sessão' }).last().click()
+  const d = page.getByRole('dialog', { name: 'Sessão' })
+  await d.getByRole('radiogroup', { name: 'Duração' }).getByRole('radio', { name: '60 min' }).click()
+  await d.getByRole('radiogroup', { name: 'Como correu' }).getByRole('radio', { name: `${overall}/5` }).click()
+  await d.getByRole('button', { name: 'Guardar' }).click()
+  await expect(d).toBeHidden()
+}
+
+test('a setup that is working is offered for the community, once', async ({ browser }) => {
+  test.setTimeout(90_000)
+  const name = `A resultar ${stamp}`
+  const page = await open(browser)
+  await signIn(page, emailOf('invited'))
+  // Saved on a new racket of the player's, with its stringing.
+  await saveSetup(page, name)
+  await page.goto('/diario')
+  await logSession(page, 5)
+  await logSession(page, 4)
+  await expect(page.getByText(`«${name}» está a resultar`)).toHaveCount(0)
+  await logSession(page, 5)
+  await expect(page.getByText(`«${name}» está a resultar: 3 sessões, nota 4,7.`, { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: 'Partilhar', exact: true }).click()
+  await expect(page).toHaveURL(/\/setups\?partilhar=/)
+  await expect(page.getByRole('dialog', { name: 'Partilhar setup' })).toBeVisible()
+  // Asked once: another good session asks nothing.
+  await page.keyboard.press('Escape')
+  await page.goto('/diario')
+  await logSession(page, 5)
+  await expect(page.getByText(`«${name}» está a resultar`, { exact: false })).toHaveCount(0)
+})
+
+test('a player who saved a recipe and plays it counts as a play', async ({ browser }) => {
+  test.setTimeout(90_000)
+  const name = `Para jogar ${stamp}`
+  const author = await open(browser)
+  await signIn(author, emailOf('played'))
+  await saveSetup(author, name)
+  await author.goto('/setups')
+  await share(author, name)
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await author.getByRole('dialog').getByRole('checkbox', { name: 'Spin' }).click()
+  await author.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  await expect(author.getByText('Setup publicado')).toBeVisible()
+  const { data } = await admin.from('public_setups').select('id').eq('name', name).single()
+
+  const player = await open(browser)
+  await signIn(player, emailOf('player'))
+  await player.goto('/')
+  const row = (await openCommunity(player)).getByRole('listitem').filter({ hasText: name })
+  await row.getByRole('button', { name: 'Experimentar' }).click()
+  await player.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
+  await player.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await expect(player.getByText('A editar:', { exact: false })).toBeVisible()
+  await player.goto('/diario')
+  await logSession(player, 4)
+  await expect.poll(async () => (await admin.from('recipe_plays').select('user_id').eq('setup_id', data!.id)).data?.length).toBe(1)
 })
 
 test('a name with an insult is not published', async ({ browser }) => {

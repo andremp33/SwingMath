@@ -122,6 +122,7 @@ export const setupSchema = z.object({
   strings: stringbedSchema.optional(),
   ratings: z.object({ forehand: rating, backhand: rating, serve: rating, volley: rating }),
   notes: z.string().max(500).optional(),
+  fromRecipe: z.string().max(64).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 })
