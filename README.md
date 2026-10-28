@@ -117,8 +117,8 @@ from Apple gets a new account, with the relay address.
    and Supabase would need it only for Apple's redirect flow, which the app
    does not use.
 4. Services → Sign in with Apple for Email Communication → Configure: add
-   the domain (`swingmath.app`) and the sender `ola@swingmath.app`, once its
-   SPF passes (see the email section). Without this, codes sent to
+   the domain (`swingmath.app`) and the sender `noreply@swingmath.app`, once
+   its SPF passes (see the email section). Without this, codes sent to
    `@privaterelay.appleid.com` addresses never arrive.
 
 *Google Cloud* (one project, console.cloud.google.com):
@@ -258,13 +258,12 @@ from a domain of ours:
    one with "Sending access" for that domain only. (Brevo works the same
    way, with 300 emails a day free: authenticate the domain, then use its
    SMTP key.)
-3. **Replies.** Supabase's SMTP has no Reply-To field, so make the sender an
-   address that forwards: Cloudflare → Email → Email Routing, route
-   `ola@swingmath.app` to `swing.math@outlook.com` (free; its MX records go
-   on the root and do not clash with Resend's on `send`). The templates also
-   name `swing.math@outlook.com` for questions.
+3. **The sender is `noreply@swingmath.app`.** It needs no mailbox: Resend
+   sends from any address on the verified domain, and nobody reads replies
+   (Supabase's SMTP has no Reply-To field anyway). The templates say not to
+   reply and give `swing.math@outlook.com` for questions.
 4. **Supabase** → Authentication → Emails → SMTP Settings → Enable custom
-   SMTP: sender email `ola@swingmath.app`, sender name `SwingMath`, host
+   SMTP: sender email `noreply@swingmath.app`, sender name `SwingMath`, host
    `smtp.resend.com`, port `465`, username `resend`, password the API key.
    Authentication → Rate Limits then allows 30 emails an hour by default,
    plenty for now.
