@@ -1,4 +1,5 @@
-import { Loader2, type LucideIcon } from 'lucide-react'
+import { ChevronRight, Loader2, type LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
@@ -373,7 +374,7 @@ export function Segmented<T extends string>({
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cx(
-            'flex flex-1 items-center justify-center gap-1.5 rounded-[calc(var(--radius-md)-4px)] px-3 py-1.5 text-sm transition-[color,background-color,box-shadow] duration-150',
+            'flex flex-1 items-center justify-center gap-1.5 rounded-[calc(var(--radius-md)-4px)] px-3 py-1.5 text-sm sm:whitespace-nowrap transition-[color,background-color,box-shadow] duration-150',
             value === o.value ? 'bg-raised font-medium text-text shadow-raised' : 'text-muted hover:text-text',
           )}
         >
@@ -532,37 +533,151 @@ export function RatingInput({ label, value, onChange, ends }: { label: string; v
   )
 }
 
-/** A titled group of settings rows, separated by hairlines. */
-export function SettingsGroup({ title, children, info, action }: { title: string; children: ReactNode; info?: ReactNode; action?: ReactNode }) {
+/** A titled group of settings rows, as a phone lists them: a quiet heading
+ *  above, the rows in one panel parted by hairlines, an optional note below.
+ *  `bare` leaves the panel out, for a group that draws its own. */
+export function SettingsGroup({
+  title,
+  children,
+  info,
+  action,
+  footer,
+  bare,
+}: {
+  title: string
+  children: ReactNode
+  info?: ReactNode
+  action?: ReactNode
+  footer?: ReactNode
+  bare?: boolean
+}) {
   return (
     <section aria-label={title}>
-      <div className="mb-2 flex min-h-8 items-center justify-between gap-3 px-1">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <h2 className="text-md font-semibold tracking-tight">{title}</h2>
+      <div className="mb-1.5 flex min-h-8 items-center justify-between gap-3 pl-4 pr-1">
+        <div className="flex min-w-0 items-center gap-1">
+          <h2 className="text-sm font-semibold text-muted">{title}</h2>
           {info}
         </div>
         {action}
       </div>
-      <div className="divide-y divide-border rounded-xl border border-border bg-surface px-4 shadow-card">{children}</div>
+      {bare ? children : <div className="divide-y divide-border rounded-xl border border-border bg-surface px-4 shadow-card">{children}</div>}
+      {footer && <div className="mt-2 px-4 text-xs leading-relaxed text-muted">{footer}</div>}
     </section>
+  )
+}
+
+export type RowTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger'
+
+// Tiles are ink on a tone; colour only where it means something.
+const TONE: Record<RowTone, string> = {
+  neutral: 'bg-surface-2 text-text',
+  accent: 'bg-accent/12 text-accent-text',
+  success: 'bg-success/12 text-success',
+  warning: 'bg-warning/15 text-warning',
+  danger: 'bg-danger/10 text-danger',
+}
+
+/** A row's icon, on a small tile, so a list reads down its left edge. */
+export function RowIcon({ icon: Icon, tone = 'neutral', spin }: { icon: LucideIcon; tone?: RowTone; spin?: boolean }) {
+  return (
+    <span aria-hidden className={cx('grid size-8 shrink-0 place-items-center rounded-[9px]', TONE[tone])}>
+      <Icon className={cx('size-[18px]', spin && 'animate-spin')} strokeWidth={1.75} />
+    </span>
   )
 }
 
 /** Name and explanation on the left, the control on the right. A wide
  *  control (`stack`) goes below the name on phones, across the row. */
-export function SettingsRow({ label, hint, children, danger, stack }: { label: ReactNode; hint?: ReactNode; children?: ReactNode; danger?: boolean; stack?: boolean }) {
+export function SettingsRow({
+  label,
+  hint,
+  children,
+  danger,
+  stack,
+  icon,
+  tone,
+}: {
+  label: ReactNode
+  hint?: ReactNode
+  children?: ReactNode
+  danger?: boolean
+  stack?: boolean
+  icon?: LucideIcon
+  tone?: RowTone
+}) {
   return (
     <div
       className={cx(
-        'grid items-center gap-x-4 gap-y-2.5 py-3.5 sm:gap-x-6',
+        'grid items-center gap-x-4 gap-y-3 py-3.5 sm:gap-x-6',
         stack ? 'grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-[minmax(0,1fr)_auto]',
       )}
     >
-      <div className="min-w-0">
-        <p className={cx('text-sm font-medium', danger && 'text-danger')}>{label}</p>
-        {hint && <p className="mt-0.5 text-sm text-muted">{hint}</p>}
+      <div className="flex min-w-0 items-center gap-3">
+        {icon && <RowIcon icon={icon} tone={danger ? 'danger' : tone} />}
+        <div className="min-w-0">
+          <p className={cx('text-sm font-medium', danger && 'text-danger')}>{label}</p>
+          {hint && <p className="mt-0.5 text-sm text-muted">{hint}</p>}
+        </div>
       </div>
       {children && <div className={cx('flex flex-wrap items-center gap-2', stack ? '*:flex-1 sm:justify-end sm:*:flex-none' : 'justify-end')}>{children}</div>}
+    </div>
+  )
+}
+
+/** A row that is itself the control: tapped, it goes somewhere (a chevron
+ *  says so) or does its one thing (export, sign out). No second button
+ *  repeats its name. */
+export function ActionRow({
+  icon,
+  tone,
+  label,
+  hint,
+  trailing,
+  to,
+  href,
+  onClick,
+  danger,
+  loading,
+}: {
+  icon: LucideIcon
+  tone?: RowTone
+  label: ReactNode
+  hint?: ReactNode
+  trailing?: ReactNode
+  to?: string
+  href?: string
+  onClick?: () => void
+  danger?: boolean
+  loading?: boolean
+}) {
+  const body = (
+    <>
+      <RowIcon icon={loading ? Loader2 : icon} tone={danger ? 'danger' : tone} spin={loading} />
+      <span className="min-w-0 flex-1">
+        <span className={cx('block text-sm font-medium', danger && 'text-danger')}>{label}</span>
+        {hint && <span className="mt-0.5 block text-sm text-muted">{hint}</span>}
+      </span>
+      {trailing}
+      {(to || href) && <ChevronRight className="size-5 shrink-0 text-muted" aria-hidden />}
+    </>
+  )
+  // The tap area runs into the panel's padding, so its highlight has room.
+  const cls = '-mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors duration-150 hover:bg-surface-2/60 active:bg-surface-2 disabled:opacity-60'
+  return (
+    <div className="py-1.5">
+      {to ? (
+        <Link to={to} className={cls}>
+          {body}
+        </Link>
+      ) : href ? (
+        <a href={href} className={cls}>
+          {body}
+        </a>
+      ) : (
+        <button type="button" className={cls} onClick={onClick} disabled={loading} aria-busy={loading || undefined}>
+          {body}
+        </button>
+      )}
     </div>
   )
 }

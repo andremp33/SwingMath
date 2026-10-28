@@ -116,7 +116,8 @@
 }
 
 /* Clay: crushed brick, grainy, the brand's own. */
-:root[data-court='clay'] {
+:root[data-court='clay'],
+[data-court-swatch='clay'] {
   --court-base: #a94c26;
   --court-paint: var(--grain-light), var(--grain-dark), linear-gradient(#a94c26, #a94c26);
   --court-logo: #ffd6bf;
@@ -143,7 +144,8 @@
 
 /* Hard court: a fast court's acrylic blue with fine sand in the paint. By
    day the accent is the court's own blue; at night, the ball's yellow. */
-:root[data-court='hard'] {
+:root[data-court='hard'],
+[data-court-swatch='hard'] {
   --court-base: #1f5fa6;
   --court-paint: var(--grain-fine), linear-gradient(#1f5fa6, #1f5fa6);
 }
@@ -178,7 +180,8 @@
 
 /* Grass: lawn mown in stripes, with the purple of the oldest grass
    tournament as the accent. */
-:root[data-court='grass'] {
+:root[data-court='grass'],
+[data-court-swatch='grass'] {
   --court-base: #3a7730;
   --court-paint: var(--grain-dark), repeating-linear-gradient(90deg, #3f7f34 0 44px, #376f2d 44px 88px);
 }
@@ -399,7 +402,8 @@ textarea {
    are painted as the player's court, with a white line where it ends
    (the baseline, and its centre mark, on the bar; the sideline on the rail).
    What sits on it reads its colours from these local tokens. */
-.court-band {
+.court-band,
+.court-card {
   --c-bg: var(--court-base);
   --c-text: #ffffff;
   --c-text-muted: rgb(255 255 255 / 0.92);
@@ -408,6 +412,8 @@ textarea {
   --c-accent-text: #ffffff;
   --c-brand: var(--court-logo, #d9764a);
   color: #ffffff;
+}
+.court-band {
   background:
     linear-gradient(#fff, #fff) 50% 100% / 3px 10px no-repeat,
     linear-gradient(#fff, #fff) 0 100% / 100% 3px no-repeat,
@@ -430,6 +436,19 @@ textarea {
       var(--court-shade),
       var(--court-paint);
   }
+}
+
+/* The plan, on the profile: a corner of the player's court, its line
+   running inside the edge. */
+.court-card {
+  background: var(--court-shade), var(--court-paint);
+  outline: 1.5px solid rgb(255 255 255 / 0.55);
+  outline-offset: -7px;
+}
+/* Each court in Settings' picker, painted as it is: the court's own tokens
+   come from data-court-swatch. */
+.court-swatch {
+  background: var(--court-shade), var(--court-paint);
 }
 
 /* The calculator's racket keeps the tones it was drawn in (clay's), whatever
