@@ -183,11 +183,25 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   await expect(row).toContainText('guardado por 1')
   // Reporting needs an account.
   await row.getByRole('button', { name: /Denunciar/ }).click()
-  await expect(visitor.getByText('Precisas de conta para isto.')).toBeVisible()
+  await expect(row.getByRole('status')).toContainText('Precisas de conta para isto. Entra no Perfil.')
+  await expect(row.getByRole('button', { name: 'Entrar', exact: true })).toBeVisible()
   // Hiding an author needs none, and keeps their setups out of sight.
   await row.getByRole('button', { name: 'Esconder este autor: Ana' }).click()
   await expect(visitor.getByText('Não vais ver mais setups deste autor.')).toBeVisible()
-  await expect(card.getByRole('listitem').filter({ hasText: 'Plow extra' })).toHaveCount(0)
+  await expect(card.getByRole('listitem').filter({ hasText: 'Plow extra' })).toHaveCount(0)  // Publishing asks for an account too, and takes the player to it.
+  await visitor.goto('/')
+  await visitor.getByRole('button', { name: /^(Guardar setup|Guardar como novo)$/ }).first().click()
+  await visitor.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await expect(visitor.getByText('A editar:', { exact: false })).toBeVisible()
+  await visitor.goto('/setups')
+  await share(visitor)
+  await visitor.getByRole('dialog').getByRole('button', { name: 'Publicar na comunidade' }).click()
+  const dialog = visitor.getByRole('dialog')
+  await expect(dialog.getByRole('status')).toContainText('Precisas de conta para isto. Entra no Perfil.')
+  await a11y(visitor, 'dialog[open]')
+  await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await expect(visitor).toHaveURL(/\/perfil$/)
+  await expect(visitor.getByRole('region', { name: 'Conta', exact: true })).toBeVisible()
 })
 
 test('a report says why, and three of them hide the recipe from everyone but its author', async ({ browser }) => {
