@@ -1,4 +1,4 @@
-import { AtSign, ExternalLink, ImageUp, LogOut, RefreshCw, Sparkles, Trash2, UserRound } from 'lucide-react'
+import { AtSign, CloudOff, ExternalLink, ImageUp, LogOut, RefreshCw, Smartphone, Sparkles, Trash2, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { AccountError, changeEmail, confirmEmailCode, deleteAccount, isReviewEmail, sendCode, signInWithPassword, signOut, syncHere, syncNow, verifyCode } from '../app/account'
 import { accountProActive, useStore } from '../data/store'
@@ -7,7 +7,7 @@ import { cloudConfigured } from '../lib/cloud'
 import { IS_APP } from '../lib/platform'
 import { PRO_BETA } from '../lib/entitlement'
 import { fmtDate } from '../lib/format'
-import { Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
+import { ActionRow, Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { MeSheet } from './MeEditor'
 import { usePaywall } from './Pro'
@@ -42,7 +42,7 @@ export function AccountGroup({ entry }: { entry?: boolean }) {
           }}
         />
       ) : (
-        <SettingsRow label={t.profile.noAccount}>
+        <SettingsRow icon={Smartphone} label={t.profile.noAccount}>
           <Button variant="primary" size="sm" icon={UserRound} onClick={() => setOpen(true)}>
             {t.profile.createAccount}
           </Button>
@@ -172,7 +172,9 @@ function SignedIn() {
   return (
     <>
       <SettingsRow
-        label={fmt(t.account.signedInAs, { email: account.email })}
+        icon={UserRound}
+        tone={pro ? 'accent' : 'neutral'}
+        label={<span className="break-words">{fmt(t.account.signedInAs, { email: account.email })}</span>}
         hint={
           PRO_BETA
             ? t.account.betaPro
@@ -182,53 +184,38 @@ function SignedIn() {
               : t.account.proActive
             : t.account.noPro
         }
-      >
-        {/* The stores' review account keeps its one email. */}
-        {!isReviewEmail(account.email) && (
-          <Button variant="secondary" size="sm" icon={AtSign} onClick={() => setSheet('email')}>
-            {t.account.changeEmail}
-          </Button>
-        )}
-      </SettingsRow>
-      {!me.name && !me.photo && (
-        <SettingsRow label={t.account.addMe} hint={t.account.addMeHint}>
-          <Button variant="secondary" size="sm" icon={ImageUp} onClick={() => setSheet('me')}>
-            {t.account.add}
-          </Button>
-        </SettingsRow>
-      )}
+      />
+      {/* The stores' review account keeps its one email. */}
+      {!isReviewEmail(account.email) && <ActionRow icon={AtSign} label={t.account.changeEmail} onClick={() => setSheet('email')} />}
+      {!me.name && !me.photo && <ActionRow icon={ImageUp} label={t.account.addMe} hint={t.account.addMeHint} onClick={() => setSheet('me')} />}
       {/* Any account: it is the player's backup. Without Pro, on one device
           at a time; this one can take it back. */}
-      <SettingsRow
-        label={t.account.sync}
+      <ActionRow
+        icon={sync.error ? CloudOff : RefreshCw}
+        tone={sync.error ? 'warning' : 'success'}
+        label={sync.error === 'elsewhere' ? t.account.syncHere : t.account.syncNow}
         hint={
-          sync.error === 'offline'
-            ? t.account.syncOffline
-            : sync.error === 'elsewhere'
-              ? t.account.syncElsewhere
-              : sync.error
-                ? t.account.syncOther
-                : sync.lastAt
-                  ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
-                  : t.account.never
+          <span className={sync.error ? 'text-warning' : undefined}>
+            {sync.error === 'offline'
+              ? t.account.syncOffline
+              : sync.error === 'elsewhere'
+                ? t.account.syncElsewhere
+                : sync.error
+                  ? t.account.syncOther
+                  : sync.lastAt
+                    ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
+                    : t.account.never}
+          </span>
         }
-      >
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={RefreshCw}
-          loading={busy}
-          onClick={async () => {
-            setBusy(true)
-            await (sync.error === 'elsewhere' ? syncHere() : syncNow())
-            setBusy(false)
-          }}
-        >
-          {sync.error === 'elsewhere' ? t.account.syncHere : t.account.syncNow}
-        </Button>
-      </SettingsRow>
+        loading={busy}
+        onClick={async () => {
+          setBusy(true)
+          await (sync.error === 'elsewhere' ? syncHere() : syncNow())
+          setBusy(false)
+        }}
+      />
       {sync.error === 'elsewhere' && (
-        <SettingsRow label={t.paywall.titles.sync} hint={t.paywall.subs.sync}>
+        <SettingsRow icon={Sparkles} tone="accent" label={t.paywall.titles.sync} hint={t.paywall.subs.sync}>
           <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('sync', { asked: true })}>
             {t.paywall.seePro}
           </Button>
@@ -350,16 +337,8 @@ export function AccountEnd() {
   const [confirm, setConfirm] = useState(false)
   return (
     <SettingsGroup title={t.profile.account}>
-      <SettingsRow label={t.account.signOut}>
-        <Button variant="secondary" size="sm" icon={LogOut} onClick={() => void signOut()}>
-          {t.account.signOut}
-        </Button>
-      </SettingsRow>
-      <SettingsRow label={t.account.deleteAccount} hint={t.account.deleteHint} danger>
-        <Button variant="danger" size="sm" icon={Trash2} onClick={() => setConfirm(true)}>
-          {t.account.deleteAccount}
-        </Button>
-      </SettingsRow>
+      <ActionRow icon={LogOut} label={t.account.signOut} onClick={() => void signOut()} />
+      <ActionRow icon={Trash2} danger label={t.account.deleteAccount} hint={t.account.deleteHint} onClick={() => setConfirm(true)} />
 
       <Sheet
         open={confirm}

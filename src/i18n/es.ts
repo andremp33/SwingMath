@@ -372,6 +372,7 @@ export const es: Dict = {
     terms: 'Términos',
     version: 'Versión {v}',
     prefs: 'Preferencias',
+    look: 'Apariencia',
     equipment: 'Tu material',
     free: 'Versión gratuita',
     seePlans: 'Ver planes',
@@ -380,9 +381,6 @@ export const es: Dict = {
     exportHint: 'Raquetas, setups y diario en un archivo, para guardarlos o cambiar de dispositivo.',
     importHint: 'Añade a lo que ya tienes una copia exportada antes.',
     deleteAllHint: 'Borra todo de este dispositivo. No se puede deshacer.',
-    exportShort: 'Exportar',
-    importShort: 'Importar',
-    deleteShort: 'Borrar',
   },
   sources: {
     title: 'De dónde salen estos números',
@@ -812,7 +810,6 @@ export const es: Dict = {
   moderation: {
     title: 'Moderación',
     toReview: '{n} por revisar',
-    open: 'Abrir',
     onlyModerators: 'Esta página es solo para moderadores.',
     empty: 'Nada por revisar.',
     reports: '{n} denuncias, la última el {date}',
