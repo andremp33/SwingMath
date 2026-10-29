@@ -187,13 +187,13 @@ export function Landing() {
 function Hero() {
   const t = useLanding()
   return (
-    <section aria-labelledby="hero-title" className="relative">
-      <div className="site-wrap site-grid pt-10 lg:pt-[96px]">
+    <section aria-labelledby="hero-title" className="site-hero relative">
+      <div className="site-hero-copy site-wrap site-grid pt-10 lg:pt-[96px]">
         <div className="relative z-10 col-span-12 lg:col-span-6">
           <h1 id="hero-title" className="site-display site-rise">
             {t.heroTitle}
           </h1>
-          <p className="site-rise site-hero-text mt-8 max-w-[38ch] text-[18px] leading-[1.55]" style={stagger(1)}>
+          <p className="site-rise mt-8 max-w-[38ch] text-[18px] leading-[1.55]" style={stagger(1)}>
             {t.heroSub}
           </p>
           <div className="site-rise" style={stagger(2)}>
@@ -201,7 +201,7 @@ function Hero() {
           </div>
         </div>
       </div>
-      <div className="site-stage mt-12 xl:mt-[-136px]">
+      <div className="site-stage mt-12">
         <div className="site-shutter">
           <img src={img('clay.jpg')} alt="" width={1920} height={1280} className="site-stage-img" fetchPriority="high" />
         </div>
@@ -451,7 +451,7 @@ function InTheApp() {
     const measure = () => {
       frame = 0
       const box = el.getBoundingClientRect()
-      const at = box.left + box.width * (window.innerWidth >= 1024 ? 0.35 : 0.5)
+      const at = box.left + box.width / 2
       let best = 0
       let bestD = Infinity
       Array.from(el.children).forEach((c, i) => {
@@ -485,7 +485,19 @@ function InTheApp() {
           {t.appTitle}
         </h2>
       </div>
-      <div className="site-showcase relative mt-12 lg:mt-16">
+      {/* On a computer every screen at once, each with its name and what it does. */}
+      <ul className="site-wrap mt-16 hidden gap-x-[var(--site-gap)] gap-y-20 lg:grid lg:grid-cols-2 xl:grid-cols-3" aria-label={t.appTitle}>
+        {SCREENS.map((src, i) => (
+          <li key={src} className="grid grid-cols-[minmax(0,13.5rem)_minmax(0,1fr)] items-center gap-7" data-reveal style={stagger(i % 3)}>
+            <img src={img(src)} alt={t.app[i][2]} width={390} height={844} loading="lazy" className="block h-auto w-full rounded-lg" />
+            <div>
+              <p className="text-[22px] font-medium leading-tight">{t.app[i][0]}</p>
+              <p className="mt-3 text-[17px] leading-[1.55] text-[var(--site-dark-muted)]">{t.app[i][1]}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="site-showcase relative mt-12 lg:hidden">
         <ul ref={row} className="site-row" tabIndex={0} aria-label={t.appTitle}>
           {SCREENS.map((src, i) => (
             <li key={src} className={cx('site-panel', i === active && 'is-lit')} onClick={() => go(i)}>

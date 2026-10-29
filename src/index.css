@@ -536,10 +536,13 @@ input[type='range'].range:disabled {
 
 /* The website (Landing.tsx). One grid, one pair of margins, five type sizes:
    display, section heading, 24, text (17–18), small (13–15). Interface
-   fragments (data-ui) keep the app's own sizes, borders and radii. */
+   fragments (data-ui) keep the app's own sizes, borders and radii. On a
+   wide screen the grid stops at --site-max and centres; fields of colour
+   still run edge to edge. */
 :root {
   --site-margin: 16px;
   --site-gap: 20px;
+  --site-max: 1360px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --site-dark: #1c1a17;
   --site-dark-ink: #f5f3ee;
@@ -559,7 +562,7 @@ input[type='range'].range:disabled {
   }
 }
 .site-wrap {
-  padding-inline: var(--site-margin);
+  padding-inline: max(var(--site-margin), calc((100% - var(--site-max)) / 2));
 }
 .site-grid {
   display: grid;
@@ -698,17 +701,40 @@ input[type='range'].range:disabled {
   background: #a4502e;
   clip-path: polygon(72px 0, 100% 0, 100% 100%, 0 100%, 0 72px);
 }
+/* The grid's edge and one column, for what is laid out against the page. */
+.site-hero,
+.site-stage {
+  --edge: max(var(--site-margin), calc((100% - var(--site-max)) / 2));
+  --col: calc((100% - 2 * var(--edge) - 11 * var(--site-gap)) / 12);
+}
 @media (min-width: 1024px) {
   .site-stage {
-    margin-left: calc(var(--site-margin) + 4 * ((100% - 2 * var(--site-margin) - 11 * var(--site-gap)) / 12 + var(--site-gap)));
+    margin-left: calc(var(--edge) + 4 * (var(--col) + var(--site-gap)));
     clip-path: polygon(120px 0, 100% 0, 100% 100%, 0 100%, 0 120px);
   }
 }
-/* From 1280px the stage rises beside the words: they keep to the four
-   columns left of it (less a little for a scrollbar). */
+/* From 1280px the words and the stage share the screen: the words in the
+   grid's first five columns, the stage from the sixth off the right edge.
+   The words start high enough to be whole on a laptop and stay in the
+   middle of the screen while the stage scrolls by. */
 @media (min-width: 1280px) {
-  .site-hero-text {
-    max-width: min(38ch, calc(4 * ((100vw - 2 * var(--site-margin) - 11 * var(--site-gap)) / 12) + 3 * var(--site-gap) - 8px));
+  .site-hero {
+    display: grid;
+    grid-template-columns: var(--edge) calc(5 * var(--col) + 4 * var(--site-gap)) var(--site-gap) minmax(0, 1fr);
+    align-items: start;
+    padding-top: 40px;
+  }
+  .site-hero-copy {
+    grid-column: 2;
+    display: block;
+    position: sticky;
+    top: calc(50svh - 175px);
+    margin-top: clamp(48px, 12svh, 160px);
+    padding: 0;
+  }
+  .site-hero .site-stage {
+    grid-column: 4;
+    margin: 0;
   }
 }
 .site-shutter {
@@ -776,23 +802,6 @@ input[type='range'].range:disabled {
 .site-panel-text {
   padding: 32px var(--site-margin) 0;
   max-width: 34ch;
-}
-@media (min-width: 1024px) {
-  .site-showcase {
-    --panel: 320px;
-  }
-  .site-row {
-    gap: max(26vw, 420px);
-    scroll-padding-inline: 0 30vw;
-    padding-inline: calc(35vw - var(--panel) / 2) calc(65vw - var(--panel) / 2);
-  }
-  .site-panel-text {
-    position: absolute;
-    top: 0;
-    left: calc(35vw + var(--panel) / 2 + 48px);
-    width: min(26ch, 24vw);
-    padding: 0;
-  }
 }
 .site-swap {
   animation: site-swap 220ms var(--ease-out);
