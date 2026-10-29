@@ -29,6 +29,7 @@ const Moderation = lazy(() => import('./screens/Moderation').then((m) => ({ defa
 const RacketForm = lazy(() => import('./screens/RacketForm').then((m) => ({ default: m.RacketForm })))
 const Settings = lazy(() => import('./screens/Settings').then((m) => ({ default: m.Settings })))
 const Profile = lazy(() => import('./screens/Profile').then((m) => ({ default: m.Profile })))
+const AccountScreen = lazy(() => import('./screens/AccountCard').then((m) => ({ default: m.AccountScreen })))
 const SetupSheet = lazy(() => import('./screens/SetupSheet').then((m) => ({ default: m.SetupSheet })))
 const StringCalc = lazy(() => import('./screens/StringCalc').then((m) => ({ default: m.StringCalc })))
 const Setups = lazy(() => import('./screens/Setups').then((m) => ({ default: m.Setups })))
@@ -58,6 +59,7 @@ const APP_ROUTES = [
       { path: '/diario', element: L(<Journal />) },
       { path: '/cordas', element: L(<StringCalc />) },
       { path: '/perfil', element: L(<Profile />) },
+      { path: '/perfil/conta', element: L(<AccountScreen />) },
       { path: '/perfil/definicoes', element: L(<Settings />) },
       { path: '/moderar', element: L(<Moderation />) },
       // Settings live in the profile now; old links land there.

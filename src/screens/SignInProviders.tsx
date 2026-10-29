@@ -156,7 +156,7 @@ function GoogleWebButton({ onToken }: { onToken: (t: IdToken) => void }) {
   return <div ref={ref} className="flex h-10 w-full justify-center overflow-hidden [color-scheme:light]" />
 }
 
-function AppleLogo() {
+export function AppleLogo() {
   return (
     <svg viewBox="0 0 17 20" className="-mt-0.5 h-[1.05em] w-auto" fill="currentColor" aria-hidden>
       <path d="M14.04 10.62c-.02-2.17 1.78-3.22 1.86-3.27-1.01-1.48-2.59-1.69-3.15-1.71-1.34-.14-2.62.79-3.3.79-.68 0-1.73-.77-2.84-.75-1.46.02-2.81.85-3.56 2.16-1.52 2.63-.39 6.53 1.09 8.67.72 1.05 1.58 2.22 2.71 2.18 1.09-.04 1.5-.7 2.81-.7 1.31 0 1.68.7 2.83.68 1.17-.02 1.91-1.07 2.62-2.12.83-1.21 1.17-2.39 1.19-2.45-.03-.01-2.28-.87-2.3-3.47ZM11.88 4.24c.6-.73 1-1.73.89-2.74-.86.04-1.9.57-2.52 1.3-.55.64-1.04 1.67-.91 2.65.96.07 1.94-.49 2.54-1.21Z" />
@@ -164,7 +164,7 @@ function AppleLogo() {
   )
 }
 
-function GoogleLogo() {
+export function GoogleLogo() {
   return (
     <svg viewBox="0 0 48 48" className="size-[18px] shrink-0" aria-hidden>
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />

@@ -41,7 +41,11 @@ export interface License {
 export interface Account {
   userId: string
   email: string
+  /** How the account signs in (an account from before: not known). */
+  providers?: SignInProvider[]
 }
+
+export type SignInProvider = 'apple' | 'google' | 'email'
 
 /** The account's subscription, as the server last reported it. */
 export interface AccountPro {

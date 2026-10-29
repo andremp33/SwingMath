@@ -16,7 +16,7 @@ import { Avatar } from '../ui/Avatar'
 import { ActionRow, Button, ChoiceChips, MultiChoiceChips, NumberField, SettingsGroup } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { bedLabel } from '../ui/strings'
-import { AccountEnd, AccountGroup } from './AccountCard'
+import { AccountRow } from './AccountCard'
 import { FleetGroup } from './Fleet'
 import { LifeBar } from './JournalSheets'
 import { MeSheet } from './MeEditor'
@@ -26,12 +26,12 @@ import { InfoTip } from '../ui/disclosure'
 /**
  * The player's page: who they are and how much they play at a glance, their
  * game (which steers the calculator), their rackets and when to restring
- * them, their plan and account, then settings, help and the legal pages,
- * with signing out and deleting the account at the end.
+ * them, their plan and the way to their account (its own page: who is
+ * signed in, the sync, signing out and deleting it), then settings, help and
+ * the legal pages.
  */
 export function Profile() {
   const t = useT()
-  const account = useStore((s) => s.account)
   return (
     <div className="max-w-2xl">
       <ProfileHeader />
@@ -41,14 +41,13 @@ export function Profile() {
         <RacketsGroup />
         <FleetGroup />
         <PlanGroup />
-        {cloudConfigured() && <AccountGroup entry />}
+        {cloudConfigured() && <AccountRow />}
         <SettingsGroup title={t.profile.more} footer={<span className="num">{fmt(t.settings.version, { v: __APP_VERSION__ })}</span>}>
           <ActionRow to="/perfil/definicoes" icon={SlidersHorizontal} label={t.profile.settings} hint={t.profile.settingsHint} />
           {SUPPORT_EMAIL && <ActionRow href={`mailto:${SUPPORT_EMAIL}`} icon={LifeBuoy} label={t.profile.support} />}
           <ActionRow to="/termos" icon={FileText} label={t.settings.terms} />
           <ActionRow to="/privacidade" icon={Shield} label={t.settings.privacy} />
         </SettingsGroup>
-        {account && <AccountEnd />}
       </div>
     </div>
   )

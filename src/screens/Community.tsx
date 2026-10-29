@@ -71,7 +71,7 @@ export function useSetupCounts() {
   return counts
 }
 
-/** "You need an account", with the way to the profile, where the account is.
+/** "You need an account", with the way to the account's page, to sign in.
  *  In place, not a toast: inside a sheet a toast sits under it, out of reach. */
 function SignInPrompt() {
   const t = useT()
@@ -79,7 +79,7 @@ function SignInPrompt() {
   return (
     <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md bg-surface-2 p-3 text-sm">
       <p className="min-w-0 flex-1">{t.community.needAccount}</p>
-      <Button size="sm" variant="primary" onClick={() => nav('/perfil')}>
+      <Button size="sm" variant="primary" onClick={() => nav('/perfil/conta')}>
         {t.community.signIn}
       </Button>
     </div>

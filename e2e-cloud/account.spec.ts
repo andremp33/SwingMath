@@ -41,16 +41,21 @@ async function open(browser: Browser) {
   return page
 }
 
-/** The account sits at the top of the profile; the form opens on request. */
+/** The account has its own page, from the profile: the way in, or who is
+ *  signed in. */
 async function accountCard(page: Page) {
   await page.goto('/perfil')
-  const card = page.getByRole('region', { name: 'Conta', exact: true })
-  const create = card.getByRole('button', { name: 'Criar conta' })
-  // Drawn once the page has loaded: the form, the button, or the account.
-  await expect(create.or(card.getByLabel('Email')).or(card.getByText('Entraste como'))).toBeVisible()
-  if (await create.isVisible()) await create.click()
+  await page.getByRole('region', { name: 'Conta', exact: true }).getByRole('link').click()
+  await expect(page).toHaveURL(/\/perfil\/conta$/)
+  const card = page.locator('main')
+  // Drawn once the page has loaded: the way in, or the account.
+  await expect(signInHeading(page).or(who(page))).toBeVisible()
   return card
 }
+
+const signInHeading = (page: Page) => page.getByRole('heading', { name: 'Entra na tua conta' })
+/** The account page's top: name or email, and how they sign in. */
+const who = (page: Page) => page.getByRole('region', { name: 'Conta', exact: true })
 
 /** Signs in; a new account then asks for a name and photo, put off here
  *  unless `keepWelcome`. */
@@ -62,7 +67,8 @@ async function signIn(page: Page, email: string, { keepWelcome = false } = {}) {
   await expect(card.getByText(`Enviámos um email para ${email}.`, { exact: false })).toBeVisible()
   await card.getByLabel('Código').fill(await codeFor(email, sentAt))
   await card.getByRole('button', { name: 'Entrar' }).click()
-  await expect(card.getByText(`Entraste como ${email}`)).toBeVisible()
+  await expect(who(page)).toContainText(email)
+  await expect(who(page)).toContainText('Entras com o email')
   const welcome = page.getByRole('dialog', { name: 'Como te chamamos?' })
   if (!keepWelcome && (await welcome.isVisible())) await welcome.getByRole('button', { name: 'Cancelar' }).click()
   return card
@@ -139,9 +145,9 @@ test('Pro through the account syncs setups to a second device', async ({ browser
   // An edit on B reaches A.
   await b.getByRole('button', { name: 'Apagar' }).first().click()
   await expect(b.getByRole('article')).toHaveCount(0)
-  await b.goto('/perfil')
+  await b.goto('/perfil/conta')
   await b.getByRole('button', { name: 'Sincronizar agora' }).click()
-  await a.goto('/perfil')
+  await a.goto('/perfil/conta')
   await a.getByRole('button', { name: 'Sincronizar agora' }).click()
   await a.goto('/setups')
   await expect(a.getByRole('article')).toHaveCount(0)
@@ -200,8 +206,8 @@ test('publish a setup; someone else tries it and reports it', async ({ browser }
   await expect(dialog.getByRole('status')).toContainText('Precisas de conta para isto. Entra no Perfil.')
   await a11y(visitor, 'dialog[open]')
   await dialog.getByRole('button', { name: 'Entrar', exact: true }).click()
-  await expect(visitor).toHaveURL(/\/perfil$/)
-  await expect(visitor.getByRole('region', { name: 'Conta', exact: true })).toBeVisible()
+  await expect(visitor).toHaveURL(/\/perfil\/conta$/)
+  await expect(signInHeading(visitor)).toBeVisible()
 })
 
 test('a report says why, and three of them hide the recipe from everyone but its author', async ({ browser }) => {
@@ -677,6 +683,27 @@ test('a setup moved to another racket moves its recipe; a hidden one stays put',
   expect(still.data).toEqual([{ id: after.data![0].id, hidden: true }])
 })
 
+test('signed in, the profile leads to the account, not the way in; signing out brings it back', async ({ browser }) => {
+  const page = await open(browser)
+  const email = emailOf('signout')
+  await page.goto('/perfil')
+  await expect(page.getByRole('region', { name: 'Conta', exact: true }).getByRole('link')).toContainText('Entrar ou criar conta')
+  await signIn(page, email)
+  // The account's page: who, how, Pro and the sync, and the way out.
+  await expect(page.getByRole('region', { name: 'Plano e sincronização' }).getByRole('button', { name: 'Sincronizar agora' })).toBeVisible()
+  await expect(signInHeading(page)).toHaveCount(0)
+  await a11y(page, 'main')
+  await page.goto('/perfil')
+  const row = page.getByRole('region', { name: 'Conta', exact: true }).getByRole('link')
+  await expect(row).toContainText(email)
+  await expect(row).not.toContainText('Entrar')
+  await row.click()
+  await page.getByRole('button', { name: 'Terminar sessão' }).click()
+  await expect(signInHeading(page)).toBeVisible()
+  await page.goto('/perfil')
+  await expect(page.getByRole('region', { name: 'Conta', exact: true }).getByRole('link')).toContainText('Entrar ou criar conta')
+})
+
 test('the review account signs in with a password; nobody else sees the field', async ({ browser }) => {
   // A throwaway password for the local stack, made here, never a real one.
   const password = `review-${stamp}-${Math.random().toString(36).slice(2)}`
@@ -689,7 +716,7 @@ test('the review account signs in with a password; nobody else sees the field', 
     await card.getByLabel('Email').fill(REVIEW_EMAIL)
     await card.getByLabel('Palavra-passe').fill(password)
     await card.getByRole('button', { name: 'Entrar' }).click()
-    await expect(card.getByText(`Entraste como ${REVIEW_EMAIL}`)).toBeVisible()
+    await expect(who(page)).toContainText(REVIEW_EMAIL)
   } finally {
     if (data.user) await admin.auth.admin.deleteUser(data.user.id)
   }
@@ -718,11 +745,12 @@ test('measurements: the median shows from 3 players, then account deletion', asy
   await expect(card).toContainText(/3 jogadores mediram esta raquete com cordas/)
   await expect(card).toContainText('323,0 g')
 
-  await page.goto('/perfil')
+  await page.goto('/perfil/conta')
   await page.getByRole('button', { name: 'Apagar conta' }).click()
   await page.getByRole('button', { name: 'Apagar conta para sempre' }).click()
   await expect(page.getByText('Conta apagada')).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Conta', exact: true }).getByRole('button', { name: 'Criar conta' })).toBeVisible()
+  // The page goes back to the way in.
+  await expect(signInHeading(page)).toBeVisible()
   const left = await admin.from('measurements').select('id').eq('racket_id', rid).eq('weight_g', 323)
   expect(left.data).toEqual([])
 })
@@ -736,7 +764,7 @@ test('a new account asks for a name and photo; a second device gets them, and a 
   await pickPhoto(a)
   await expect(welcome).toContainText('Fica na tua conta, em todos os teus aparelhos.')
   await welcome.getByRole('button', { name: 'Guardar' }).click()
-  await expect(a.getByRole('heading', { level: 1 })).toHaveText('Ana Silva')
+  await expect(who(a).getByRole('heading')).toHaveText('Ana Silva')
 
   // On the account: the name and the photo's stamp, and the photo in Storage.
   const id = (await userByEmail(email)).id
@@ -748,7 +776,7 @@ test('a new account asks for a name and photo; a second device gets them, and a 
   const b = await open(browser)
   await signIn(b, email, { keepWelcome: true })
   await expect(b.getByRole('dialog', { name: 'Como te chamamos?' })).toHaveCount(0)
-  await expect(b.getByRole('heading', { level: 1 })).toHaveText('Ana Silva')
+  await expect(who(b).getByRole('heading')).toHaveText('Ana Silva')
   await expect(b.locator('main [data-avatar="photo"]')).toBeVisible()
 
   // The photo removed there: gone from Storage, and from the first device.
@@ -764,11 +792,13 @@ test('a new account asks for a name and photo; a second device gets them, and a 
   await pickPhoto(a)
   await a.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
   await expect.poll(async () => (await admin.storage.from('avatars').list(id)).data?.length, { timeout: 15_000 }).toBe(1)
+  await a.goto('/perfil/conta')
   await a.getByRole('button', { name: 'Apagar conta' }).click()
   await a.getByRole('button', { name: 'Apagar conta para sempre' }).click()
   await expect(a.getByText('Conta apagada')).toBeVisible()
   expect((await admin.storage.from('avatars').list(id)).data).toEqual([])
   // This device keeps its own copy.
+  await a.goto('/perfil')
   await expect(a.getByRole('heading', { level: 1 })).toHaveText('Ana Silva')
 })
 
@@ -792,7 +822,6 @@ test('the account’s email changes with the codes sent to the new and the curre
   await d.getByLabel(`Código enviado para ${old}`).fill(await codeFor(old, sentAt))
   await d.getByRole('button', { name: 'Confirmar' }).click()
   await expect(page.getByText(`Email mudado para ${next}`)).toBeVisible()
-  await expect(card.getByText(`Entraste como ${next}`)).toBeVisible()
-  await expect(page.locator('main header')).toContainText(next)
+  await expect(who(page)).toContainText(next)
   expect(await userByEmail(next)).toBeTruthy()
 })

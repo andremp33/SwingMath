@@ -67,7 +67,7 @@ export async function initNative() {
     if (code) await cloud.auth.exchangeCodeForSession(code)
     else if (hash.get('access_token') && hash.get('refresh_token'))
       await cloud.auth.setSession({ access_token: hash.get('access_token')!, refresh_token: hash.get('refresh_token')! })
-    openPath('/perfil')
+    openPath('/perfil/conta')
   })
 
   // A tap on a restring reminder opens it in the journal; any other, its page.

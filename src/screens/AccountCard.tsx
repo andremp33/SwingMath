@@ -1,18 +1,20 @@
-import { AtSign, CloudOff, ExternalLink, ImageUp, LogOut, RefreshCw, Smartphone, Sparkles, Trash2, UserRound } from 'lucide-react'
+import { AtSign, Cloud, CloudOff, ExternalLink, LogOut, Pencil, RefreshCw, Smartphone, Sparkles, Trash2, UserRound, Users } from 'lucide-react'
 import { useState } from 'react'
 import { AccountError, changeEmail, confirmEmailCode, deleteAccount, isReviewEmail, REVIEW_EMAIL, sendCode, signInWithPassword, signOut, syncHere, syncNow, verifyCode } from '../app/account'
-import { accountProActive, useStore } from '../data/store'
+import { accountProActive, useStore, type SignInProvider } from '../data/store'
 import { fmt, useT, type Dict } from '../i18n'
 import { cloudConfigured } from '../lib/cloud'
 import { IS_APP } from '../lib/platform'
 import { PRO_BETA } from '../lib/entitlement'
-import { fmtDate } from '../lib/format'
+import { fmtDate, LOCALE } from '../lib/format'
 import { emailSignIn } from '../lib/socialSignIn'
-import { ActionRow, Button, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
+import { Avatar } from '../ui/Avatar'
+import { BackTitle } from '../ui/BackTitle'
+import { ActionRow, Button, RowIcon, SettingsGroup, SettingsRow, TextField } from '../ui/basics'
 import { Sheet, useToast } from '../ui/overlay'
 import { MeSheet } from './MeEditor'
 import { usePaywall } from './Pro'
-import { SignInProviders } from './SignInProviders'
+import { AppleLogo, GoogleLogo, SignInProviders } from './SignInProviders'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -23,36 +25,102 @@ function ago(ms: number, t: Dict) {
   return fmt(t.account.hoursAgo, { n: Math.round(min / 60) })
 }
 
-/** The profile's top: the account and sync, or no account (data on this
- *  phone) with a way to create one. `entry` keeps the form closed until asked. */
-export function AccountGroup({ entry }: { entry?: boolean }) {
+/** How the sync went, in words. */
+function syncText(sync: ReturnType<typeof useStore.getState>['sync'], t: Dict) {
+  if (sync.error === 'offline') return t.account.syncOffline
+  if (sync.error === 'elsewhere') return t.account.syncElsewhere
+  if (sync.error) return t.account.syncOther
+  return sync.lastAt ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) }) : t.account.never
+}
+
+/** "You sign in with Google and email", in the page's language. */
+function viaText(providers: SignInProvider[], t: Dict, lang: string) {
+  const names = providers.map((p) => t.account.viaNames[p])
+  return fmt(t.account.via, { list: new Intl.ListFormat(LOCALE[lang] ?? 'en', { type: 'conjunction' }).format(names) })
+}
+
+/** The profile's way to the account: who is signed in and how the sync
+ *  goes, or the invitation to sign in. Both open the account's page. */
+export function AccountRow() {
   const t = useT()
   const account = useStore((s) => s.account)
-  const [open, setOpen] = useState(!entry)
-  // A new account, on a device without a name or photo: ask for them (with
-  // the name Apple or Google shared, if any, already written).
-  const [welcome, setWelcome] = useState<{ name?: string }>()
-  if (!cloudConfigured()) return entry ? <p className="text-sm text-muted">{t.profile.noAccount}</p> : null
+  const sync = useStore((s) => s.sync)
   return (
     <SettingsGroup title={t.account.title} action={!account && <span className="text-sm text-muted">{t.account.optional}</span>}>
       {account ? (
+        <ActionRow
+          to="/perfil/conta"
+          icon={sync.error ? CloudOff : UserRound}
+          tone={sync.error ? 'warning' : 'accent'}
+          label={<span className="break-words">{account.email}</span>}
+          hint={<span className={sync.error ? 'text-warning' : undefined}>{syncText(sync, t)}</span>}
+        />
+      ) : (
+        <ActionRow to="/perfil/conta" icon={UserRound} label={t.account.rowSignedOut} hint={t.account.rowSignedOutHint} />
+      )}
+    </SettingsGroup>
+  )
+}
+
+/** The account's page: signed in, who and how, Pro and the sync, then
+ *  signing out and deleting it; signed out, the way in. */
+export function AccountScreen() {
+  const t = useT()
+  const account = useStore((s) => s.account)
+  // A new account, on a device without a name or photo: ask for them (with
+  // the name Apple or Google shared, if any, already written). Here, not in
+  // the sign-in: that goes away as soon as the account arrives.
+  const [welcome, setWelcome] = useState<{ name?: string }>()
+  return (
+    <div className="max-w-2xl">
+      <BackTitle fallback="/perfil">{t.account.title}</BackTitle>
+      {!cloudConfigured() ? (
+        <p className="text-sm text-muted">{t.profile.noAccount}</p>
+      ) : account ? (
         <SignedIn />
-      ) : open ? (
-        <SignInForm
+      ) : (
+        <SignInPanel
           onSignedIn={(fresh, name) => {
             const { me } = useStore.getState()
             if (fresh && !me.name && !me.photo) setWelcome({ name })
           }}
         />
-      ) : (
-        <SettingsRow icon={Smartphone} label={t.profile.noAccount}>
-          <Button variant="primary" size="sm" icon={UserRound} onClick={() => setOpen(true)}>
-            {t.profile.createAccount}
-          </Button>
-        </SettingsRow>
       )}
       {welcome && <MeSheet title={t.me.welcome} name={welcome.name} onClose={() => setWelcome(undefined)} />}
-    </SettingsGroup>
+    </div>
+  )
+}
+
+/** Signed out: what an account gives, then Apple and Google (and the email
+ *  code, when on). */
+function SignInPanel({ onSignedIn }: { onSignedIn: (fresh: boolean, name?: string) => void }) {
+  const t = useT()
+  const perks = [
+    { icon: Cloud, title: t.account.perkBackup, hint: t.account.perkBackupHint },
+    { icon: Smartphone, title: t.account.perkDevices, hint: t.account.perkDevicesHint },
+    { icon: Users, title: t.account.perkCommunity, hint: t.account.perkCommunityHint },
+  ]
+  return (
+    <section aria-labelledby="sign-in-title" className="rounded-xl border border-border bg-surface px-4 py-5 shadow-card">
+      <h2 id="sign-in-title" className="text-lg font-semibold tracking-tight">
+        {t.account.signInTitle}
+      </h2>
+      <p className="mt-1 text-sm text-muted">{t.account.signInLead}</p>
+      <ul className="mt-4 space-y-3">
+        {perks.map((p) => (
+          <li key={p.title} className="flex items-start gap-3">
+            <RowIcon icon={p.icon} tone="accent" />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">{p.title}</span>
+              <span className="block text-sm text-muted">{p.hint}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-5">
+        <SignInForm onSignedIn={onSignedIn} />
+      </div>
+    </section>
   )
 }
 
@@ -92,8 +160,7 @@ function SignInForm({ onSignedIn }: { onSignedIn: (fresh: boolean, name?: string
   const form = byEmail || reviewOpen
   if (!sent) {
     return (
-      <div className="space-y-3 py-3.5">
-        <p className="text-sm text-muted">{t.account.intro}</p>
+      <div className="space-y-3">
         <SignInProviders onSignedIn={onSignedIn} divider={form} />
         {!form && REVIEW_EMAIL && (
           <button type="button" className="press block py-1 text-sm text-muted underline-offset-2 hover:underline" onClick={() => setReviewOpen(true)}>
@@ -140,7 +207,7 @@ function SignInForm({ onSignedIn }: { onSignedIn: (fresh: boolean, name?: string
   }
   return (
     <form
-      className="space-y-3 py-3.5"
+      className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault()
         void run(async () => {
@@ -174,6 +241,8 @@ function SignInForm({ onSignedIn }: { onSignedIn: (fresh: boolean, name?: string
   )
 }
 
+/** Signed in: who (name, photo, email) and how they sign in, Pro and the
+ *  sync, then signing out and deleting the account. */
 function SignedIn() {
   const t = useT()
   const lang = useStore((s) => s.lang)
@@ -186,63 +255,75 @@ function SignedIn() {
   const paywall = usePaywall()
   // During the beta every account has Pro, sync included.
   const pro = PRO_BETA || accountProActive(accountPro)
+  const name = me.name?.trim()
+  const providers = account.providers ?? []
 
   return (
-    <>
-      <SettingsRow
-        icon={UserRound}
-        tone={pro ? 'accent' : 'neutral'}
-        label={<span className="break-words">{fmt(t.account.signedInAs, { email: account.email })}</span>}
-        hint={
-          PRO_BETA
-            ? t.account.betaPro
-            : pro
-            ? accountPro?.status === 'cancelled' && accountPro.endsAt
-              ? fmt(t.account.proUntil, { date: fmtDate(Date.parse(accountPro.endsAt), lang) })
-              : t.account.proActive
-            : t.account.noPro
-        }
-      />
-      {/* The stores' review account keeps its one email; without email of
-          our own, nobody's changes (it is confirmed by codes). */}
-      {emailSignIn() && !isReviewEmail(account.email) && <ActionRow icon={AtSign} label={t.account.changeEmail} onClick={() => setSheet('email')} />}
-      {!me.name && !me.photo && <ActionRow icon={ImageUp} label={t.account.addMe} hint={t.account.addMeHint} onClick={() => setSheet('me')} />}
-      {/* Any account: it is the player's backup. Without Pro, on one device
-          at a time; this one can take it back. */}
-      <ActionRow
-        icon={sync.error ? CloudOff : RefreshCw}
-        tone={sync.error ? 'warning' : 'success'}
-        label={sync.error === 'elsewhere' ? t.account.syncHere : t.account.syncNow}
-        hint={
-          <span className={sync.error ? 'text-warning' : undefined}>
-            {sync.error === 'offline'
-              ? t.account.syncOffline
-              : sync.error === 'elsewhere'
-                ? t.account.syncElsewhere
-                : sync.error
-                  ? t.account.syncOther
-                  : sync.lastAt
-                    ? fmt(t.account.syncedAt, { when: ago(sync.lastAt, t) })
-                    : t.account.never}
-          </span>
-        }
-        loading={busy}
-        onClick={async () => {
-          setBusy(true)
-          await (sync.error === 'elsewhere' ? syncHere() : syncNow())
-          setBusy(false)
-        }}
-      />
-      {sync.error === 'elsewhere' && (
-        <SettingsRow icon={Sparkles} tone="accent" label={t.paywall.titles.sync} hint={t.paywall.subs.sync}>
-          <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('sync', { asked: true })}>
-            {t.paywall.seePro}
+    <div className="space-y-7">
+      <section aria-label={t.account.title} className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 shadow-card">
+        <Avatar className="size-16 text-lg" />
+        <div className="min-w-0 flex-1">
+          <h2 className="break-words text-lg font-semibold tracking-tight">{name || account.email}</h2>
+          {name && <p className="break-words text-sm text-muted">{account.email}</p>}
+          {providers.length > 0 && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+              {providers.includes('apple') && <AppleLogo />}
+              {providers.includes('google') && <GoogleLogo />}
+              {providers.includes('email') && <AtSign className="size-4" aria-hidden />}
+              <span>{viaText(providers, t, lang)}</span>
+            </p>
+          )}
+          <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setSheet('me')} className="mt-2">
+            {name || me.photo ? t.me.edit : t.me.add}
           </Button>
-        </SettingsRow>
-      )}
+        </div>
+      </section>
+
+      <SettingsGroup title={t.account.planSync}>
+        <SettingsRow
+          icon={Sparkles}
+          tone={pro ? 'accent' : 'neutral'}
+          label="Pro"
+          hint={
+            PRO_BETA
+              ? t.account.betaPro
+              : pro
+                ? accountPro?.status === 'cancelled' && accountPro.endsAt
+                  ? fmt(t.account.proUntil, { date: fmtDate(Date.parse(accountPro.endsAt), lang) })
+                  : t.account.proActive
+                : t.account.noPro
+          }
+        />
+        {/* Any account: it is the player's backup. Without Pro, on one device
+            at a time; this one can take it back. */}
+        <ActionRow
+          icon={sync.error ? CloudOff : RefreshCw}
+          tone={sync.error ? 'warning' : 'success'}
+          label={sync.error === 'elsewhere' ? t.account.syncHere : t.account.syncNow}
+          hint={<span className={sync.error ? 'text-warning' : undefined}>{syncText(sync, t)}</span>}
+          loading={busy}
+          onClick={async () => {
+            setBusy(true)
+            await (sync.error === 'elsewhere' ? syncHere() : syncNow())
+            setBusy(false)
+          }}
+        />
+        {sync.error === 'elsewhere' && (
+          <SettingsRow icon={Sparkles} tone="accent" label={t.paywall.titles.sync} hint={t.paywall.subs.sync}>
+            <Button variant="primary" size="sm" icon={Sparkles} onClick={() => paywall('sync', { asked: true })}>
+              {t.paywall.seePro}
+            </Button>
+          </SettingsRow>
+        )}
+        {/* The stores' review account keeps its one email; without email of
+            our own, nobody's changes (it is confirmed by codes). */}
+        {emailSignIn() && !isReviewEmail(account.email) && <ActionRow icon={AtSign} label={t.account.changeEmail} onClick={() => setSheet('email')} />}
+      </SettingsGroup>
+
+      <AccountEnd />
       {sheet === 'email' && <EmailSheet onClose={() => setSheet(undefined)} />}
       {sheet === 'me' && <MeSheet onClose={() => setSheet(undefined)} />}
-    </>
+    </div>
   )
 }
 
@@ -346,8 +427,9 @@ function EmailSheet({ onClose }: { onClose: () => void }) {
   )
 }
 
-/** At the end of the profile: sign out, or delete the account and what is in the cloud. */
-export function AccountEnd() {
+/** At the end of the account's page: sign out, or delete the account and
+ *  what is in the cloud. */
+function AccountEnd() {
   const t = useT()
   const toast = useToast()
   const license = useStore((s) => s.license)
@@ -355,10 +437,12 @@ export function AccountEnd() {
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState(false)
   return (
-    <SettingsGroup title={t.profile.account}>
-      <ActionRow icon={LogOut} label={t.account.signOut} onClick={() => void signOut()} />
-      <ActionRow icon={Trash2} danger label={t.account.deleteAccount} hint={t.account.deleteHint} onClick={() => setConfirm(true)} />
-
+    <>
+      {/* The sheet stays out of the group: its list draws a line above each child. */}
+      <SettingsGroup title={t.profile.account}>
+        <ActionRow icon={LogOut} label={t.account.signOut} onClick={() => void signOut()} />
+        <ActionRow icon={Trash2} danger label={t.account.deleteAccount} hint={t.account.deleteHint} onClick={() => setConfirm(true)} />
+      </SettingsGroup>
       <Sheet
         open={confirm}
         onClose={() => setConfirm(false)}
@@ -411,6 +495,6 @@ export function AccountEnd() {
           </div>
         )}
       </Sheet>
-    </SettingsGroup>
+    </>
   )
 }
