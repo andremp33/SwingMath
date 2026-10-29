@@ -980,12 +980,13 @@ export const es: Dict = {
     },
     compare: {
       caption: 'Qué tienes en Gratis y en Pro',
-      what: 'Lo que hace la app',
+      what: 'Qué cambia',
       free: 'Gratis',
       yes: 'Incluido',
       no: 'No incluido',
       unlimited: 'Sin límite',
       allDevices: 'Todos',
+      both: 'En los dos planes: calculadora, medir, biblioteca, diario con recordatorios y copia de seguridad en la nube.',
       rows: {
         setups: 'Setups guardados',
         solver: 'Planes de plomo',
@@ -994,9 +995,6 @@ export const es: Dict = {
         insights: 'Análisis del diario',
         pros: 'Raquetas de los pros',
         strings: 'Calculadora de cuerdas',
-        core: 'Calculadora, medir y biblioteca',
-        journal: 'Diario y recordatorios de encordado',
-        backup: 'Copia de seguridad en la nube',
       },
       hints: {
         solver: 'Dónde va cada tira, en Planear',
