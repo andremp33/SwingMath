@@ -697,6 +697,10 @@ export const pt = {
     addMe: 'Põe o teu nome e uma foto',
     addMeHint: 'Ficam na conta e aparecem em todos os teus aparelhos.',
     add: 'Adicionar',
+    continueApple: 'Continuar com a Apple',
+    continueGoogle: 'Continuar com a Google',
+    orEmail: 'ou com o teu email',
+    reviewAccount: 'Entrar com a conta de revisão das lojas',
     errors: {
       offline: 'Sem internet.',
       invalid: 'Código errado ou expirado.',
@@ -704,6 +708,7 @@ export const pt = {
       config: 'As contas ainda não estão configuradas nesta versão.',
       email: 'Escreve um email válido.',
       taken: 'Esse email já tem uma conta.',
+      provider: 'Não foi possível entrar. Tenta de novo.',
     },
   },
   community: {

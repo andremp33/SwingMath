@@ -112,12 +112,17 @@ export function MeFields({ value, onChange }: { value: Me; onChange: (m: Me) => 
   )
 }
 
-/** The profile's name and photo, edited in a sheet and kept together. */
-export function MeSheet({ onClose, title }: { onClose: () => void; title?: string }) {
+/** The profile's name and photo, edited in a sheet and kept together.
+ *  `name`: offered when the profile has none (the one Apple or Google
+ *  shared); kept only if saved. */
+export function MeSheet({ onClose, title, name }: { onClose: () => void; title?: string; name?: string }) {
   const t = useT()
   const toast = useToast()
   const account = useStore((s) => s.account)
-  const [draft, setDraft] = useState<Me>(() => useStore.getState().me)
+  const [draft, setDraft] = useState<Me>(() => {
+    const me = useStore.getState().me
+    return name && !me.name ? { ...me, name: name.slice(0, NAME_MAX) } : me
+  })
   return (
     <Sheet
       open

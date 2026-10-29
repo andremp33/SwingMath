@@ -36,6 +36,11 @@ jobs:
           # the site's JavaScript); the database rules protect the data.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL || 'https://cplvbecwurnzutxxsngu.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwbHZiZWN3dXJuenV0eHhzbmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1MDEwODcsImV4cCI6MjEwNzA3NzA4N30.1_xrjUT3Yu7gemGSMljCyne5zyxgpDmxxOcTUcttfF0' }}
+          # Sign in with Google and Apple in the preview (no button until set).
+          VITE_GOOGLE_WEB_CLIENT_ID: ${{ vars.VITE_GOOGLE_WEB_CLIENT_ID }}
+          VITE_APPLE_SERVICE_ID: ${{ vars.VITE_APPLE_SERVICE_ID }}
+          # The code by email, once Supabase sends through an SMTP of ours.
+          VITE_EMAIL_SIGN_IN: ${{ vars.VITE_EMAIL_SIGN_IN }}
           VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL || secrets.VITE_SUPPORT_EMAIL }}
           VITE_OWNER_NAME: ${{ vars.VITE_OWNER_NAME || secrets.VITE_OWNER_NAME }}
           VITE_OWNER_ADDRESS: ${{ vars.VITE_OWNER_ADDRESS || secrets.VITE_OWNER_ADDRESS }}
