@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { OwnedRacket } from '../domain/journal'
 import { STROKES, type Setup } from '../domain/types'
-import { db, saveSetup, uid } from '../data/db'
+import { db, restored, saveSetup, uid } from '../data/db'
 import { useAllRackets, useOwned, useSetups } from '../data/hooks'
 import { isPro, useStore } from '../data/store'
 import { FREE_SETUPS } from '../domain/freePlans'
@@ -281,7 +281,7 @@ function SetupCard({
               onSelect: async () => {
                 await db.setups.delete(s.id)
                 if (compare.includes(s.id)) toggleCompare(s.id)
-                toast(t.common.deleted, { label: t.common.undo, run: () => saveSetup(s) })
+                toast(t.common.deleted, { label: t.common.undo, run: () => saveSetup(restored(s)) })
               },
             },
           ]}

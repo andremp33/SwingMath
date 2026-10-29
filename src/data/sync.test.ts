@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MAX_MEASUREMENTS } from '../domain/fleet'
 import type { OwnedRacket } from '../domain/journal'
 import type { Setup } from '../domain/types'
-import { deleteOwned, ensureOwned, openDb, restoreOwned, type SwingDb } from './db'
+import { deleteOwned, ensureOwned, openDb, restored, restoreOwned, type SwingDb } from './db'
 import { applyRemote, enqueueAll, SyncError, syncOnce, trackChanges, type Remote, type RemoteRow } from './sync'
 
 /** The server's rules, in memory: newest client version wins, and every
@@ -255,5 +255,31 @@ describe('deleting an owned racket, then undoing it', () => {
       expect((await d.db.stringings.get('st1'))?.ownedId).toBe('o1')
       expect((await d.db.sessions.get('se1'))?.stringingId).toBe('st1')
     }
+  })
+})
+
+describe('deleting a setup, then undoing it', () => {
+  it('comes back on both devices, even after the deletion was synced', async () => {
+    const server = fakeServer()
+    const a = await device()
+    const b = await device()
+    const s = setup('s1', 'Base', 10)
+    await a.db.setups.put(s)
+    await settle()
+    await a.sync(server.remote)
+    await b.sync(server.remote)
+
+    await a.db.setups.delete('s1')
+    await settle()
+    await a.sync(server.remote)
+    expect(server.rows.get('setup:s1')?.deleted).toBe(true)
+
+    await a.db.setups.put(restored(s))
+    await settle()
+    await a.sync(server.remote)
+    await b.sync(server.remote)
+    await a.sync(server.remote)
+    for (const d of [a, b]) expect((await d.db.setups.get('s1'))?.name).toBe('Base')
+    expect(server.rows.get('setup:s1')?.deleted).toBe(false)
   })
 })
