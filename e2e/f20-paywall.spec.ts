@@ -36,15 +36,19 @@ async function openPlans(page: Page) {
 }
 
 test.describe('F20 the paywall with the player’s racket', () => {
-  test('F20-N1 without a racket of theirs: no preview, the four benefits, and what stays free', async ({ page }) => {
+  test('F20-N1 without a racket of theirs: no preview, Free next to Pro in a table', async ({ page }) => {
     await start(page)
     const d = await openPlans(page)
-    await expect(d.getByText('As tuas raquetes iguais, sempre: a app avisa quando uma se afasta e diz como corrigir.')).toBeVisible()
-    await expect(d.getByText(/^O teu Diário diz-te que corda e que tensão pôr, e quando trocar; a calculadora de cordas/)).toBeVisible()
-    await expect(d.getByText(/^Chumbo certo à primeira, até à raquete de um pro/)).toBeVisible()
-    await expect(d.getByText('Setups sem limite, em todos os teus aparelhos.')).toBeVisible()
-    await expect(d.getByText(/^Continua grátis: .*até 5 setups/)).toBeVisible()
+    const table = d.getByRole('table', { name: 'O que tens no Grátis e no Pro' })
+    await expect(table.getByRole('columnheader')).toHaveText(['O que a app faz', 'Grátis', 'Pro'])
+    // A row per thing: the free limit, then what Pro gives.
+    await expect(table.getByRole('row', { name: /^Setups guardados/ }).getByRole('cell')).toHaveText(['5', 'Sem limite'])
+    await expect(table.getByRole('row', { name: /^Planos de chumbo/ }).getByRole('cell')).toHaveText(['3', 'Sem limite'])
+    await expect(table.getByRole('row', { name: /^Aparelhos sincronizados/ }).getByRole('cell')).toHaveText(['1', 'Todos'])
+    await expect(table.getByRole('row', { name: /^Frota/ }).getByRole('cell')).toHaveText(['Não incluído', 'Incluído'])
+    await expect(table.getByRole('row', { name: /^Calculadora, medir e biblioteca/ }).getByRole('cell')).toHaveText(['Incluído', 'Incluído'])
     await expect(d.getByTestId('preview-title')).toHaveCount(0)
+    await a11y(page)
   })
 
   test('F20-H1 their racket, as measured, against the pro they opened last: strips, never grams', async ({ page }) => {

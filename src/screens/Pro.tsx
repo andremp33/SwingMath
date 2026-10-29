@@ -1,4 +1,4 @@
-import { Check, Lock, Sparkles } from 'lucide-react'
+import { Lock, Sparkles } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { isPro, useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
@@ -11,6 +11,7 @@ import { Sheet, useToast } from '../ui/overlay'
 import { AppOnly } from '../preview/text'
 import { PaywallTop } from './PaywallPreview'
 import { LegalSheet, type LegalKind } from './Legal'
+import { PlanCompare } from './PlanCompare'
 import { useReminders } from './reminders'
 import { forgetPlans, loadPlans, useTrialDays } from './storePlans'
 
@@ -71,7 +72,7 @@ const storeName = () => (/iPhone|iPad|Mac/.test(navigator.userAgent) ? 'App Stor
 
 /**
  * The store apps' paywall: the player's own racket, report or fleet (else
- * why it opened), three outcomes, what stays free,
+ * why it opened), Free next to Pro,
  * the plans with the store's own prices (annual chosen), and the renewal
  * terms both stores ask for next to the button. The X is there from the start.
  */
@@ -127,15 +128,7 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
       {license?.provider === 'store' && license.status === 'ended' && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.pro.ended}</p>}
       {freeProUntil !== null && now >= freeProUntil && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.paywall.freeProEnded}</p>}
       <PaywallTop reason={reason} />
-      <ul className="space-y-2">
-        {t.paywall.benefits.map((f) => (
-          <li key={f} className="flex gap-2 text-sm">
-            <Check className="mt-0.5 size-4 shrink-0 text-accent-text" strokeWidth={2} aria-hidden />
-            {f}
-          </li>
-        ))}
-      </ul>
-      <p className="text-sm text-muted">{t.paywall.free}</p>
+      <PlanCompare />
 
       {plans === null ? (
         <p className="text-sm text-muted">{t.pro.loadingPlans}</p>

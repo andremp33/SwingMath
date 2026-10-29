@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { test as base, expect, type Page } from '@playwright/test'
+import { test as base, expect, type Locator, type Page } from '@playwright/test'
 
 /** Every spec fails on console errors and 5xx responses. */
 export const test = base.extend<{ errors: string[] }>({
@@ -94,3 +94,58 @@ export async function pickTarget(page: Page, name: string | RegExp, search?: str
   await sheet.getByRole('button', { name }).first().click()
   await expect(sheet).toBeHidden()
 }
+
+/** The player's own rackets: Aero #1 with two stringings, a session on the
+ *  last and a measurement; Aero #2 bare. */
+export async function seedOwned(page: Page) {
+  await page.evaluate(async () => {
+    const dbUrl = '/src/data/db.ts'
+    const racketsUrl = '/src/data/rackets.ts'
+    const { db } = await import(/* @vite-ignore */ dbUrl)
+    const { STOCK_RACKETS } = await import(/* @vite-ignore */ racketsUrl)
+    const now = Date.now()
+    const racketId = STOCK_RACKETS[0].id
+    const bed = { mains: { material: 'poly', tensionKg: 23 } }
+    const measurement = { id: 'm1', date: now, weightG: 318, balanceCm: 32.5, swingweight: 322, strung: true, origin: 'shop' }
+    await db.owned.bulkPut([
+      { id: 'o1', name: 'Aero #1', racketId, measurements: [measurement], createdAt: now, updatedAt: now + 1 },
+      { id: 'o2', name: 'Aero #2', racketId, createdAt: now, updatedAt: now + 1 },
+    ])
+    await db.stringings.bulkPut(
+      ['st1', 'st2'].map((id, i) => ({ id, ownedId: 'o1', label: 'Aero #1', racketId, date: now - (1 - i) * 864e5, bed, createdAt: now, updatedAt: now + 1 })),
+    )
+    await db.sessions.put({ id: 'se1', date: now, minutes: 60, kind: 'match', stringingId: 'st2', ratings: {}, createdAt: now, updatedAt: now + 1 })
+  })
+}
+
+/** Drags a row sideways as a finger would, by `dx` px: real touches where
+ *  the browser takes them (Chromium's CDP), else the mouse. */
+export async function swipe(page: Page, row: Locator, dx: number, opts: { touch?: boolean; dy?: number } = {}) {
+  const b = (await row.boundingBox())!
+  const [x, y] = [b.x + b.width * 0.7, b.y + b.height / 2]
+  const dy = opts.dy ?? 0
+  const steps = 12
+  const isChromium = page.context().browser()?.browserType().name() === 'chromium'
+  if (opts.touch && isChromium) {
+    const cdp = await page.context().newCDPSession(page)
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', at?: { x: number; y: number }) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: at ? [at] : [] })
+    await touch('touchStart', { x, y })
+    for (let i = 1; i <= steps; i++) {
+      await touch('touchMove', { x: x + (dx * i) / steps, y: y + (dy * i) / steps })
+      await page.waitForTimeout(16)
+    }
+    await touch('touchEnd')
+    return
+  }
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  for (let i = 1; i <= steps; i++) {
+    await page.mouse.move(x + (dx * i) / steps, y + (dy * i) / steps)
+    await page.waitForTimeout(16)
+  }
+  await page.mouse.up()
+}
+
+/** How far a swiped row's card sits from its place (px; 0 at rest). */
+export const swipedBy = (row: Locator) => row.locator('> div').first().evaluate((e) => new DOMMatrix(getComputedStyle(e).transform).m41)

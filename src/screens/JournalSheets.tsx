@@ -1,6 +1,6 @@
 import { ChevronDown, FileText, Pencil, Plus, RotateCw, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
-import { db, deleteOwned, deleteStringing, saveOwned, saveSession, saveStringing, uid } from '../data/db'
+import { db, deleteStringing, saveOwned, saveSession, saveStringing, uid } from '../data/db'
 import { useRacket, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
 import {
@@ -26,6 +26,7 @@ import { RacketPicker } from '../ui/RacketPicker'
 import { bedLabel, StringbedEditor } from '../ui/strings'
 import { useUnits } from '../lib/units'
 import { useAfterSession } from './Community'
+import { useDeleteOwned } from './deleteOwned'
 
 const DAY = 86_400_000
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -108,6 +109,7 @@ function WhenField({ value, onChange }: { value: number; onChange: (ms: number) 
 
 const DURATIONS = [30, 45, 60, 90, 120] as const
 
+
 /**
  * A racket the player owns: new (with the strings it has now, so the journal
  * can start counting) or edited.
@@ -115,6 +117,7 @@ const DURATIONS = [30, 45, 60, 90, 120] as const
 export function OwnedSheet({ value, onClose, initialBed }: { value: OwnedRacket | null; onClose: () => void; initialBed?: Stringbed }) {
   const t = useT()
   const toast = useToast()
+  const remove = useDeleteOwned()
   const setups = useSetups()
   const config = useStore((s) => s.config)
   const [draft, setDraft] = useState<OwnedRacket | null>(value)
@@ -162,9 +165,7 @@ export function OwnedSheet({ value, onClose, initialBed }: { value: OwnedRacket 
               icon={Trash2}
               className="mr-auto"
               onClick={async () => {
-                if (!window.confirm(t.journal.deleteRacketConfirm)) return
-                await deleteOwned(draft.id)
-                toast(t.common.deleted)
+                await remove(draft)
                 onClose()
               }}
             >
