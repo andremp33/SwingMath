@@ -162,6 +162,7 @@ export const stringingSchema = z.object({
   date: z.number(),
   bed: stringbedSchema,
   lifeHours: num(2, 200).optional(),
+  rating: rating5,
   notes: z.string().max(500).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),

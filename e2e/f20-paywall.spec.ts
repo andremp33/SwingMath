@@ -42,7 +42,7 @@ test.describe('F20 the paywall with the player’s racket', () => {
     const table = d.getByRole('table', { name: 'O que tens no Grátis e no Pro' })
     await expect(table.getByRole('columnheader')).toHaveText(['O que muda', 'Grátis', 'Pro'])
     // What Pro adds, the most wanted first; the free limits last.
-    await expect(table.locator('tbody th')).toHaveText([/^Raquetes dos pros/, /^Planos de chumbo/, /^Frota/, /^Calculadora de cordas/, /^Análise do diário/, /^Setups guardados/, /^Aparelhos sincronizados/])
+    await expect(table.locator('tbody th')).toHaveText([/^Raquetes dos pros/, /^Planos de chumbo/, /^Frota/, /^Calculadora de cordas/, /^Relatório das cordas/, /^Setups guardados/, /^Aparelhos sincronizados/])
     await expect(table.getByRole('row', { name: /^Raquetes dos pros/ }).getByRole('cell')).toHaveText(['Não incluído', 'Incluído'])
     await expect(table.getByRole('row', { name: /^Planos de chumbo/ }).getByRole('cell')).toHaveText(['3', 'Sem limite'])
     await expect(table.getByRole('row', { name: /^Setups guardados/ }).getByRole('cell')).toHaveText(['5', 'Sem limite'])
@@ -83,15 +83,17 @@ test.describe('F20 the paywall with the player’s racket', () => {
     await expect(sw).toHaveAttribute('data-done', 'true', { timeout: 15_000 })
   })
 
-  test('F20-H3 from the journal: the real number from their strings, the rest blurred', async ({ page }) => {
+  test('F20-H3 from the strings’ report: the real number from their strings, the rest blurred', async ({ page }) => {
     await start(page, { path: '/diario' })
     await seedRacket(page, { sessions: 2 })
-    await page.getByRole('region', { name: 'O que joga melhor' }).getByRole('button', { name: 'Experimentar o Pro' }).click()
+    await page.getByRole('region', { name: 'As tuas raquetes' }).getByRole('button', { name: 'Aero de jogo', exact: true }).click()
+    await page.getByRole('dialog', { name: 'Aero de jogo' }).getByRole('button', { name: /^Relatório da corda de/ }).click()
+    await page.getByRole('dialog', { name: 'Relatório da corda' }).getByRole('button', { name: 'Experimentar o Pro' }).click()
     const d = page.getByRole('dialog', { name: 'SwingMath Pro' })
-    await expect(d.getByRole('heading', { name: 'Descobre o que joga melhor' })).toBeVisible()
+    await expect(d.getByRole('heading', { name: 'Sabe quando a corda morre' })).toBeVisible()
     await expect(d.getByTestId('teaser-number')).toHaveText('Vai em 3,0 h de jogo')
     // What opened it leads the table.
-    await expect(d.locator('tr[data-lead] th')).toHaveText(/^Análise do diário/)
+    await expect(d.locator('tr[data-lead] th')).toHaveText(/^Relatório das cordas/)
     await expect(d.locator('tbody tr').first()).toHaveAttribute('data-lead', 'true')
     await expect(d.getByTestId('preview-title')).toHaveCount(0)
     await a11y(page)

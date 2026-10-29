@@ -47,7 +47,7 @@ test.describe('F21 Pro brought up again, and the restring reminder', () => {
     await start(page, { path: '/diario' })
     await seed(page, 8)
     const d = page.getByRole('dialog', { name: 'SwingMath Pro' })
-    await expect(d.getByRole('heading', { name: 'Descobre o que joga melhor' })).toBeVisible()
+    await expect(d.getByRole('heading', { name: 'Sabe quando a corda morre' })).toBeVisible()
     await expect(d.getByTestId('teaser-number')).toHaveText('Vai em 3,0 h de jogo')
     // Seen: the clock starts again.
     expect(Date.now() - (await nudgeAt(page))!).toBeLessThan(60_000)

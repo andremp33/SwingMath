@@ -951,3 +951,32 @@ input[type='range'].range:disabled {
     animation-duration: 0ms !important;
   }
 }
+
+/* A string's life curve (JournalReport): the line draws itself in, the
+   area and the marks follow. */
+.string-curve-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: string-curve-draw 900ms var(--ease-out, ease-out) both;
+}
+.string-curve-area,
+.string-curve-mark {
+  animation: string-curve-fade 400ms ease-out 650ms both;
+}
+@keyframes string-curve-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes string-curve-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .string-curve-line,
+  .string-curve-area,
+  .string-curve-mark {
+    animation: none;
+  }
+}

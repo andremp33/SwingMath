@@ -327,4 +327,16 @@ describe('what plays best', () => {
     const close = [...played('a', [4, 4, 4, 4]), ...played('b', [4, 4, 4, 5])]
     expect(insights(list, close).every((r) => r.noise)).toBe(true)
   })
+
+  it('counts the rating given when the strings came off, even with no session', () => {
+    const list = [{ ...stringing('a', 'A', 30), rating: 2 }, { ...stringing('b', 'B', 20), rating: 5 }, stringing('c', 'C', 10)]
+    const r = insights(list, played('a', [4, 4]))
+    // A: the two sessions and the rating, (4 + 4 + 2) / 3. B: its rating alone. A judged stringing is not noise for want of sessions.
+    expect(r.map((x) => [x.stringing.id, x.sessions, x.avg.overall, x.noise])).toEqual([
+      ['b', 0, 5, false],
+      ['a', 2, 10 / 3, false],
+    ])
+    // Ratings say nothing about one kind of session.
+    expect(insights(list, [], { kind: 'match' })).toEqual([])
+  })
 })
