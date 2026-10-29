@@ -184,13 +184,51 @@ export async function saveOwned(o: OwnedRacket) {
   await db.owned.put(ownedSchema.parse(o) as OwnedRacket)
 }
 
+/** What deleting an owned racket took with it, to put back on undo. */
+export interface OwnedRemoval {
+  owned: OwnedRacket
+  stringings: Stringing[]
+  /** Session id → the stringing it was linked to. */
+  links: Record<string, string>
+}
+
 /** Deletes an owned racket and its stringings; the sessions stay, unlinked. */
-export async function deleteOwned(id: string) {
-  await db.transaction('rw', db.owned, db.stringings, db.sessions, async () => {
-    const ids = (await db.stringings.where('ownedId').equals(id).toArray()).map((s) => s.id)
-    for (const sid of ids) await db.sessions.where('stringingId').equals(sid).modify((s) => void delete s.stringingId)
-    await db.stringings.bulkDelete(ids)
-    await db.owned.delete(id)
+export async function deleteOwned(id: string, d: SwingDb = db): Promise<OwnedRemoval | undefined> {
+  return d.transaction('rw', d.owned, d.stringings, d.sessions, async () => {
+    const owned = await d.owned.get(id)
+    if (!owned) return undefined
+    const stringings = await d.stringings.where('ownedId').equals(id).toArray()
+    const links: Record<string, string> = {}
+    // A newer updatedAt, so the unlinking reaches the other devices.
+    const at = Date.now()
+    for (const st of stringings)
+      await d.sessions.where('stringingId').equals(st.id).modify((s) => {
+        links[s.id] = st.id
+        delete s.stringingId
+        s.updatedAt = at
+      })
+    await d.stringings.bulkDelete(stringings.map((s) => s.id))
+    await d.owned.delete(id)
+    return { owned, stringings, links }
+  })
+}
+
+/** Undoes deleteOwned. Everything comes back newer than the deletion, so it
+ *  wins over the tombstones if they were already synced. */
+export async function restoreOwned({ owned, stringings, links }: OwnedRemoval, d: SwingDb = db) {
+  await d.transaction('rw', d.owned, d.stringings, d.sessions, async () => {
+    const at = Date.now() + 1
+    await d.owned.put({ ...owned, updatedAt: at })
+    await d.stringings.bulkPut(stringings.map((s) => ({ ...s, updatedAt: at })))
+    await d.sessions
+      .where('id')
+      .anyOf(Object.keys(links))
+      .modify((s) => {
+        // A session linked to another stringing since is left alone.
+        if (s.stringingId) return
+        s.stringingId = links[s.id]
+        s.updatedAt = at
+      })
   })
 }
 
