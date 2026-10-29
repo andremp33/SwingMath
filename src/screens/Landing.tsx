@@ -438,7 +438,7 @@ function AppFilm() {
   )
 }
 
-const SCREENS = ['app-calculator.png', 'app-measure.png', 'app-strings.png', 'app-match.png']
+const SCREENS = ['app-calculator.png', 'app-measure.png', 'app-strings.png', 'app-match.png', 'app-journal.png', 'app-courts.png']
 
 function InTheApp() {
   const t = useLanding()
