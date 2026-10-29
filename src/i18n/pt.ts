@@ -978,12 +978,13 @@ export const pt = {
     },
     compare: {
       caption: 'O que tens no Grátis e no Pro',
-      what: 'O que a app faz',
+      what: 'O que muda',
       free: 'Grátis',
       yes: 'Incluído',
       no: 'Não incluído',
       unlimited: 'Sem limite',
       allDevices: 'Todos',
+      both: 'Nos dois planos: calculadora, medir, biblioteca, diário com lembretes e cópia de segurança na nuvem.',
       rows: {
         setups: 'Setups guardados',
         solver: 'Planos de chumbo',
@@ -992,9 +993,6 @@ export const pt = {
         insights: 'Análise do diário',
         pros: 'Raquetes dos pros',
         strings: 'Calculadora de cordas',
-        core: 'Calculadora, medir e biblioteca',
-        journal: 'Diário e lembretes de encordoar',
-        backup: 'Cópia de segurança na nuvem',
       },
       hints: {
         solver: 'Onde pôr cada tira, no Planear',

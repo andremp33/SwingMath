@@ -128,7 +128,7 @@ function StorePanel({ reason, onDone }: { reason: PaywallReason; onDone?: () => 
       {license?.provider === 'store' && license.status === 'ended' && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.pro.ended}</p>}
       {freeProUntil !== null && now >= freeProUntil && <p className="rounded-md bg-surface-2 px-3 py-2.5 text-sm">{t.paywall.freeProEnded}</p>}
       <PaywallTop reason={reason} />
-      <PlanCompare />
+      <PlanCompare reason={reason} />
 
       {plans === null ? (
         <p className="text-sm text-muted">{t.pro.loadingPlans}</p>

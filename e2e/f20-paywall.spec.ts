@@ -40,13 +40,16 @@ test.describe('F20 the paywall with the player’s racket', () => {
     await start(page)
     const d = await openPlans(page)
     const table = d.getByRole('table', { name: 'O que tens no Grátis e no Pro' })
-    await expect(table.getByRole('columnheader')).toHaveText(['O que a app faz', 'Grátis', 'Pro'])
-    // A row per thing: the free limit, then what Pro gives.
-    await expect(table.getByRole('row', { name: /^Setups guardados/ }).getByRole('cell')).toHaveText(['5', 'Sem limite'])
+    await expect(table.getByRole('columnheader')).toHaveText(['O que muda', 'Grátis', 'Pro'])
+    // What Pro adds, the most wanted first; the free limits last.
+    await expect(table.locator('tbody th')).toHaveText([/^Raquetes dos pros/, /^Planos de chumbo/, /^Frota/, /^Calculadora de cordas/, /^Análise do diário/, /^Setups guardados/, /^Aparelhos sincronizados/])
+    await expect(table.getByRole('row', { name: /^Raquetes dos pros/ }).getByRole('cell')).toHaveText(['Não incluído', 'Incluído'])
     await expect(table.getByRole('row', { name: /^Planos de chumbo/ }).getByRole('cell')).toHaveText(['3', 'Sem limite'])
+    await expect(table.getByRole('row', { name: /^Setups guardados/ }).getByRole('cell')).toHaveText(['5', 'Sem limite'])
     await expect(table.getByRole('row', { name: /^Aparelhos sincronizados/ }).getByRole('cell')).toHaveText(['1', 'Todos'])
-    await expect(table.getByRole('row', { name: /^Frota/ }).getByRole('cell')).toHaveText(['Não incluído', 'Incluído'])
-    await expect(table.getByRole('row', { name: /^Calculadora, medir e biblioteca/ }).getByRole('cell')).toHaveText(['Incluído', 'Incluído'])
+    // Opened from the Profile: no row stands out. What both have is one line.
+    await expect(table.locator('tr[data-lead]')).toHaveCount(0)
+    await expect(d.getByText(/^Nos dois planos: calculadora, medir, biblioteca/)).toBeVisible()
     await expect(d.getByTestId('preview-title')).toHaveCount(0)
     await a11y(page)
   })
@@ -87,6 +90,9 @@ test.describe('F20 the paywall with the player’s racket', () => {
     const d = page.getByRole('dialog', { name: 'SwingMath Pro' })
     await expect(d.getByRole('heading', { name: 'Descobre o que joga melhor' })).toBeVisible()
     await expect(d.getByTestId('teaser-number')).toHaveText('Vai em 3,0 h de jogo')
+    // What opened it leads the table.
+    await expect(d.locator('tr[data-lead] th')).toHaveText(/^Análise do diário/)
+    await expect(d.locator('tbody tr').first()).toHaveAttribute('data-lead', 'true')
     await expect(d.getByTestId('preview-title')).toHaveCount(0)
     await a11y(page)
   })

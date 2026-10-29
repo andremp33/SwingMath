@@ -980,12 +980,13 @@ export const en: Dict = {
     },
     compare: {
       caption: 'What you get with Free and with Pro',
-      what: 'What the app does',
+      what: 'What changes',
       free: 'Free',
       yes: 'Included',
       no: 'Not included',
       unlimited: 'Unlimited',
       allDevices: 'All',
+      both: 'In both plans: calculator, measuring, library, the journal with reminders, and cloud backup.',
       rows: {
         setups: 'Saved setups',
         solver: 'Lead plans',
@@ -994,9 +995,6 @@ export const en: Dict = {
         insights: 'Journal insights',
         pros: 'Pros’ rackets',
         strings: 'String calculator',
-        core: 'Calculator, measuring and library',
-        journal: 'Journal and restring reminders',
-        backup: 'Cloud backup',
       },
       hints: {
         solver: 'Where each strip goes, in Plan',
