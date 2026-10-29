@@ -294,10 +294,11 @@ our sign-in emails, so one account signs in with a password instead:
 1. In Supabase → Authentication → Users → Add user, create it with an email
    you control (for example `review@yourdomain`), a strong password, and
    "Auto confirm user" on.
-2. Set `VITE_REVIEW_EMAIL` to that email for the app builds. Under Apple and
-   Google, "Entrar com a conta de revisão das lojas" then opens the email
-   and password fields (with the email code on, that email shows the
-   password field instead). No other email signs in with a password.
+2. Set `VITE_REVIEW_EMAIL` to that email for the app builds. In Perfil →
+   Conta, under Apple and Google, "Entrar com a conta de revisão das lojas"
+   then opens the email and password fields (with the email code on, that
+   email shows the password field instead). No other email signs in with a
+   password.
 3. Give the email and password to the reviewers in App Store Connect (App
    Review Information) and Play Console (App access). Keep the password out
    of the repository.

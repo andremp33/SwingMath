@@ -2,7 +2,7 @@ import type { Session } from '@supabase/supabase-js'
 import { useEffect } from 'react'
 import { create } from 'zustand'
 import { db, ensureOwned } from '../data/db'
-import { AVATAR_COLORS, useStore, type AccountPro, type AvatarColor, type Me } from '../data/store'
+import { AVATAR_COLORS, useStore, type AccountPro, type AvatarColor, type Me, type SignInProvider } from '../data/store'
 import { enqueueAll, supabaseRemote, SyncError, syncOnce, trackChanges } from '../data/sync'
 import { cloudConfigured, getCloud, sessionLikely, whenCloud } from '../lib/cloud'
 import { photoBlob, photoDataUrl } from '../lib/photo'
@@ -341,13 +341,20 @@ const identifyStore = (userId: string | null) => {
       .catch(() => {})
 }
 
+/** The ways the account signs in, from what Supabase linked to it (the
+ *  stores' review account's password counts as email). */
+export function providersOf(meta: Record<string, unknown> | undefined): SignInProvider[] {
+  const list = Array.isArray(meta?.providers) ? meta.providers : [meta?.provider]
+  return (['apple', 'google', 'email'] as const).filter((p) => list.includes(p))
+}
+
 async function onSession(session: Session | null) {
   if (!session?.user.email) {
     store().setAccount(null)
     identifyStore(null)
     return
   }
-  store().setAccount({ userId: session.user.id, email: session.user.email })
+  store().setAccount({ userId: session.user.id, email: session.user.email, providers: providersOf(session.user.app_metadata) })
   identifyStore(session.user.id)
   void syncMe()
   await refreshSubscription()

@@ -160,7 +160,7 @@ export function Onboarding() {
               <Button variant="primary" size="lg" className="w-full" onClick={() => setStep('racket')}>
                 {t.onboarding.start}
               </Button>
-              <button type="button" onClick={() => finish('/perfil')} className="min-h-11 w-full text-sm text-muted underline-offset-2 hover:underline">
+              <button type="button" onClick={() => finish('/perfil/conta')} className="min-h-11 w-full text-sm text-muted underline-offset-2 hover:underline">
                 {t.onboarding.haveAccount}
               </button>
             </>
