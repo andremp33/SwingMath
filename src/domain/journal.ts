@@ -58,6 +58,9 @@ export interface Stringing {
   bed: Stringbed
   /** The player's own string life in hours, overriding the material's. */
   lifeHours?: number
+  /** How these strings played overall, 1-5: asked when they are replaced,
+   *  so a ranking needs no rated sessions. */
+  rating?: number
   notes?: string
   createdAt: number
   updatedAt: number
@@ -240,7 +243,11 @@ export function bedKey(st: Stringing): string {
 }
 
 /** Averages per string (see bedKey), best overall first. Only rated
- *  sessions count towards each average. */
+ *  sessions count towards each average; the rating a stringing was given
+ *  when it was replaced counts as one more overall (not by kind: it was
+ *  not one kind of session). A row
+ *  of such ratings alone is not noise for want of sessions: the player
+ *  judged the whole stringing. */
 export function insights(all: Stringing[], sessions: Session[], { kind, withinLife }: InsightOptions = {}): StringingInsight[] {
   const groups = new Map<string, Stringing[]>()
   for (const st of all) groups.set(bedKey(st), [...(groups.get(bedKey(st)) ?? []), st])
@@ -253,13 +260,18 @@ export function insights(all: Stringing[], sessions: Session[], { kind, withinLi
   const rows = [...groups.values()]
     .map((list) => {
       const latest = list.reduce((a, b) => (b.date > a.date ? b : a))
-      return { stringing: latest, stringings: list, noise: false, ...summariseSessions(list.flatMap(counted)) }
+      const played = list.flatMap(counted)
+      const summary = summariseSessions(played)
+      const judged = kind ? [] : list.map((st) => st.rating).filter((v): v is number => v !== undefined)
+      const overalls = [...played.map((s) => s.ratings.overall).filter((v): v is number => v !== undefined), ...judged]
+      const avg = overalls.length ? { ...summary.avg, overall: overalls.reduce((a, b) => a + b, 0) / overalls.length } : summary.avg
+      return { stringing: latest, stringings: list, noise: false, judged: judged.length > 0, ...summary, avg }
     })
-    .filter((i) => i.sessions > 0)
+    .filter((i) => i.sessions > 0 || i.judged)
     .sort((a, b) => (b.avg.overall ?? 0) - (a.avg.overall ?? 0) || b.sessions - a.sessions)
   const near = (a: StringingInsight, b?: StringingInsight) =>
     !!b && a.avg.overall !== undefined && b.avg.overall !== undefined && Math.abs(a.avg.overall - b.avg.overall) < NOISE_GAP
-  return rows.map((r, i) => ({ ...r, noise: r.sessions < NOISE_SESSIONS || near(r, rows[i - 1]) || near(r, rows[i + 1]) }))
+  return rows.map(({ judged, ...r }, i) => ({ ...r, noise: (r.sessions < NOISE_SESSIONS && !judged) || near(r, rows[i - 1]) || near(r, rows[i + 1]) }))
 }
 
 /** How a session played, 1-5: its overall rating, else the mean of power,

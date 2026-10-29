@@ -119,8 +119,8 @@ test.describe('A02 no free Pro: the store trial instead', () => {
     await page.goto('/perfil')
     await expect(page.getByRole('region', { name: 'Plano' })).toContainText('Grátis')
     // Pro views stay locked.
-    await page.goto('/diario')
-    await expect(page.getByRole('region', { name: 'O que joga melhor' }).getByRole('button', { name: 'Experimentar o Pro' })).toBeVisible()
+    await page.goto('/cordas')
+    await expect(page.getByRole('button', { name: 'Experimentar o Pro' })).toBeVisible()
   })
 
   test('A02-E1 skipping the walkthrough gives nothing either', async ({ page }) => {
@@ -149,13 +149,13 @@ test.describe('A02 no free Pro: the store trial instead', () => {
     await page.reload()
     const d = page.getByRole('dialog', { name: 'SwingMath Pro' })
     await expect(d).toContainText('O teu Pro grátis terminou.')
-    await expect(d.getByRole('heading', { name: 'Descobre o que joga melhor' })).toBeVisible()
+    await expect(d.getByRole('heading', { name: 'Sabe quando a corda morre' })).toBeVisible()
     await expect(d.getByTestId('teaser-number')).toHaveText('Vai em 2,0 h de jogo')
     await d.getByRole('button', { name: 'Fechar' }).click()
-    // Their racket and sessions are where they were; only the Pro views lock again.
+    // Their racket, sessions and the ranking of their own ratings are where they were.
     await expect(page.getByRole('region', { name: 'As tuas raquetes' })).toContainText('Aero')
     await expect(page.getByRole('region', { name: 'Sessões' }).getByRole('listitem')).toHaveCount(1)
-    await expect(page.getByRole('region', { name: 'O que joga melhor' }).getByRole('button', { name: 'Experimentar o Pro' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'O que joga melhor' }).getByRole('listitem')).toContainText('4,0')
     expect((await stored(page)).freeProEndTold).toBe(true)
     // Once.
     await page.reload()

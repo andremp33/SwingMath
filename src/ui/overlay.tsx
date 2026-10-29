@@ -51,7 +51,10 @@ export function Sheet({
               <X className="size-5" aria-hidden />
             </button>
           </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
+          {/* Focusable, so a keyboard can scroll it when nothing inside is. */}
+          <div tabIndex={0} className="overflow-y-auto px-5 py-4 outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset">
+            {children}
+          </div>
           {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-border px-5 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">{footer}</div>}
         </div>
       )}

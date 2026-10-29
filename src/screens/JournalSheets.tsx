@@ -224,24 +224,30 @@ export function OwnedSheet({ value, onClose, initialBed }: { value: OwnedRacket 
 /** A stringing of one owned racket: a restring (prefilled from the last) or an edit. */
 export function StringingSheet({
   value,
+  previous,
   owned,
   onClose,
   onRestrung,
 }: {
   value: Stringing | null
+  /** The strings this one replaces: a new stringing asks how they played. */
+  previous?: Stringing
   owned: OwnedRacket[]
   onClose: () => void
   /** After a new stringing (not an edit) is saved. */
   onRestrung?: (st: Stringing) => void
 }) {
   const t = useT()
+  const lang = useStore((s) => s.lang)
   const toast = useToast()
   const [draft, setDraft] = useState<Stringing | null>(value)
+  const [verdict, setVerdict] = useState(previous?.rating)
   // A new stringing to edit starts a new draft.
   const [shown, setShown] = useState(value)
   if (shown !== value) {
     setShown(value)
     setDraft(value)
+    setVerdict(previous?.rating)
   }
   const o = owned.find((x) => x.id === draft?.ownedId)
   const racket = useRacket(o?.racketId ?? draft?.racketId)
@@ -249,8 +255,11 @@ export function StringingSheet({
 
   // New ones are created with updatedAt = createdAt; saving moves updatedAt on.
   const isEdit = value !== null && value.updatedAt !== value.createdAt
+  // One tap on the strings coming off: enough for the journal to rank them.
+  const asks = !isEdit && previous && previous.id !== draft.id
   const set = (p: Partial<Stringing>) => setDraft({ ...draft, ...p })
   const save = async () => {
+    if (asks && verdict !== previous.rating) await saveStringing({ ...previous, rating: verdict, updatedAt: Date.now() })
     const saved = {
       ...draft,
       label: o?.name ?? draft.label,
@@ -299,6 +308,14 @@ export function StringingSheet({
           <p className="font-semibold">{o?.name ?? draft.label}</p>
           {racket && <p className="truncate text-sm text-muted">{racketLabel(racket)}</p>}
         </div>
+        {asks && (
+          <div className="space-y-1" data-testid="previous-rating">
+            <RatingInput label={t.journal.previousRating} value={verdict} onChange={setVerdict} ends={t.journal.ratingEnds} />
+            <p className="num text-xs text-muted">
+              {bedLabel(previous.bed, t, lang)} · {fmtDate(previous.date, lang)}
+            </p>
+          </div>
+        )}
         <DateField label={t.journal.strungOn} value={draft.date} onChange={(date) => set({ date })} />
         <StringbedEditor value={draft.bed} onChange={(bed) => set({ bed })} />
         <NumberField label={t.journal.lifeHours} hint={t.journal.lifeHoursHint} unit="h" min={2} max={200} value={draft.lifeHours} onChange={(lifeHours) => set({ lifeHours })} />

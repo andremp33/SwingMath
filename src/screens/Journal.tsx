@@ -14,7 +14,6 @@ import { bedLabel } from '../ui/strings'
 import { LifeBar, OwnedSheet, RacketSheet, SessionList, SessionSheet, StringingSheet } from './JournalSheets'
 import { RestringReminderSheet, StringingReportSheet } from './JournalReport'
 import { MeasurementSheet } from './MeasurementSheet'
-import { ProGate } from './Pro'
 
 const DAY = 86_400_000
 const WEEK = 7 * DAY
@@ -82,6 +81,7 @@ export function Journal() {
       {stringing && (
         <StringingSheet
           value={stringing}
+          previous={stringing.ownedId ? latestOf(stringing.ownedId, stringings ?? []) : undefined}
           owned={owned ?? []}
           onClose={() => setStringing(null)}
           onRestrung={(st) => setReport(previousOf(st, stringings ?? [], sessions ?? []) ?? null)}
@@ -199,9 +199,8 @@ export function Journal() {
 
         <Card label={t.journal.insights}>
           <CardTitle info={<InfoTip title={t.journal.insights}>{t.journal.insightsHint}</InfoTip>}>{t.journal.insights}</CardTitle>
-          <ProGate title={t.journal.insights} reason="journal" bare>
-            <Insights stringings={stringings} sessions={sessions} owned={owned} />
-          </ProGate>
+          {/* Free: it is the player's own notes, ranked. What to do next is Pro (the report). */}
+          <Insights stringings={stringings} sessions={sessions} owned={owned} />
         </Card>
 
         <Link to="/cordas" className="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-sm font-semibold hover:bg-surface-2">
@@ -472,7 +471,7 @@ function Insights({ stringings, sessions, owned }: { stringings: Stringing[]; se
               <div className="h-full rounded-full bg-accent" style={{ width: `${((r.avg.overall ?? 0) / 5) * 100}%` }} />
             </div>
             <p className="num mt-1 text-xs text-muted">
-              {many ? fmt(t.journal.stringingsN, { n: r.stringings.length }) : fmtDate(r.stringing.date, lang)} · {r.sessions === 1 ? t.journal.sessionOne : fmt(t.journal.sessions, { n: r.sessions })}
+              {many ? fmt(t.journal.stringingsN, { n: r.stringings.length }) : fmtDate(r.stringing.date, lang)} · {r.sessions === 0 ? t.journal.ratedAtChange : r.sessions === 1 ? t.journal.sessionOne : fmt(t.journal.sessions, { n: r.sessions })}
               {r.armPainShare > 0 && <> · {fmt(t.journal.pain, { n: Math.round(r.armPainShare * 100) })}</>}
               {r.noise && (
                 <>
