@@ -101,5 +101,7 @@ test('PC05 without Pro: whose racket it is, not its numbers; picking one opens P
   await sinner.click()
   const sheet = page.getByRole('dialog', { name: 'SwingMath Pro' })
   await expect(sheet).toBeVisible()
-  await expect(page.getByRole('table')).toHaveCount(0)
+  // No comparison with the pro's numbers: the only table is the plans', in the sheet.
+  await expect(page.getByRole('table')).toHaveCount(1)
+  await expect(sheet.getByRole('table', { name: 'O que tens no Grátis e no Pro' })).toBeVisible()
 })
