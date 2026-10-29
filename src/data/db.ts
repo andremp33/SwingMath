@@ -269,6 +269,12 @@ export async function saveSetup(s: Setup) {
   await db.setups.put(setupSchema.parse(s) as Setup)
 }
 
+/** A deleted row to put back on undo: newer than the deletion, so it wins
+ *  over the tombstone if that was already synced (see restoreOwned). */
+export function restored<T extends { updatedAt: number }>(row: T): T {
+  return { ...row, updatedAt: Date.now() + 1 }
+}
+
 export async function deleteRacket(id: string) {
   await db.transaction('rw', db.rackets, db.setups, async () => {
     await db.setups.where('racketId').equals(id).delete()
