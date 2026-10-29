@@ -1,6 +1,6 @@
 import { ChevronDown, FileText, Pencil, Plus, RotateCw, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useId, useMemo, useState } from 'react'
-import { db, deleteStringing, saveOwned, saveSession, saveStringing, uid } from '../data/db'
+import { db, deleteStringing, restored, saveOwned, saveSession, saveStringing, uid } from '../data/db'
 import { useRacket, useSetups } from '../data/hooks'
 import { useStore } from '../data/store'
 import {
@@ -369,7 +369,7 @@ export function SessionSheet({ value, stringings, owned, onClose }: { value: Ses
               className="mr-auto"
               onClick={async () => {
                 await db.sessions.delete(draft.id)
-                toast(t.common.deleted, { label: t.common.undo, run: () => void db.sessions.put(draft) })
+                toast(t.common.deleted, { label: t.common.undo, run: () => void db.sessions.put(restored(draft)) })
                 onClose()
               }}
             >
