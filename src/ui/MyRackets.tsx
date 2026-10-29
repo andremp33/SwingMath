@@ -7,8 +7,10 @@ import { defaultConfig, useStore } from '../data/store'
 import { latestOf, type OwnedRacket } from '../domain/journal'
 import { useT } from '../i18n'
 import { OwnedSheet } from '../screens/JournalSheets'
+import { useDeleteOwned } from '../screens/deleteOwned'
 import { Badge, Button, IconButton, cx } from './basics'
 import { bedLabel } from './strings'
+import { SwipeRow } from './SwipeRow'
 
 /** Loads one of the player's rackets into the calculator: its setup if it
  *  has one (else the stock frame), with the strings on it now. */
@@ -69,7 +71,8 @@ export function MyRacketsRow() {
   )
 }
 
-/** Rackets tab: the player's own rackets, to open in the calculator or edit. */
+/** Rackets tab: the player's own rackets, to open in the calculator, edit,
+ *  or swipe away. */
 export function MyRacketsSection() {
   const t = useT()
   const nav = useNavigate()
@@ -79,7 +82,10 @@ export function MyRacketsSection() {
   const config = useStore((s) => s.config)
   const lang = useStore((s) => s.lang)
   const open = useOpenOwned()
+  const remove = useDeleteOwned()
   const [editing, setEditing] = useState<OwnedRacket | null>(null)
+  // The row swiped open, if any: opening another closes it.
+  const [swiped, setSwiped] = useState<string | null>(null)
   const add = () => {
     const at = Date.now()
     setEditing({ id: uid(), name: '', racketId: config.racketId, createdAt: at, updatedAt: at })
@@ -103,7 +109,15 @@ export function MyRacketsSection() {
             const r = rackets.find((x) => x.id === o.racketId)
             const st = latestOf(o.id, stringings ?? [])
             return (
-              <li key={o.id} className={cx('flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface p-3', o.retired && 'opacity-60')}>
+              <SwipeRow
+                key={o.id}
+                label={`${t.common.delete} ${o.name}`}
+                open={swiped === o.id}
+                onOpenChange={(on) => setSwiped((cur) => (on ? o.id : cur === o.id ? null : cur))}
+                onDelete={() => void remove(o)}
+                // Put away: the contents fade, not the card, which hides the action.
+                className={cx('flex items-center gap-2 rounded-lg border border-border bg-surface p-3', o.retired && '*:opacity-60')}
+              >
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 truncate font-semibold">
                     {o.name}
@@ -122,7 +136,7 @@ export function MyRacketsSection() {
                   }}
                 />
                 <IconButton icon={Pencil} label={`${t.common.edit} ${o.name}`} onClick={() => setEditing(o)} />
-              </li>
+              </SwipeRow>
             )
           })}
         </ul>

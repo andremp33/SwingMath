@@ -86,7 +86,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       >
         {msgs.map((m) => (
           <div key={m.id} className="pointer-events-auto flex items-center gap-4 rounded-full bg-text px-4 py-2.5 text-sm font-medium text-bg shadow-pop">
-            {m.text}
+            <span>{m.text}</span>
             {m.action && (
               <button
                 type="button"

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MAX_MEASUREMENTS } from '../domain/fleet'
 import type { OwnedRacket } from '../domain/journal'
 import type { Setup } from '../domain/types'
-import { ensureOwned, openDb, type SwingDb } from './db'
+import { deleteOwned, ensureOwned, openDb, restoreOwned, type SwingDb } from './db'
 import { applyRemote, enqueueAll, SyncError, syncOnce, trackChanges, type Remote, type RemoteRow } from './sync'
 
 /** The server's rules, in memory: newest client version wins, and every
@@ -220,5 +220,40 @@ describe('measurements and lead on owned rackets', () => {
     expect(await applyRemote(a.db, [{ kind: 'owned', id: 'o1', data: bad, deleted: false, client_updated_at: 7 }])).toBe(0)
     expect(await applyRemote(a.db, [{ kind: 'owned', id: 'o1', data: measured(MAX_MEASUREMENTS + 1), deleted: false, client_updated_at: 7 }])).toBe(0)
     expect(await a.db.owned.get('o1')).toBeUndefined()
+  })
+})
+
+describe('deleting an owned racket, then undoing it', () => {
+  it('takes its stringings, unlinks its sessions, and the undo wins over the synced tombstones', async () => {
+    const server = fakeServer()
+    const a = await device()
+    const b = await device()
+    const bed = { mains: { material: 'poly' as const, tensionKg: 23 } }
+    await a.db.owned.put({ id: 'o1', name: 'Aero #1', racketId: 'stock-x', createdAt: 1, updatedAt: 1 })
+    await a.db.stringings.put({ id: 'st1', ownedId: 'o1', label: 'Aero #1', racketId: 'stock-x', date: 1, bed, createdAt: 1, updatedAt: 1 })
+    await a.db.sessions.put({ id: 'se1', date: 2, minutes: 60, kind: 'match', stringingId: 'st1', ratings: {}, createdAt: 2, updatedAt: 2 })
+    await settle()
+    await a.sync(server.remote)
+    await b.sync(server.remote)
+
+    const gone = await deleteOwned('o1', a.db)
+    expect(gone?.stringings.map((s) => s.id)).toEqual(['st1'])
+    expect(await a.db.stringings.count()).toBe(0)
+    expect((await a.db.sessions.get('se1'))?.stringingId).toBeUndefined()
+    await settle()
+    await a.sync(server.remote)
+    await b.sync(server.remote)
+    expect(await b.db.owned.get('o1')).toBeUndefined()
+    expect((await b.db.sessions.get('se1'))?.stringingId).toBeUndefined()
+
+    await restoreOwned(gone!, a.db)
+    await settle()
+    await a.sync(server.remote)
+    await b.sync(server.remote)
+    for (const d of [a, b]) {
+      expect((await d.db.owned.get('o1'))?.name).toBe('Aero #1')
+      expect((await d.db.stringings.get('st1'))?.ownedId).toBe('o1')
+      expect((await d.db.sessions.get('se1'))?.stringingId).toBe('st1')
+    }
   })
 })
