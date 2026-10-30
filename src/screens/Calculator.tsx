@@ -21,6 +21,7 @@ import { ComfortCard, GoalsCard, GripCard, StringsCard, SweetSpotCard } from './
 import { CommunityCard, CommunityLink } from './Community'
 import { InfoSheet } from './InfoSheet'
 import { CollapsibleCard, InfoTip } from '../ui/disclosure'
+import { OnceHint } from '../ui/hint'
 import { RacketSources } from './RacketSources'
 import { useSetupRoom } from './freePlans'
 import { usePaywall } from './Pro'
@@ -140,10 +141,10 @@ export function Calculator() {
                     {!racket.isStock && <Badge tone="accent">{t.library.custom}</Badge>}
                   </div>
                   <div className="xl:hidden">
-                    <SpecStrip rows={baseRows} />
+                    <SpecStrip rows={baseRows} explain />
                   </div>
                   <div className="hidden xl:block">
-                    <SpecTable rows={baseRows} showDelta={false} />
+                    <SpecTable rows={baseRows} showDelta={false} explain />
                   </div>
                 </div>
               ) : (
@@ -243,8 +244,10 @@ export function Calculator() {
                 onClose={closeTip}
               />
             ) : (
-              // Until the first lead goes on, where to start.
-              totalLead === 0 && <p className="mb-3 text-sm text-muted">{t.calc.leadHint}</p>
+              // Where to start, until the player has put lead on once.
+              <OnceHint id="lead" done={totalLead > 0} className="mb-3">
+                {t.calc.leadHint}
+              </OnceHint>
             )}
             {/* The racket keeps its own tones on the panel (index.css). */}
             <div className="racket-tones">
@@ -308,7 +311,7 @@ export function Calculator() {
                 </InfoTip>
               }
             >
-              <SpecTable rows={resultRows} />
+              <SpecTable rows={resultRows} explain />
             </CollapsibleCard>
           </div>
           {/* Phones have the feel in the result bar, larger and always at hand. */}

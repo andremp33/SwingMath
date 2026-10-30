@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useMemo } from 'react'
 import { mapLayout, type MapPoint } from '../domain/racketMap'
 import type { Racket } from '../domain/types'
+import { OnceHint } from './hint'
 import { useT } from '../i18n'
 
 /** The map is a square: four tiles, one per zone, around a centre. */
@@ -144,9 +145,11 @@ export function RacketMap({ all, picked, onRemove }: { all: Racket[]; picked: Ra
         ))}
       </svg>
 
-      {picked.length === 0 ? (
-        <p className="mt-2 text-center text-sm text-muted">{m.empty}</p>
-      ) : (
+      {/* How to fill it, until the first racket goes on. */}
+      <OnceHint id="map" done={picked.length > 0} className="mt-2 justify-center">
+        {m.empty}
+      </OnceHint>
+      {picked.length > 0 && (
         <ul className="mt-3 flex flex-wrap gap-2" aria-label={m.title}>
           {picked.map((r) => (
             <li key={r.id} className="flex items-center gap-1.5 rounded-full border border-border py-0.5 pl-2.5 pr-0.5 text-sm">

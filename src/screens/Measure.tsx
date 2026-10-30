@@ -1,5 +1,5 @@
 import { ArrowLeft, Play, Plus, Square, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mean, oddTrials, swingweightError, swingweightFromPeriod } from '../domain/measure'
 import { useOwned, useRacket } from '../data/hooks'
@@ -7,6 +7,9 @@ import { useStore } from '../data/store'
 import { fmt, useT } from '../i18n'
 import { fmtNum } from '../lib/format'
 import { Button, Card, CardTitle, cx, NumberField, PageTitle } from '../ui/basics'
+import { InfoTip } from '../ui/disclosure'
+import { BalanceArt, PendulumArt, ScaleArt } from '../ui/drawings'
+import { OnceHint } from '../ui/hint'
 import { useToast } from '../ui/overlay'
 import { ShareMeasurement } from './Community'
 import { MeasurementSheet } from './MeasurementSheet'
@@ -85,7 +88,7 @@ export function Measure() {
 
   return (
     <>
-      <PageTitle subtitle={t.measure.intro}>
+      <PageTitle subtitle={t.measure.intro} action={<InfoTip title={t.measure.title}>{t.measure.introMore}</InfoTip>}>
         <span className="flex items-center gap-2">
           <button type="button" onClick={() => nav(-1)} aria-label={t.common.back} className="rounded-full p-1.5 text-muted hover:bg-surface-2">
             <ArrowLeft className="size-5" aria-hidden />
@@ -97,35 +100,46 @@ export function Measure() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <div className="space-y-4">
           <Card label={t.measure.step1}>
-            <CardTitle>{t.measure.step1}</CardTitle>
-            <p className="mb-3 text-sm text-muted">{t.measure.step1Hint}</p>
+            <CardTitle info={<InfoTip title={t.measure.step1}>{t.measure.step1Hint}</InfoTip>}>{t.measure.step1}</CardTitle>
+            <Step art={<ScaleArt />}>{t.measure.step1Line}</Step>
             <div className="max-w-[220px]">
               <WeightField label={t.spec.weight} min={150} max={500} value={weightG} onChange={setWeight} />
             </div>
           </Card>
 
           <Card label={t.measure.step2}>
-            <CardTitle>{t.measure.step2}</CardTitle>
-            <p className="mb-3 text-sm text-muted">{t.measure.step2Hint}</p>
+            <CardTitle info={<InfoTip title={t.measure.step2}>{t.measure.step2Hint}</InfoTip>}>{t.measure.step2}</CardTitle>
+            <Step art={<BalanceArt />}>{t.measure.step2Line}</Step>
             <div className="max-w-[220px]">
               <BalanceField label={t.spec.balance} min={250} max={400} value={balanceMm} onChange={setBalance} />
             </div>
           </Card>
 
           <Card label={t.measure.step3}>
-            <CardTitle>{t.measure.step3}</CardTitle>
-            <p className="mb-3 text-sm text-muted">{t.measure.step3Hint}</p>
-            <ul className="mb-4 list-disc space-y-1 pl-5 text-sm">
-              {t.measure.how.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
+            <CardTitle
+              info={
+                <InfoTip title={t.measure.step3}>
+                  <p>{t.measure.step3Hint}</p>
+                  <ul className="list-disc space-y-1 pl-5">
+                    {t.measure.how.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  <p>{t.measure.tapHintMore}</p>
+                </InfoTip>
+              }
+            >
+              {t.measure.step3}
+            </CardTitle>
+            <Step art={<PendulumArt />}>{t.measure.step3Line}</Step>
             <div className="grid max-w-[460px] grid-cols-2 gap-3">
               <NumberField label={t.measure.pivot} unit="cm" min={2} max={20} value={pivotCm} onChange={setPivot} />
               <NumberField label={t.measure.swings} min={3} max={100} value={swings} onChange={(v) => setSwings(v === undefined ? undefined : Math.round(v))} />
             </div>
 
-            <p className="mt-4 text-sm text-muted">{t.measure.tapHint}</p>
+            <OnceHint id="measure-timer" done={trials.length > 0} className="mt-4">
+              {t.measure.tapHint}
+            </OnceHint>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               {startedAt === null ? (
                 <Button variant="primary" size="lg" icon={Play} onClick={() => setStartedAt(performance.now())} disabled={!swings}>
@@ -208,7 +222,7 @@ export function Measure() {
             {!ready ? (
               <p className="text-sm text-muted">{t.measure.needWB}</p>
             ) : sw === undefined ? (
-              <p className="text-sm text-muted">{t.measure.tapHint}</p>
+              <p className="text-sm text-muted">{t.measure.needSwings}</p>
             ) : (
               <>
                 <p className="num text-display font-extrabold" data-testid="measured-sw">
@@ -246,5 +260,15 @@ export function Measure() {
         />
       )}
     </>
+  )
+}
+
+/** A step's picture and its one line; the rest is behind the step's (?). */
+function Step({ art, children }: { art: ReactNode; children: ReactNode }) {
+  return (
+    <div className="mb-4 flex items-center gap-4">
+      <div className="w-36 shrink-0 sm:w-44">{art}</div>
+      <p className="min-w-0 text-sm">{children}</p>
+    </div>
   )
 }

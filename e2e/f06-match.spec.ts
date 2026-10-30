@@ -50,6 +50,8 @@ test.describe('F06 hit a target', () => {
     await run.click()
     await expect(page.getByRole('region', { name: 'Plano de chumbo' })).toContainText('Chumbo total')
     await expect(page.getByText('2 planos grátis')).toBeVisible()
+    // Positions and the limit are folded under "Mais opções".
+    await page.getByRole('region', { name: 'Onde pôr o chumbo' }).getByRole('button', { name: /^Mais opções/ }).click()
     await page.getByRole('button', { name: '12h (ponta)', exact: true }).click()
     await page.getByLabel('Máximo por posição').fill('6')
     await run.click()

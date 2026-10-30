@@ -30,7 +30,7 @@ test('PC01 a pro measured unstrung is converted to strung, and the page says so'
   await expect(pro).toContainText('Medido')
   await expect(pro.getByRole('link', { name: /Fonte: Tennisnerd .*, outubro de 2025/ })).toHaveAttribute('href', /tennisnerd\.net/)
   await expect(pro).toContainText('Medido sem cordas; convertido para com cordas.')
-  await expect(page.getByText('Tudo com cordas: o teu setup como o jogas')).toBeVisible()
+  await expect(page.getByText('Tudo com cordas: o teu setup e o do profissional')).toBeVisible()
   // 302 g bare, with the strings on.
   const w = Number((await cell(page, 'Peso', 1).textContent())!.replace(' g', '').replace(',', '.'))
   expect(w).toBeGreaterThan(315)

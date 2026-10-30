@@ -159,6 +159,8 @@ interface State {
   publishInvited: string[]
   /** String names the player used last, newest first (the name field's suggestions). */
   recentStrings: string[]
+  /** One-time instructions the player has already followed (ui/hint.tsx). */
+  hintsDone: string[]
   account: Account | null
   accountPro: AccountPro | null
   sync: SyncState
@@ -195,6 +197,7 @@ interface State {
   markInvited: (setupId: string) => void
   setRecipesView: (v: 'list' | 'grid') => void
   noteString: (name: string) => void
+  markHint: (id: string) => void
   showAuthor: (authorKey: string) => void
   showAllAuthors: () => void
   setAccount: (a: Account | null) => void
@@ -238,6 +241,7 @@ export const useStore = create<State>()(
       publishInvited: [],
       recipesView: 'auto',
       recentStrings: [],
+      hintsDone: [],
       account: null,
       accountPro: null,
       sync: { userId: null, cursor: null },
@@ -282,6 +286,7 @@ export const useStore = create<State>()(
           const n = name.trim()
           return n ? { recentStrings: [n, ...s.recentStrings.filter((x) => x.toLowerCase() !== n.toLowerCase())].slice(0, 8) } : {}
         }),
+      markHint: (id) => set((s) => (s.hintsDone.includes(id) ? {} : { hintsDone: [...s.hintsDone, id] })),
       showAuthor: (id) => set((s) => ({ hiddenAuthors: s.hiddenAuthors.filter((x) => x !== id) })),
       showAllAuthors: () => set({ hiddenAuthors: [] }),
       setRecipesView: (recipesView) => set({ recipesView }),

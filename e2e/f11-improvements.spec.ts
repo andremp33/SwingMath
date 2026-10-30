@@ -37,9 +37,13 @@ test.describe('F11 measuring and tuning in steps', () => {
     await start(page, { path: '/medir' })
     await page.getByLabel('Peso', { exact: true }).fill('320')
     await page.getByLabel('Equilíbrio', { exact: true }).fill('320')
-    // The instructions are on screen.
-    await expect(page.getByText('nunca de lado (de lado mede-se SW + TW)', { exact: false })).toBeVisible()
-    await expect(page.getByText('20 oscilações completas (ida e volta), 3 vezes.')).toBeVisible()
+    // A picture and a line on screen; the full instructions behind the step's (?).
+    await expect(page.getByText('Pendura-a pela vareta, cabeça para baixo')).toBeVisible()
+    await page.getByRole('button', { name: 'Informação: 3. Swingweight (pêndulo)' }).click()
+    const how = page.getByRole('dialog', { name: '3. Swingweight (pêndulo)' })
+    await expect(how.getByText('nunca de lado (de lado mede-se SW + TW)', { exact: false })).toBeVisible()
+    await expect(how.getByText('20 oscilações completas (ida e volta), 3 vezes.')).toBeVisible()
+    await how.getByRole('button', { name: 'Fechar' }).click()
     const T = periodFromSwingweight(320, 32, 320)
     // The third: 21 swings counted as 20.
     for (const total of [T * 19.98, T * 20.02, T * 21]) {

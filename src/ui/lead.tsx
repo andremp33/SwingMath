@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useId, useRef, useState, type KeyboardEvent } from 'react'
 import { Minus, Plus, X } from 'lucide-react'
 import { geometry as frameGeometry, leadPositions, type Geometry } from '../domain/physics'
 import type { Strip } from '../domain/preview'
@@ -151,24 +151,28 @@ function frameOutline(g: Geometry) {
   return { outside, bed, throat, yH, bx, by, yc: f.yc }
 }
 
-function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
+/** The racket itself, in cm (x across, y down from the tip). Also drawn,
+ *  turned and scaled, in the small pictures (ui/drawings.tsx); its clips
+ *  are its own, so several on a page don't borrow each other's. */
+export function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
   const f = frameShape(g)
   const o = frameOutline(g)
+  const id = useId()
   const [mains, crosses] = (pattern?.match(/^(\d+)\s*x\s*(\d+)/i)?.slice(1).map(Number) ?? [16, 19]) as [number, number]
   const frame = 'var(--c-text)'
   return (
     <>
       <defs>
-        <clipPath id="bed">
+        <clipPath id={`${id}bed`}>
           <path d={o.bed} />
         </clipPath>
-        <clipPath id="grip">
+        <clipPath id={`${id}grip`}>
           <rect x={-GRIP} y={o.yH} width={GRIP * 2} height={g.L - o.yH - 1.3} />
         </clipPath>
       </defs>
       {/* String bed */}
       <path d={o.bed} fill="var(--c-surface)" />
-      <g clipPath="url(#bed)" stroke="var(--c-border-input)" strokeWidth="0.08" opacity="0.55">
+      <g clipPath={`url(#${id}bed)`} stroke="var(--c-border-input)" strokeWidth="0.08" opacity="0.55">
         {Array.from({ length: mains }, (_, i) => {
           const x = -o.bx * 0.92 + ((i + 0.5) * (2 * o.bx * 0.92)) / mains
           return <line key={`m${i}`} x1={x} y1={o.yc - g.a} x2={x} y2={o.yc + g.a} />
@@ -183,7 +187,7 @@ function RacketArt({ g, pattern }: { g: Geometry; pattern?: string }) {
       {/* Bumper guard along the top */}
       <path d={hoopArc(f, g, 0, 17, 0)} fill="none" stroke="var(--c-text-muted)" strokeWidth="0.35" strokeLinecap="round" opacity="0.6" />
       {/* Grip: wrapped turns over the handle, a collar where it starts */}
-      <g clipPath="url(#grip)" stroke="var(--c-bg)" strokeWidth="0.09" opacity="0.3">
+      <g clipPath={`url(#${id}grip)`} stroke="var(--c-bg)" strokeWidth="0.09" opacity="0.3">
         {Array.from({ length: Math.ceil((g.L - o.yH) / 1.1) + 2 }, (_, i) => {
           const y0 = o.yH + 0.4 + i * 1.1
           return <line key={i} x1={-GRIP - 0.2} y1={y0} x2={GRIP + 0.2} y2={y0 - 1} />

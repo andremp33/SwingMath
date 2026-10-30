@@ -16,6 +16,7 @@ import { fmt, useT } from '../i18n'
 import { fmtNum, fmtSigned, fold, LOCALE, racketLabel } from '../lib/format'
 import { Badge, Button, Card, CardTitle, cx, NumberField, PageTitle, Segmented, Select } from '../ui/basics'
 import { LEAD_MAX, RacketDiagram } from '../ui/lead'
+import { PlanArt } from '../ui/drawings'
 import { RacketPicker } from '../ui/RacketPicker'
 import { ProDetails, ProRow } from '../ui/ProPicker'
 import { useFreePlans } from './freePlans'
@@ -93,14 +94,53 @@ const toBase = (r: Racket, v: Vals): Base | null =>
         twistweight: v.twistweight,
       }
 
-function SpecFields({ v, onChange, required }: { v: Vals; onChange: (v: Vals) => void; required?: boolean }) {
+/** Weight, balance and swingweight; the optional twistweight beside them,
+ *  or (`foldTw`) under "More options", with its value in the summary. */
+function SpecFields({ v, onChange, required, foldTw }: { v: Vals; onChange: (v: Vals) => void; required?: boolean; foldTw?: boolean }) {
   const t = useT()
+  const lang = useStore((s) => s.lang)
+  const tw = <NumberField label={t.spec.twistweight} hint={t.common.optional} min={5} max={25} value={v.twistweight} onChange={(twistweight) => onChange({ ...v, twistweight })} />
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <WeightField label={t.spec.weight} min={150} max={500} required={required} value={v.weightG} onChange={(weightG) => onChange({ ...v, weightG })} />
-      <BalanceField label={t.spec.balance} min={250} max={400} required={required} value={v.balanceMm} onChange={(balanceMm) => onChange({ ...v, balanceMm })} />
-      <NumberField label={t.spec.swingweight} min={150} max={450} required={required} value={v.swingweight} onChange={(swingweight) => onChange({ ...v, swingweight })} />
-      <NumberField label={t.spec.twistweight} hint={t.common.optional} min={5} max={25} value={v.twistweight} onChange={(twistweight) => onChange({ ...v, twistweight })} />
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <WeightField label={t.spec.weight} min={150} max={500} required={required} value={v.weightG} onChange={(weightG) => onChange({ ...v, weightG })} />
+        <BalanceField label={t.spec.balance} min={250} max={400} required={required} value={v.balanceMm} onChange={(balanceMm) => onChange({ ...v, balanceMm })} />
+        <NumberField label={t.spec.swingweight} min={150} max={450} required={required} value={v.swingweight} onChange={(swingweight) => onChange({ ...v, swingweight })} />
+        {!foldTw && tw}
+      </div>
+      {foldTw && (
+        <MoreOptions summary={v.twistweight === undefined ? undefined : `TW ${fmtNum(v.twistweight, 1, lang)}`}>
+          <div className="grid grid-cols-2 gap-3">{tw}</div>
+        </MoreOptions>
+      )}
+    </>
+  )
+}
+
+/** What most plans leave as it is, folded: a tap shows it. Closed, the
+ *  summary says what is set differently. */
+function MoreOptions({ summary, children }: { summary?: string; children: ReactNode }) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+        className="-mx-1 flex min-h-9 items-center gap-1 rounded-md px-1 text-left text-sm font-medium text-accent-text hover:bg-surface-2"
+      >
+        {t.match.moreOptions}
+        <ChevronDown className={cx('size-4 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
+        {!open && summary && <span className="num ml-1 font-normal text-muted">{summary}</span>}
+      </button>
+      {open && (
+        <div id={id} className="mt-3 space-y-4">
+          {children}
+        </div>
+      )}
     </div>
   )
 }
@@ -482,31 +522,45 @@ function Smart() {
           {targetSrc && !typed && !pickedPro && targetSrc.strung !== fromStrung && (
             <p className="text-sm font-medium">{fmt(t.match.converted, { from: state(targetSrc.strung), to: state(fromStrung) })}</p>
           )}
-          <SpecFields v={to} onChange={(v) => { setTyped(v); setRes(null) }} />
+          <SpecFields v={to} onChange={(v) => { setTyped(v); setRes(null) }} foldTw />
         </Card>
 
         <Card label={t.match.step3}>
           <CardTitle>{step(3, t.match.step3)}</CardTitle>
-          <h3 className="mb-2 text-sm text-muted">{t.match.positions}</h3>
-          <div className="flex flex-wrap gap-2">
-            {POSITIONS.map((p) => {
-              const on = allowed.includes(p)
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => setAllowed(on ? allowed.filter((x) => x !== p) : [...allowed, p])}
-                  className={cx('rounded-md border px-3 py-1.5 text-sm transition-colors', on ? 'border-text text-text' : 'border-border text-muted hover:text-text')}
-                >
-                  {t.pos[p]}
-                </button>
-              )
-            })}
-          </div>
-          <div className="mt-4 max-w-[200px]">
-            <NumberField label={t.match.maxPer} unit="g" min={1} max={50} value={maxPer} onChange={setMaxPer} />
-          </div>
+          {/* Every position and the usual limit, unless the player says otherwise. */}
+          <MoreOptions
+            summary={
+              [
+                allowed.length < POSITIONS.length && fmt(t.match.positionsOf, { n: allowed.length, max: POSITIONS.length }),
+                maxPer !== undefined && maxPer !== LEAD_MAX && fmt(t.match.maxShort, { g: fmtNum(maxPer, 0, lang) }),
+              ]
+                .filter(Boolean)
+                .join(' · ') || undefined
+            }
+          >
+            <div>
+              <h3 className="mb-2 text-sm text-muted">{t.match.positions}</h3>
+              <div className="flex flex-wrap gap-2">
+                {POSITIONS.map((p) => {
+                  const on = allowed.includes(p)
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setAllowed(on ? allowed.filter((x) => x !== p) : [...allowed, p])}
+                      className={cx('rounded-md border px-3 py-1.5 text-sm transition-colors', on ? 'border-text text-text' : 'border-border text-muted hover:text-text')}
+                    >
+                      {t.pos[p]}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="max-w-[200px]">
+              <NumberField label={t.match.maxPer} unit="g" min={1} max={50} value={maxPer} onChange={setMaxPer} />
+            </div>
+          </MoreOptions>
           {err && (
             <p role="alert" className="mt-3 text-sm text-danger">
               {err}
@@ -518,7 +572,17 @@ function Smart() {
         </Card>
       </div>
 
-      <div className="xl:sticky xl:top-8">{res ? <PlanCard res={res.plan} full={res.full} diag={res.diag} onOpen={openInCalc} /> : null}</div>
+      <div className="xl:sticky xl:top-8">
+        {res ? (
+          <PlanCard res={res.plan} full={res.full} diag={res.diag} onOpen={openInCalc} />
+        ) : (
+          // Before the first plan: a picture of what it will be.
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-input/60 px-4 py-6 text-center">
+            <PlanArt className="max-w-[180px]" />
+            <p className="text-sm text-muted">{t.match.planHere}</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -926,6 +990,7 @@ function BatchSlot({ n, name, slot, onChange, onRemove }: { n: number; name?: st
       <SpecFields
         v={slot.vals}
         required
+        foldTw
         onChange={(vals) => onChange({ vals, base: racket ? toBase(racket, vals) : null })}
       />
     </Card>
