@@ -18,13 +18,12 @@ const norm = (v: number, lo: number, hi: number) => Math.min(1, Math.max(0, (v -
  * that drive each sensation, scaled to 5-95 %. The formulas are shown to the
  * user in the info sheet, so keep this file and the copy in sync.
  *
- * Power, spin and control also depend on the stringbed. From Tennis
- * Warehouse University's tests: open patterns let the mains slide and snap
- * back, so they give more spin (16x15 about 10 % more than 16x19 with the
- * same string, more than poly over nylon gives) and a higher launch; dense
- * ones (18x20) launch flatter and steer better; a stiffer bed (more strings,
- * more tension, stiffer string) returns a little less energy and controls
- * more. The frame still weighs most.
+ * Power, spin and control also depend on the stringbed: open patterns let
+ * the mains slide and snap back, so they give more spin (more than poly
+ * over nylon does) and a higher launch; dense ones (18x20) launch flatter
+ * and steer better; a stiffer bed (more strings, more tension, stiffer
+ * string) returns a little less energy and controls more. The frame still
+ * weighs most.
  */
 export function feel(s: Specs, frame: FeelFrame, strings: Stringbed = DEFAULT_STRINGBED): Feel {
   const exact = feelExact(s, frame, strings)

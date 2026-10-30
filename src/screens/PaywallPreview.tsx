@@ -54,7 +54,7 @@ const FEW_STRIPS = 3
  *  reaches in a few strips, else the one it reaches in the fewest. */
 function previewFor(o: OwnedRacket, frame: Racket, lastProId: string | null) {
   const m = latestMeasurement(o)
-  const [specs, strung] = m ? [m, m.strung] : frame.strung ? [frame.strung, true] : [frame, false]
+  const [specs, strung] = m ? [m, m.strung] : [frame, false]
   const me = withStrings(frame, { weightG: specs.weightG, balanceCm: specs.balanceCm, swingweight: specs.swingweight }, strung, true)
   const base = { lengthCm: frame.lengthCm, headSizeSqIn: frame.headSizeSqIn, ...me }
   const targets = PRO_TARGETS.map((pro) => ({ id: pro.id, pro, specs: withStrings(pro, pro, pro.strung, true) }))

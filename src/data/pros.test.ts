@@ -47,10 +47,10 @@ describe('pro targets', () => {
 
   it('strings add their mass towards the head', () => {
     const nadal = PRO_TARGETS.find((p) => p.id === 'nadal')!
-    const bare = withStrings(nadal, nadal, true, false)
-    expect(nadal.weightG - bare.weightG).toBe(17)
-    expect(bare.balanceCm).toBeLessThan(nadal.balanceCm)
-    expect(nadal.swingweight - bare.swingweight).toBeGreaterThan(20)
+    const strung = withStrings(nadal, nadal, false, true)
+    expect(strung.weightG - nadal.weightG).toBe(17)
+    expect(strung.balanceCm).toBeGreaterThan(nadal.balanceCm)
+    expect(strung.swingweight - nadal.swingweight).toBeGreaterThan(20)
   })
 
   it('same state: unchanged', () => {

@@ -25,7 +25,7 @@ import { OnceHint } from '../ui/hint'
 import { RacketSources } from './RacketSources'
 import { useSetupRoom } from './freePlans'
 import { usePaywall } from './Pro'
-import { racketFeel, reviewOf } from '../data/racketFeel'
+import { racketFeel } from '../data/racketFeel'
 import { FEEL_KEYS, type Feel } from '../domain/feel'
 import { suggestSetupName } from '../lib/setupName'
 import { BalanceField, WeightField } from '../ui/unitFields'
@@ -789,11 +789,8 @@ function AddPositionSheet({ open, onClose, onAdded }: { open: boolean; onClose: 
   )
 }
 
-/** Where the feel starts: independent playtests of the frame, or of its closest sibling. */
+/** Where the feel starts: a stock frame's specs and line, or the specs alone. */
 function FeelSource({ racket }: { racket: Racket }) {
   const t = useT()
-  const rev = reviewOf(racket)
-  if (!rev) return <p className="mt-3 text-xs text-muted">{t.calc.feelSpecsOnly}</p>
-  const like = rev.key.split('|')
-  return <p className="mt-3 text-xs text-muted">{rev.own ? t.calc.feelFrom : fmt(t.calc.feelFromLike, { model: `${like[1]} ${like[2]}`.trim() })}</p>
+  return <p className="mt-3 text-xs text-muted">{racket.isStock ? t.calc.feelFrom : t.calc.feelSpecsOnly}</p>
 }

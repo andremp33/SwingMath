@@ -1,8 +1,8 @@
 /**
  * Manufacturers' own unstrung specs, read from their official product pages
  * (live, or the Wayback Machine's copy for models the maker no longer
- * shows). Only what the page states: Yonex lists no swingweight, Tecnifibre
- * only the weight. Read with a plain-HTML extractor, not by hand; see
+ * shows). Only what the page states: only Babolat lists swingweight and
+ * stiffness. Read with a plain-HTML extractor, not by hand; see
  * replica/official-specs.md for the method.
  *
  * Key: `${brand}|${model}|${year}` as in ROWS.
@@ -23,7 +23,6 @@ export interface Official {
 
 const BAB = 'https://www.babolat.com/'
 const YNX = 'https://www.yonex.com/tennis/racquets/'
-const TEC = 'https://www.tecnifibre.com/en/products/'
 const HEAD = 'https://www.head.com/'
 const DUN = 'https://dunlopsports.com/de/products/tennis/rackets/'
 const SOL = 'https://solincosports.com/equipment/'
@@ -74,10 +73,6 @@ export const OFFICIAL: Record<string, Official> = {
   'Yonex|Percept 97H|2023': { weightG: 330, balanceMm: 310, url: YNX + 'percept/percept-97h', archived: '20250913005743' },
   'Yonex|Percept 100D|2023': { weightG: 305, balanceMm: 315, url: YNX + 'percept/percept-100d', archived: '20250618202740' },
 
-  // Tecnifibre: the weight only (read 2026-10-12).
-  'Tecnifibre|TFight 300S|2025': { weightG: 300, url: TEC + 't-fight-300s' },
-  'Tecnifibre|TFight 305S|2025': { weightG: 305, url: TEC + 't-fight-305s' },
-  'Tecnifibre|TFight 315S|2025': { weightG: 315, url: TEC + 't-fight-315s' },
   // Head: weight and balance.
   'Head|Speed MP|2026': { weightG: 300, balanceMm: 320, url: HEAD + 'en_US/product/speed-mp-2026-232026', indexed: true },
   'Head|Speed Pro|2026': { weightG: 310, balanceMm: 310, url: HEAD + 'en_US/product/speed-pro-2026-232006', indexed: true },
@@ -96,7 +91,7 @@ export const OFFICIAL: Record<string, Official> = {
   'Head|Prestige MP|2023': { weightG: 310, balanceMm: 320, url: HEAD + 'product/prestige-mp-2023-236123', indexed: true },
   'Head|Prestige Pro|2023': { weightG: 320, balanceMm: 310, url: HEAD + 'en_US/product/prestige-pro-2023-236103', indexed: true },
 
-  // Wilson: weight and balance (Pro Staff X: weight only).
+  // Wilson: weight and balance.
   'Wilson|Blade 98 16x19 v10|2026': { weightG: 305, balanceMm: 325, url: 'https://au.wilson.com/products/blade-98-16x19-v10-tennis-racket', indexed: true },
   'Wilson|Blade 98 18x20 v10|2026': { weightG: 305, balanceMm: 325, url: 'https://mas.wilson.com/products/wilson-blade-v10-racket-line', indexed: true },
   'Wilson|Blade 98 16x19 v9|2024': { weightG: 305, balanceMm: 320, url: 'https://id.wilson.com/en/products/blade-98-16x19-v9', indexed: true },
@@ -107,7 +102,6 @@ export const OFFICIAL: Record<string, Official> = {
   'Wilson|Clash 100 v2|2022': { weightG: 295, balanceMm: 310, url: 'https://sg.wilson.com/products/wilson-clash-100-v2.0-performance-tennis-racket-unstrung-wr074011u', indexed: true },
   'Wilson|Clash 100 Pro v2|2022': { weightG: 310, balanceMm: 306, url: 'https://sg.wilson.com/products/clash-100-pro-v2-performance-tennis-racket-unstrung', indexed: true },
   'Wilson|Pro Staff 97 v14|2023': { weightG: 315, balanceMm: 310, url: 'https://mas.wilson.com/products/pro-staff-97-v14-professional-tennis-racket-wr125711u', indexed: true },
-  'Wilson|Pro Staff X v14|2023': { weightG: 315, url: 'https://sg.wilson.com/products/wilson-pro-staff-x-v14-frm-performance-tennis-racket-unstrung---wr125811u-free-stringing-service', indexed: true },
   'Wilson|RF 01 Pro (leather grip)|': { weightG: 320, balanceMm: 315, url: 'https://mas.wilson.com/products/wilson-rf-01-pro-performance-tennis-racket-unstrung-wr151311u2', indexed: true },
   'Wilson|Shift 99 Pro|2023': { weightG: 315, balanceMm: 315, url: 'https://id.wilson.com/en/products/shift-99-pro-v1', indexed: true },
   'Wilson|Shift 99 (300g)|': { weightG: 300, balanceMm: 315, url: 'https://ph.wilson.com/products/wilson-shift-99-v1-professional-racket', indexed: true },
@@ -140,8 +134,3 @@ export const OFFICIAL: Record<string, Official> = {
 /** The address to show: the archived copy when the live page is gone. */
 export const officialHref = (o: Official) => (o.archived ? `https://web.archive.org/web/${o.archived}/${o.url}` : o.url)
 
-/**
- * Tolerances the makers publish (Babolat: ±7 g, ±7 mm); a measured frame
- * outside them, or 10 swingweight points away, is worth a second look.
- */
-export const TOLERANCE = { weightG: 7, balanceMm: 7, swingweight: 10 }

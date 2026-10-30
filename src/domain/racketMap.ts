@@ -4,9 +4,10 @@ import { compute } from './physics'
 import { DEFAULT_ACCESSORY_MASSES, emptyLead, type Racket } from './types'
 
 /**
- * Where a frame sits on the racket map: from its playtest where it has one,
- * from its specs otherwise. x runs from control (−1) to power (+1), y from
- * touch (−1) to spin (+1). Played strung, with an overgrip.
+ * Where a frame sits on the racket map: from its start (specs and line,
+ * domain/specFeel) for stock frames, from the specs alone otherwise. x runs
+ * from control (−1) to power (+1), y from touch (−1) to spin (+1). Played
+ * strung, with an overgrip.
  */
 export interface MapPoint {
   x: number
@@ -25,8 +26,8 @@ export function mapScores(r: Racket): MapPoint {
     masses: DEFAULT_ACCESSORY_MASSES,
     leadG: emptyLead(),
   })
-  // Frames with a playtest: its spin, power, control and touch. The player's
-  // own frames: the specs alone.
+  // Stock frames: their start's spin, power, control and touch. The
+  // player's own frames: the specs alone.
   const f = racketFeel(r, result)
   const target = feelTarget(r)
   if (target) return { x: (f.power - f.control) / 100, y: (f.spin - target.touch) / 100 }

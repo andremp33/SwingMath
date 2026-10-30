@@ -20,7 +20,8 @@ export interface RacketSpec {
   ra?: number
 }
 
-export type SpecOrigin = 'official' | 'measured'
+/** The maker's published figure, or our estimate from its other figures. */
+export type SpecOrigin = 'official' | 'estimated'
 
 export interface Racket extends RacketSpec {
   id: string
@@ -32,18 +33,10 @@ export interface Racket extends RacketSpec {
   /** Where the numbers come from (a URL for stock frames), shown to the user. */
   source?: string
   pattern?: string
-  /** Strung measurements the stock values were derived from. */
-  strung?: { weightG: number; balanceCm: number; swingweight: number }
-  /** The source gave no strung weight; it was estimated (nominal + strings). */
-  approxWeight?: boolean
-  /** Where each reference value comes from: the maker's page or a measurement. */
+  /** Where each reference value comes from: the maker's page or an estimate. */
   specFrom?: { weight: SpecOrigin; balance: SpecOrigin; swingweight: SpecOrigin }
   /** The maker's own unstrung specs, with the page they come from. */
   official?: { weightG: number; balanceMm?: number; swingweight?: number; ra?: number; href: string; archived: boolean }
-  /** An independent measurement (strung, by Tennis Warehouse), as unstrung. */
-  measured?: { weightG: number; balanceCm: number; swingweight: number }
-  /** The measurement against the maker's specs: false when outside their tolerance. */
-  agrees?: boolean
   createdAt: number
   updatedAt: number
 }

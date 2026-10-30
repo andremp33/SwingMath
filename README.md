@@ -28,7 +28,7 @@ in a browser, where there is no App Store or Google Play; it never reaches a
 build.
 
 - `src/domain/` — physics, sweet spot, pendulum swingweight, strings, grip, arm comfort, journal, solvers (pure, tested)
-- `src/data/` — racket library, local database (IndexedDB), sync with the account
+- `src/data/` — racket library (the makers' published specs, `official.ts`, with the page for each frame; swingweight estimated where the maker gives none), local database (IndexedDB), sync with the account
 - `src/screens/` — the app's screens; `Landing.tsx` is the website (front page, `/privacidade`, `/termos`, `/suporte`, `/apagar-conta`, `/s/…`, `/ficha/…`)
 - `supabase/` — database schema and rules (`migrations/`), the RevenueCat webhook (`functions/rc-webhook`), account deletion (`functions/delete-account`), sign-in email
 - `.github/workflows/deploy.yml` — builds and publishes to GitHub Pages on every push to `main`
