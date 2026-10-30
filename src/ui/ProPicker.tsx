@@ -11,6 +11,10 @@ import { useUnits } from '../lib/units'
 export const monthYear = (ym: string, lang: string) =>
   new Date(`${ym}-15T12:00:00Z`).toLocaleDateString(LOCALE[lang] ?? 'en-GB', { month: 'long', year: 'numeric' })
 
+/** Who published a pro's numbers, without the detail: "Tennisnerd" from
+ *  "Tennisnerd (Jonas Eriksson), ATP Vienna". */
+const shortSource = (s: string) => s.split(/[(,]/)[0].trim()
+
 /** A pro's name and racquet, searched without accents or case. */
 const proMatches = (p: ProTarget, q: string) => fold(`${p.player} ${p.racket}`).includes(fold(q.trim()))
 
@@ -29,6 +33,7 @@ export function ProRow({ p }: { p: ProTarget }) {
           <Badge tone={p.evidence === 'measured' ? 'accent' : 'neutral'}>{t.match.evidence[p.evidence]}</Badge>
         </span>
         <span className="block truncate text-muted">{p.racket}</span>
+        <span className="block truncate text-xs text-muted">{fmt(t.match.proBy, { source: shortSource(p.source) })}</span>
       </span>
       {pro ? (
         <span className="num shrink-0 text-right text-xs text-muted">

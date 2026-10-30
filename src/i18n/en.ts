@@ -321,6 +321,7 @@ export const en: Dict = {
     evidence: { measured: 'Measured', reported: 'Reported' },
     evidenceHint: { measured: 'Measured by an identified lab, stringer, shop or writer.', reported: 'Published by the maker or the press, in a given article.' },
     proSource: 'Source: {source}, {date}',
+    proBy: 'per {source}',
     fromStock: 'Start from the stock racquet',
     proStrings: 'Strings: {s}',
     noPros: 'No player by that name.',

@@ -319,6 +319,7 @@ export const pt = {
     evidence: { measured: 'Medido', reported: 'Reportado' },
     evidenceHint: { measured: 'Medido por um laboratório, encordoador, loja ou autor identificados.', reported: 'Publicado pela marca ou pela imprensa, num artigo concreto.' },
     proSource: 'Fonte: {source}, {date}',
+    proBy: 'segundo {source}',
     fromStock: 'Partir da raquete de série',
     proStrings: 'Cordas: {s}',
     noPros: 'Nenhum jogador com esse nome.',

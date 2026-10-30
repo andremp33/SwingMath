@@ -40,10 +40,11 @@ const PT: Record<'privacy' | 'terms', LegalDoc> = {
   },
   terms: {
     title: 'Termos de utilização',
-    updated: 'Atualizados a 28 de outubro de 2026',
+    updated: 'Atualizados a 30 de outubro de 2026',
     sections: [
       ['O serviço', 'O SwingMath calcula como o chumbo, os acessórios e as cordas alteram as especificações e a sensação de uma raquete, e ajuda-te a acompanhar as tuas raquetes e encordoamentos. É uma ferramenta de estimativa.'],
       ['Estimativas, não garantias', 'Os valores são estimativas a partir de um modelo físico e dos dados que introduzes. As especificações de catálogo são nominais e cada raquete varia. Confirma sempre com medições antes de alterar a tua raquete. Não somos responsáveis por danos em equipamento nem por resultados em jogo.'],
+      ['Marcas, modelos e jogadores', 'Os nomes de marcas, de modelos de raquetes e cordas e de jogadores aparecem só para identificar o equipamento a que os números se referem. As marcas pertencem aos respetivos donos. O SwingMath é independente: não é afiliado, patrocinado nem aprovado por nenhuma marca nem por nenhum jogador. As especificações das raquetes dos jogadores vêm de medições ou publicações de terceiros, indicadas em cada uma com a data, e podem não corresponder à raquete que o jogador usa hoje.'],
       ['SwingMath Pro', 'O Pro existe como subscrição mensal ou anual, que renova automaticamente no fim de cada período até cancelares, ou como compra vitalícia. O vitalício é uma compra única: não renova e podes restaurá-lo noutro dispositivo com a mesma conta da loja, em «Restaurar compras». O preço e o período aparecem antes de confirmares a compra.'],
       ['Teste grátis', 'Quando é oferecido, o teste grátis (7 dias no plano anual) é um por conta da App Store ou da Google Play e dá-te o Pro completo sem pagares nada. A app mostra a data em que termina e, com as notificações ligadas, avisa-te dois dias antes. Podes cancelar a qualquer momento durante o teste, nas definições da loja, sem qualquer custo. Se não cancelares pelo menos 24 horas antes do fim do teste, a subscrição começa e o primeiro período é cobrado. O teste não se aplica à compra vitalícia.'],
       ['Pro grátis temporário', 'Até 27 de outubro de 2026, a app desbloqueava o Pro de graça ao terminar a introdução, até uma data que mostrava. Quem o recebeu mantém-no até essa data: não pede pagamento nem passa pela loja, não renova e termina sozinho. Não conta como o teste grátis da loja. A app já não o dá. Os teus dados continuam teus depois de terminar.'],
@@ -85,10 +86,11 @@ const EN: typeof PT = {
   },
   terms: {
     title: 'Terms of use',
-    updated: 'Updated 28 October 2026',
+    updated: 'Updated 30 October 2026',
     sections: [
       ['The service', 'SwingMath works out how lead, accessories and strings change a racket’s specs and feel, and helps you keep track of your rackets and stringings. It is an estimating tool.'],
       ['Estimates, not guarantees', 'The values are estimates from a physical model and the data you enter. Catalogue specs are nominal and every frame varies. Always confirm with measurements before changing your racket. We are not liable for damage to equipment or for results on court.'],
+      ['Brands, models and players', 'Names of brands, of racket and string models and of players appear only to identify the equipment the numbers refer to. The trademarks belong to their owners. SwingMath is independent: it is not affiliated with, sponsored or endorsed by any brand or any player. The specs of players’ rackets come from third parties’ measurements or publications, named on each with its date, and may not match the racket the player uses today.'],
       ['SwingMath Pro', 'Pro comes as a monthly or annual subscription, which renews automatically at the end of each period until you cancel, or as a lifetime purchase. Lifetime is a one-off purchase: it does not renew, and you can restore it on another device with the same store account under “Restore purchases”. The price and period are shown before you confirm.'],
       ['Free trial', 'Where offered, the free trial (7 days on the annual plan) is one per App Store or Google Play account and gives you all of Pro without paying anything. The app shows the date it ends and, with notifications on, reminds you two days before. You can cancel at any time during the trial, in the store’s settings, at no cost. Unless you cancel at least 24 hours before the trial ends, the subscription starts and the first period is charged. The trial does not apply to the lifetime purchase.'],
       ['Temporary free Pro', 'Until 27 October 2026, the app unlocked Pro for free when the walkthrough ended, until a date it showed. Whoever got it keeps it until that date: it asks for no payment and does not go through the store, it does not renew, and it ends on its own. It is not the store’s free trial. The app no longer gives it. Your data stays yours after it ends.'],
@@ -130,10 +132,11 @@ const ES: typeof PT = {
   },
   terms: {
     title: 'Términos de uso',
-    updated: 'Actualizados el 28 de octubre de 2026',
+    updated: 'Actualizados el 30 de octubre de 2026',
     sections: [
       ['El servicio', 'SwingMath calcula cómo el plomo, los accesorios y las cuerdas cambian las especificaciones y la sensación de una raqueta, y te ayuda a llevar el control de tus raquetas y encordados. Es una herramienta de estimación.'],
       ['Estimaciones, no garantías', 'Los valores son estimaciones a partir de un modelo físico y de los datos que introduces. Las especificaciones de catálogo son nominales y cada raqueta varía. Confirma siempre con mediciones antes de modificar tu raqueta. No somos responsables de daños en el material ni de resultados en el juego.'],
+      ['Marcas, modelos y jugadores', 'Los nombres de marcas, de modelos de raquetas y cuerdas y de jugadores aparecen solo para identificar el material al que se refieren los números. Las marcas pertenecen a sus respectivos dueños. SwingMath es independiente: no está afiliado, patrocinado ni aprobado por ninguna marca ni por ningún jugador. Las especificaciones de las raquetas de los jugadores vienen de mediciones o publicaciones de terceros, indicadas en cada una con su fecha, y pueden no coincidir con la raqueta que el jugador usa hoy.'],
       ['SwingMath Pro', 'El Pro existe como suscripción mensual o anual, que se renueva automáticamente al final de cada periodo hasta que la canceles, o como compra vitalicia. El vitalicio es una compra única: no se renueva y puedes restaurarlo en otro dispositivo con la misma cuenta de la tienda, en «Restaurar compras». El precio y el periodo aparecen antes de confirmar la compra.'],
       ['Prueba gratis', 'Cuando se ofrece, la prueba gratis (7 días en el plan anual) es una por cuenta de la App Store o de Google Play y te da todo el Pro sin pagar nada. La app muestra la fecha en que termina y, con las notificaciones activadas, te avisa dos días antes. Puedes cancelar en cualquier momento durante la prueba, en los ajustes de la tienda, sin ningún coste. Si no cancelas al menos 24 horas antes de que termine la prueba, empieza la suscripción y se cobra el primer periodo. La prueba no se aplica a la compra vitalicia.'],
       ['Pro gratis temporal', 'Hasta el 27 de octubre de 2026, la app desbloqueaba el Pro gratis al terminar la introducción, hasta una fecha que mostraba. Quien lo recibió lo mantiene hasta esa fecha: no pide pago ni pasa por la tienda, no se renueva y termina solo. No cuenta como la prueba gratuita de la tienda. La app ya no lo da. Tus datos siguen siendo tuyos cuando termina.'],

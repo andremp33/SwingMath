@@ -163,6 +163,7 @@ function SiteFrame({ children, front = false }: { children: ReactNode; front?: b
           <span className="text-muted md:text-right">© {YEAR} SwingMath</span>
         </div>
         {front && <p className="mt-6 max-w-[90ch] text-[15px] leading-6 text-muted">{t.credits}</p>}
+        <p className={cx('max-w-[90ch] text-[15px] leading-6 text-muted', front ? 'mt-2' : 'mt-6')}>{t.brands}</p>
       </footer>
     </div>
   )
