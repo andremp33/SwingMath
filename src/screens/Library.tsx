@@ -1,5 +1,5 @@
 import { Calculator, CircleCheck, Copy, Diamond, Pencil, Plus, Search, SearchX } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { memo, useDeferredValue, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Racket, RacketType } from '../domain/types'
 import { saveRacket, uid } from '../data/db'
@@ -65,6 +65,9 @@ export function Library() {
   }, [list, sort])
   const filtered = q || type !== 'all' || brand !== 'all'
   const owned = useOwned()
+  // The catalogue's hundred-odd cards are the slow part of the screen: they
+  // wait for the player's own rackets, and lag behind what is typed in search.
+  const shown = useDeferredValue(owned && groups)
   const mine = owned?.find((o) => !o.retired)
   const mineFrame = mine && all.find((r) => r.id === mine.racketId)
   const similar = useMemo(() => (mineFrame ? similarTo(mineFrame, all) : []), [mineFrame, all])
@@ -157,7 +160,7 @@ export function Library() {
         />
       ) : (
         <div className="space-y-8">
-          {groups.map((grp) => (
+          {shown?.map((grp) => (
             <section key={grp.name || 'all'} aria-label={grp.name || undefined}>
               {grp.name && (
                 <h2 className="mb-3 flex items-baseline gap-2 text-md font-semibold tracking-tight">
@@ -191,7 +194,8 @@ function similarTo(r: Racket, all: Racket[], n = 4): Racket[] {
     .slice(0, n)
 }
 
-function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showBrand: boolean; community?: number }) {
+// Memoised: the player's own rackets loading, or a save, need not redraw the catalogue.
+const RacketCard = memo(function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showBrand: boolean; community?: number }) {
   const t = useT()
   const nav = useNavigate()
   const lang = useStore((s) => s.lang)
@@ -301,4 +305,4 @@ function RacketCard({ racket: r, showBrand, community }: { racket: Racket; showB
       </div>
     </article>
   )
-}
+})
