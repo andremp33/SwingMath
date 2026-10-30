@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { FEEL_KEYS, type Feel } from '../domain/feel'
 import type { Specs } from '../domain/types'
 import { useStore } from '../data/store'
@@ -5,6 +7,8 @@ import { useT } from '../i18n'
 import { fmtNum, fmtSigned } from '../lib/format'
 import { G_PER_OZ, MM_PER_IN, useUnits } from '../lib/units'
 import { cx } from './basics'
+import { SpecGlyph, type SpecKey } from './drawings'
+import { Sheet } from './overlay'
 
 export interface SpecRow {
   key: string
@@ -66,46 +70,102 @@ export function useSpecRows(s: Specs, from?: Specs, opts: { recoil?: boolean } =
   return rows
 }
 
-/** Four numbers in a row, for the reference on phones. */
-export function SpecStrip({ rows }: { rows: SpecRow[] }) {
-  // Each column as wide as its figure, the room left spread between them:
-  // the long ones (kg·cm²) fit a phone's panel without cutting.
-  return (
-    <dl className="grid grid-cols-[repeat(4,auto)] justify-between gap-x-2">
-      {rows.slice(0, 4).map((r) => (
-        <div key={r.key} className="min-w-0">
-          <dt className="truncate text-xs text-muted">{r.key === 'sw' ? 'SW' : r.key === 'tw' ? 'TW' : r.label}</dt>
-          <dd className={cx('num truncate text-base font-semibold', r.muted && 'text-muted')}>
-            {r.value}
-            {r.unit && <span className="ml-0.5 text-xs font-normal text-muted">{r.unit}</span>}
-          </dd>
-        </div>
-      ))}
-    </dl>
+const GLYPHS: SpecKey[] = ['w', 'b', 'sw', 'tw']
+const isGlyph = (k: string): k is SpecKey => (GLYPHS as string[]).includes(k)
+
+/** What a number measures: its picture, in plain words, then how we
+ *  compute it. Opened from the number's label. */
+function SpecSheet({ k, onClose }: { k: SpecKey | null; onClose: () => void }) {
+  const t = useT()
+  const shown = k ?? 'w'
+  const i = GLYPHS.indexOf(shown)
+  const title = [t.spec.weight, t.spec.balance, t.spec.swingweight, t.spec.twistweight][i]
+  const plain = [t.spec.weightInfo, t.spec.balanceInfo, t.spec.swingweightInfo, t.spec.twistweightInfo][i]
+  // "Peso: soma de todas as massas." without its own name.
+  const rest = t.info.body[i]?.split(':').slice(1).join(':').trim()
+  const how = rest && rest.charAt(0).toUpperCase() + rest.slice(1)
+  return createPortal(
+    <Sheet open={k !== null} onClose={onClose} title={title}>
+      <div className="space-y-3 text-sm leading-relaxed">
+        <SpecGlyph k={shown} className="!h-auto w-full max-w-[200px]" />
+        <p className="text-base">{plain}</p>
+        {how && <p className="text-muted">{how}</p>}
+      </div>
+    </Sheet>,
+    document.body,
   )
 }
 
-export function SpecTable({ rows, showDelta = true }: { rows: SpecRow[]; showDelta?: boolean }) {
-  const lang = useStore((x) => x.lang)
+/** A number's label, with its picture; a tap explains it. */
+function SpecLabel({ r, stacked, onOpen }: { r: SpecRow; stacked?: boolean; onOpen: (k: SpecKey) => void }) {
+  const t = useT()
+  const label = stacked && r.key === 'sw' ? 'SW' : stacked && r.key === 'tw' ? 'TW' : r.label
+  if (!isGlyph(r.key)) return <>{label}</>
+  const k = r.key
   return (
-    <dl className="divide-y divide-border/70">
-      {rows.map((r) => {
-        const d = r.delta === undefined ? 0 : Math.round(r.delta * 10 ** (r.deltaDigits ?? 1)) / 10 ** (r.deltaDigits ?? 1)
-        return (
-          <div key={r.key} className="flex items-baseline justify-between gap-3 py-2.5">
-            <dt className="text-sm text-muted">{r.label}</dt>
-            <dd className="flex items-baseline gap-2 text-right">
-              {showDelta && r.delta !== undefined && d !== 0 && (
-                <span className="text-xs text-muted">{fmtSigned(r.delta, r.deltaDigits ?? 1, lang)}</span>
-              )}
-              <span className={cx('readout text-lg', r.muted && 'text-muted')}>{r.value}</span>
-              {r.unit && <span className="-ml-1 text-sm text-muted">{r.unit}</span>}
-              {r.sub && <span className="text-xs text-muted">{r.sub}</span>}
+    <button
+      type="button"
+      onClick={() => onOpen(k)}
+      aria-label={`${t.common.info}: ${r.label}`}
+      className={cx('-m-1 flex max-w-full rounded-md p-1 text-left hover:bg-surface-2', stacked ? 'flex-col items-start gap-1' : 'items-center gap-2')}
+    >
+      <SpecGlyph k={k} className="text-text" />
+      <span className="truncate">{label}</span>
+    </button>
+  )
+}
+
+/** Four numbers in a row, for the reference on phones. With `explain`,
+ *  each label carries its picture and opens what it means. */
+export function SpecStrip({ rows, explain }: { rows: SpecRow[]; explain?: boolean }) {
+  const [open, setOpen] = useState<SpecKey | null>(null)
+  // Each column as wide as its figure, the room left spread between them:
+  // the long ones (kg·cm²) fit a phone's panel without cutting.
+  return (
+    <>
+      <dl className="grid grid-cols-[repeat(4,auto)] justify-between gap-x-2">
+        {rows.slice(0, 4).map((r) => (
+          <div key={r.key} className="min-w-0">
+            <dt className="truncate text-xs text-muted">
+              {explain ? <SpecLabel r={r} stacked onOpen={setOpen} /> : r.key === 'sw' ? 'SW' : r.key === 'tw' ? 'TW' : r.label}
+            </dt>
+            <dd className={cx('num truncate text-base font-semibold', r.muted && 'text-muted')}>
+              {r.value}
+              {r.unit && <span className="ml-0.5 text-xs font-normal text-muted">{r.unit}</span>}
             </dd>
           </div>
-        )
-      })}
-    </dl>
+        ))}
+      </dl>
+      {explain && <SpecSheet k={open} onClose={() => setOpen(null)} />}
+    </>
+  )
+}
+
+export function SpecTable({ rows, showDelta = true, explain }: { rows: SpecRow[]; showDelta?: boolean; explain?: boolean }) {
+  const lang = useStore((x) => x.lang)
+  const [open, setOpen] = useState<SpecKey | null>(null)
+  return (
+    <>
+      <dl className="divide-y divide-border/70">
+        {rows.map((r) => {
+          const d = r.delta === undefined ? 0 : Math.round(r.delta * 10 ** (r.deltaDigits ?? 1)) / 10 ** (r.deltaDigits ?? 1)
+          return (
+            <div key={r.key} className="flex items-baseline justify-between gap-3 py-2.5">
+              <dt className="min-w-0 self-center text-sm text-muted">{explain ? <SpecLabel r={r} onOpen={setOpen} /> : r.label}</dt>
+              <dd className="flex items-baseline gap-2 text-right">
+                {showDelta && r.delta !== undefined && d !== 0 && (
+                  <span className="text-xs text-muted">{fmtSigned(r.delta, r.deltaDigits ?? 1, lang)}</span>
+                )}
+                <span className={cx('readout text-lg', r.muted && 'text-muted')}>{r.value}</span>
+                {r.unit && <span className="-ml-1 text-sm text-muted">{r.unit}</span>}
+                {r.sub && <span className="text-xs text-muted">{r.sub}</span>}
+              </dd>
+            </div>
+          )
+        })}
+      </dl>
+      {explain && <SpecSheet k={open} onClose={() => setOpen(null)} />}
+    </>
   )
 }
 

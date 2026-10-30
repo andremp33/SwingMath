@@ -1,4 +1,4 @@
-import { Calculator, ClipboardList, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2, UserRound, X } from 'lucide-react'
+import { Calculator, GitCompareArrows, Pencil, Plus, Printer, Share2, Star, Trash2, UserRound, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { OwnedRacket } from '../domain/journal'
@@ -12,6 +12,8 @@ import { fmtDate, fmtNum, leadParts, racketLabel } from '../lib/format'
 import { compute } from '../domain/physics'
 import { bedLabel } from '../lib/bedLabel'
 import { Badge, Button, cx, EmptyState, PageTitle, Select } from '../ui/basics'
+import { SetupsArt } from '../ui/drawings'
+import { OnceHint } from '../ui/hint'
 import { MoreMenu } from '../ui/menu'
 import { useToast } from '../ui/overlay'
 import { OwnedSheet } from './JournalSheets'
@@ -71,7 +73,7 @@ export function Setups() {
       <PageTitle action={!pro && setups.length > 0 && <Badge tone="pro">{setups.length < FREE_SETUPS ? fmt(t.setups.freeCount, { n: setups.length, max: FREE_SETUPS }) : 'Pro'}</Badge>}>{t.setups.title}</PageTitle>
 
       {setups.length === 0 ? (
-        <EmptyState icon={ClipboardList} text={t.setups.empty} action={<Button variant="primary" onClick={() => nav('/')}>{t.setups.emptyAction}</Button>} />
+        <EmptyState art={<SetupsArt />} text={t.setups.empty} action={<Button variant="primary" onClick={() => nav('/')}>{t.setups.emptyAction}</Button>} />
       ) : (
         <>
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
@@ -87,7 +89,11 @@ export function Setups() {
               </Button>
             )}
           </div>
-          {selecting && <p className="mb-2 text-sm text-muted">{t.setups.selectHint}</p>}
+          {selecting && (
+            <OnceHint id="compare" done={picked.length >= 2} className="mb-2">
+              {t.setups.selectHint}
+            </OnceHint>
+          )}
           <ul className={cx('grid grid-cols-1 gap-3 md:grid-cols-2', selecting && 'mb-32 sm:mb-20')}>
             {list.map((s) => (
               <li key={s.id} className="min-w-0">

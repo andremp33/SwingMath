@@ -470,10 +470,20 @@ export function MultiChoiceChips<T extends string>({
   )
 }
 
-export function EmptyState({ icon: Icon, text, action }: { icon: LucideIcon; text: string; action?: ReactNode }) {
+/** Nothing here yet: an icon, or a drawing (`art`) of what will be, one
+ *  line, and the one thing to do about it. */
+export function EmptyState({ icon: Icon, art, text, action }: { icon?: LucideIcon; art?: ReactNode; text: string; action?: ReactNode }) {
+  if (art)
+    return (
+      <div className="flex flex-col items-center gap-4 px-4 py-10 text-center">
+        <div className="w-full max-w-[200px]">{art}</div>
+        <p className="max-w-xs text-base">{text}</p>
+        {action}
+      </div>
+    )
   return (
     <div className="flex flex-col items-start gap-3 py-8">
-      <Icon className="size-6 text-muted" strokeWidth={1.5} aria-hidden />
+      {Icon && <Icon className="size-6 text-muted" strokeWidth={1.5} aria-hidden />}
       <p className="text-sm text-muted">{text}</p>
       {action}
     </div>

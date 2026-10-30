@@ -1,5 +1,5 @@
 import { ArrowRight, Check, Plus, RotateCw, Timer } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { saveOwned, uid } from '../data/db'
 import { useAllRackets, useOwned, useSessions, useStringings } from '../data/hooks'
@@ -10,6 +10,7 @@ import { fmt, useT } from '../i18n'
 import { fmtDate, fmtNum } from '../lib/format'
 import { Button, Card, CardTitle, ChoiceChips, cx, PageTitle } from '../ui/basics'
 import { InfoTip } from '../ui/disclosure'
+import { JournalArt } from '../ui/drawings'
 import { bedLabel } from '../ui/strings'
 import { LifeBar, OwnedSheet, RacketSheet, SessionList, SessionSheet, StringingSheet } from './JournalSheets'
 import { RestringReminderSheet, StringingReportSheet } from './JournalReport'
@@ -140,19 +141,33 @@ export function Journal() {
       </>
     )
 
-  // First time: add a racket, then log a session.
+  // First time: what it is for in a picture and a line, then the two steps
+  // (add a racket, then log a session). The longer words are behind the (?).
   if (active.length === 0 && sessions.length === 0)
     return (
       <>
-        <PageTitle subtitle={t.journal.intro}>{t.journal.title}</PageTitle>
-        <ol className="space-y-3">
-          <Step n={1} title={t.journal.step1} hint={t.journal.step1Hint}>
-            <Button variant="primary" icon={Plus} onClick={() => setEditingOwned(newOwned())}>
-              {t.journal.addRacket}
-            </Button>
-          </Step>
-          <Step n={2} title={t.journal.step2} hint={t.journal.step2Hint} muted />
-        </ol>
+        <PageTitle
+          action={
+            <InfoTip title={t.journal.title}>
+              <p>{t.journal.intro}</p>
+              <p>{t.journal.step1Hint}</p>
+              <p>{t.journal.step2Hint}</p>
+            </InfoTip>
+          }
+        >
+          {t.journal.title}
+        </PageTitle>
+        <Card className="mx-auto max-w-md">
+          <JournalArt className="mx-auto" />
+          <p className="mt-3 text-center text-base">{t.journal.introShort}</p>
+          <ol className="mt-5 space-y-2">
+            <Step n={1} title={t.journal.step1} />
+            <Step n={2} title={t.journal.step2} muted />
+          </ol>
+          <Button variant="primary" size="lg" icon={Plus} className="mt-5 w-full" onClick={() => setEditingOwned(newOwned())}>
+            {t.journal.addRacket}
+          </Button>
+        </Card>
         {sheets}
       </>
     )
@@ -221,18 +236,14 @@ export function Journal() {
   )
 }
 
-function Step({ n, title, hint, muted, children }: { n: number; title: string; hint: string; muted?: boolean; children?: ReactNode }) {
+function Step({ n, title, muted }: { n: number; title: string; muted?: boolean }) {
   return (
-    // A step still to come: dashed and muted, never faded below readable contrast.
-    <li className={cx('flex gap-4 rounded-lg border border-border p-4', muted && 'border-dashed')}>
-      <span aria-hidden className="num flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 font-bold">
+    // A step still to come: muted, never faded below readable contrast.
+    <li className="flex items-center gap-3">
+      <span aria-hidden className={cx('num flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold', muted ? 'border border-dashed border-border-input text-muted' : 'bg-text text-bg')}>
         {n}
       </span>
-      <div className="min-w-0 space-y-2">
-        <p className={cx('font-semibold', muted && 'text-muted')}>{title}</p>
-        <p className="text-sm text-muted">{hint}</p>
-        {children}
-      </div>
+      <p className={cx('font-medium', muted && 'text-muted')}>{title}</p>
     </li>
   )
 }
