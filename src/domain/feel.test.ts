@@ -34,7 +34,7 @@ describe('feel and the stringbed', () => {
     expect(at('16x15').spin).toBeGreaterThan(at('16x18').spin)
   })
 
-  it('the pattern moves spin about twice as much as poly over a synthetic does (TWU)', () => {
+  it('the pattern moves spin about twice as much as poly over a synthetic does', () => {
     const pattern = at('16x15').spin - at('16x19').spin
     const material = at('16x19').spin - at('16x19', { mains: { material: 'synthetic', tensionKg: 23 } }).spin
     expect(material).toBeGreaterThan(0)

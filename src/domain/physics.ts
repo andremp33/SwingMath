@@ -135,6 +135,19 @@ export function estimateTwistweight(headSizeSqIn: number): number {
   return 0.135 * headSizeSqIn
 }
 
+/**
+ * Swingweight (unstrung, kg·cm² about the 10 cm axis) when the maker gives
+ * only weight and balance: the parallel-axis term, m·(b − 10)², plus the
+ * frame's own moment about its balance point, taken as k·m·L². k = 0.105 is
+ * the mean over Babolat's published frames (weight, balance and swingweight
+ * from the same page), which it gives back within 5.5 points RMS.
+ */
+export const SW_SHAPE_K = 0.105
+export function estimateSwingweight(weightG: number, balanceCm: number, lengthCm: number): number {
+  const m = weightG / 1000
+  return m * (balanceCm - SW_AXIS_CM) ** 2 + SW_SHAPE_K * m * lengthCm ** 2
+}
+
 export interface Base {
   lengthCm: number
   headSizeSqIn: number

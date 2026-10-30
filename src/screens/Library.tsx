@@ -219,7 +219,6 @@ const RacketCard = memo(function RacketCard({ racket: r, showBrand, community }:
 
   // Stock specs: unstrung, no overgrip, as the frame leaves the factory.
   const pts = (r.lengthCm / 2 - r.balanceCm) / 0.3175
-  const official = r.specFrom?.weight === 'official'
   const facts = [`${r.headSizeSqIn} in²`, r.pattern, r.ra && `RA ${r.ra}`, Math.abs(r.lengthCm - 68.58) > 0.3 && `${fmtNum(r.lengthCm, 1, lang)} cm`].filter(Boolean)
 
   return (
@@ -239,14 +238,10 @@ const RacketCard = memo(function RacketCard({ racket: r, showBrand, community }:
         </div>
         {!r.isStock ? (
           <Badge tone="accent">{t.library.custom}</Badge>
-        ) : official ? (
-          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-success" title={t.library.officialHint}>
+        ) : (
+          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-success" title={r.specFrom?.swingweight === 'estimated' ? t.library.officialHintEstimated : t.library.officialHint}>
             <CircleCheck className="size-3.5" aria-hidden />
             {t.library.official}
-          </span>
-        ) : (
-          <span className="shrink-0 text-xs text-muted" title={t.library.measuredHint}>
-            {t.library.measured}
           </span>
         )}
       </div>

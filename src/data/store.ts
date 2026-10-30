@@ -295,7 +295,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'swingmath',
-      version: 6,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
       // v2: the stock library was replaced by verified frames with new ids.
       migrate: (persisted, version) => {
@@ -318,6 +318,13 @@ export const useStore = create<State>()(
         // v6: the community hides authors by an opaque key, no longer by
         // account id; the old ids match nothing now.
         if (version < 6) s.hiddenAuthors = []
+        // v7: frames without the maker's specs left the library; the same
+        // model in another year where there is one, the first frame if not.
+        const left = s.config?.racketId
+        if (version < 7 && s.config && left?.startsWith('stock-') && !STOCK_RACKETS.some((r) => r.id === left)) {
+          s.config = { ...s.config, racketId: RENAMED[left] ?? STOCK_RACKETS[0].id }
+          if (!RENAMED[left]) s.loadedSetupId = null
+        }
         return s as State
       },
     },

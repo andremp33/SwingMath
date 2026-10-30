@@ -207,8 +207,7 @@ export type StringFeel = Record<StringFeelKey, number>
  * How the stringbed plays, 5-95 %. A softer bed returns more energy and is
  * kinder to the arm; a stiffer one launches lower (control). Open patterns
  * let the mains slide and snap back for spin, more than the string's own
- * slickness does (Tennis Warehouse University: 16x15 about 10 % more spin
- * than 16x19 with the same string; poly over nylon 4-5 %). The stiffness
+ * slickness does, as lab tests of string movement show. The stiffness
  * window covers real setups, from a soft multi in a big head (~70) to a
  * dense poly bed strung tight (~145), so one change moves a few points and
  * nothing pins to the ends.

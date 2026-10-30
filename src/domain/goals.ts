@@ -24,7 +24,7 @@ export interface GoalAdvice {
 export interface GoalInput extends ComputeInput {
   spec: ComputeInput['spec'] & FeelFrame
   strings?: Stringbed
-  /** Where the frame's playtest moves the feel (data/racketFeel's
+  /** Where the frame's start moves the feel (data/racketFeel's
    *  feelOffset), so the goals read as the feel does. */
   feelOffset?: Partial<Record<GoalKey, number>>
 }
@@ -61,7 +61,7 @@ const withTension = (bed: Stringbed, kg: number): Stringbed => ({
  * For each goal, the single change that raises it most: GOAL_GRAMS of lead
  * at one of the sweet spot card's spots, or GOAL_KG more or less tension.
  * Differences of the feel heuristic, so they hold for stock frames too (the
- * playtest only shifts where the feel starts). The cost is the goal that
+ * frame's start only shifts where the feel begins). The cost is the goal that
  * drops most with it, so the player sees what they trade.
  */
 export function goalAdvice(input: GoalInput, goals: readonly GoalKey[]): GoalAdvice[] {

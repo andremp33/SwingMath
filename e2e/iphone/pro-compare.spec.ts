@@ -52,11 +52,11 @@ test('PC02 what the source does not publish is "—"; the feel only with the sto
   await expect(page.getByRole('dialog', { name: 'Sensação estimada' })).toContainText('Estimada a partir da raquete de série.')
   await page.keyboard.press('Escape')
   await expect(feel.getByRole('meter', { name: 'Potência: Jannik Sinner' })).toBeVisible()
-  // Federer's is not: no feel at all.
+  // Seyboth Wild's is not: no feel at all.
   await page.getByRole('button', { name: 'Escolher outro profissional' }).click()
-  await page.getByLabel('Procurar jogador').fill('federer')
-  await page.getByRole('radio', { name: /Roger Federer/ }).click()
-  await expect(page.getByRole('table').getByRole('columnheader').nth(1)).toContainText('Roger Federer')
+  await page.getByLabel('Procurar jogador').fill('seyboth')
+  await page.getByRole('radio', { name: /Thiago Seyboth Wild/ }).click()
+  await expect(page.getByRole('table').getByRole('columnheader').nth(1)).toContainText('Thiago Seyboth Wild')
   await expect(page.getByRole('region', { name: 'Sensação' })).toHaveCount(0)
 })
 

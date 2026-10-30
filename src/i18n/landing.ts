@@ -66,6 +66,7 @@ const pt = {
   faqTitle: 'Perguntas',
   faq: [
     ['Quão preciso é?', 'Usamos física de massas pontuais, com o mesmo eixo das máquinas de swingweight. A precisão depende sobretudo das medições de partida: com as da tua raquete é melhor do que com valores de catálogo. Usa «Confirmar com a minha medição» para veres no teu caso.'],
+    ['De onde vêm os números das raquetes?', 'Das especificações que cada fabricante publica no seu site, sem cordas, com a página indicada em cada raquete. Quando a marca não publica o swingweight, estimamo-lo a partir do peso, do equilíbrio e do comprimento, e a app diz que é estimado. As medições que os jogadores partilham na comunidade mostram como as raquetes saem na realidade.'],
     ['Preciso de conta?', 'Não. A conta é opcional e grátis: guarda uma cópia de segurança, sincroniza com outro aparelho (vários ao mesmo tempo no Pro) e partilha medições e setups com a comunidade.'],
     ['Há versão para o browser?', 'Não: o SwingMath é uma app para Android e iPhone. Este site só a apresenta.'],
     ['A minha raquete não está na lista.', 'Adiciona-a em 30 segundos, com as tuas medições.'],
@@ -170,6 +171,7 @@ const en: LandingDict = {
   faqTitle: 'Questions',
   faq: [
     ['How accurate is it?', 'We use point-mass physics, on the same axis as swingweight machines. Accuracy depends mostly on the starting measurements: yours beat catalogue values. Use “Check with my measurement” to see it for your racket.'],
+    ['Where do the rackets’ numbers come from?', 'From the specs each maker publishes on its site, unstrung, with the page linked on each racket. When the maker does not publish swingweight, we estimate it from weight, balance and length, and the app says it is estimated. The measurements players share in the community show how the frames really come out.'],
     ['Do I need an account?', 'No. The account is optional and free: it keeps a backup, syncs with another device (several at once with Pro) and shares measurements and setups with the community.'],
     ['Is there a browser version?', 'No: SwingMath is an app for Android and iPhone. This site only introduces it.'],
     ['My racket is not on the list.', 'Add it in 30 seconds, with your own measurements.'],
@@ -272,6 +274,7 @@ const es: LandingDict = {
   faqTitle: 'Preguntas',
   faq: [
     ['¿Qué precisión tiene?', 'Usamos física de masas puntuales, con el mismo eje que las máquinas de swingweight. La precisión depende sobre todo de las mediciones de partida: con las de tu raqueta es mejor que con los valores de catálogo. Usa «Comprobar con mi medición» para verlo en tu caso.'],
+    ['¿De dónde salen los números de las raquetas?', 'De las especificaciones que cada fabricante publica en su web, sin cuerdas, con la página enlazada en cada raqueta. Cuando la marca no publica el swingweight, lo estimamos a partir del peso, el balance y la longitud, y la app indica que es estimado. Las mediciones que los jugadores comparten en la comunidad muestran cómo salen las raquetas en realidad.'],
     ['¿Necesito cuenta?', 'No. La cuenta es opcional y gratis: guarda una copia de seguridad, sincroniza con otro dispositivo (varios a la vez con Pro) y comparte mediciones y setups con la comunidad.'],
     ['¿Hay versión para el navegador?', 'No: SwingMath es una app para Android y iPhone. Esta web solo la presenta.'],
     ['Mi raqueta no está en la lista.', 'Añádela en 30 segundos, con tus mediciones.'],

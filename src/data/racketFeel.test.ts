@@ -4,7 +4,7 @@ import { DEFAULT_ACCESSORY_MASSES, emptyLead } from '../domain/types'
 import { STOCK_RACKETS } from './rackets'
 import { goalAdvice } from '../domain/goals'
 import { DEFAULT_STRINGBED } from '../domain/strings'
-import { feelOffset, racketFeel, reviewOf } from './racketFeel'
+import { feelOffset, feelTarget, racketFeel } from './racketFeel'
 
 const find = (model: string, year?: number) => STOCK_RACKETS.find((r) => r.model === model && (year === undefined || r.year === year))!
 const stock = (model: string, year?: number) => {
@@ -13,28 +13,38 @@ const stock = (model: string, year?: number) => {
   return racketFeel(r, result)
 }
 
-describe('feel from the playtests', () => {
-  it('every stock frame has a review, its own or its family’s', () => {
-    const missing = STOCK_RACKETS.filter((r) => !reviewOf(r)).map((r) => r.id)
-    expect(missing).toEqual([])
-    expect(STOCK_RACKETS.filter((r) => reviewOf(r)?.own).length).toBeGreaterThan(115)
+describe('feel from the specs and the line', () => {
+  it('every stock frame has a start; the player’s own have none', () => {
+    expect(STOCK_RACKETS.filter((r) => !feelTarget(r)).map((r) => r.id)).toEqual([])
+    expect(feelTarget({ ...find('Pure Drive', 2025), isStock: false })).toBeUndefined()
   })
 
-  it('spin lines spin: Pure Aero, Extreme, VCORE, SX', () => {
-    expect(stock('Pure Aero', 2026).spin).toBeGreaterThan(85)
-    expect(stock('Extreme MP', 2026).spin).toBeGreaterThan(62)
-    expect(stock('Extreme Pro', 2024).spin).toBeGreaterThan(70)
-    expect(stock('SX 300', 2022).spin).toBeGreaterThan(75)
-    // The VCORE 98 is a spin frame, not a control one.
-    const v = stock('VCORE 98 (305g)', 2026)
-    expect(v.spin).toBeGreaterThan(70)
-    expect(v.control).toBeLessThan(40)
+  // Golden: frames players know, in the order everyone agrees on.
+  it('power: Pure Drive over Pure Strike, Ultra over Clash, Pure Drive over Blade', () => {
+    expect(stock('Pure Drive', 2025).power).toBeGreaterThan(stock('Pure Strike 98 18x20', 2024).power)
+    expect(stock('Ultra 100 v5', 2025).power).toBeGreaterThan(stock('Clash 100 v3', 2025).power)
+    expect(stock('Pure Drive', 2025).power).toBeGreaterThan(stock('Blade 98 16x19 v10', 2026).power)
   })
 
-  it('control frames control; power frames power', () => {
-    for (const [m, y] of [['Prestige Pro', 2023], ['Gravity Pro', 2025], ['Blade 98 18x20 v9', 2024], ['Percept 97D', 2023]] as const) expect(stock(m, y).control, m).toBeGreaterThan(75)
-    expect(stock('Pure Drive', 2025).power).toBeGreaterThan(85)
+  it('spin: Pure Aero over Blade, Extreme over Prestige, VCORE over Percept, 16x19 over 18x20', () => {
+    expect(stock('Pure Aero', 2026).spin).toBeGreaterThan(stock('Blade 98 16x19 v10', 2026).spin)
+    expect(stock('Extreme MP', 2026).spin).toBeGreaterThan(stock('Prestige MP', 2023).spin)
+    expect(stock('VCORE 98 (305g)', 2026).spin).toBeGreaterThan(stock('Percept 97', 2023).spin)
     expect(stock('Blade 98 18x20 v9', 2024).spin).toBeLessThan(stock('Blade 98 16x19 v9', 2024).spin)
+  })
+
+  it('control: Prestige, Gravity Pro and Pure Strike over Pure Drive and Pure Aero', () => {
+    for (const [m, y] of [['Prestige Pro', 2023], ['Gravity Pro', 2025], ['Pure Strike 98 18x20', 2024], ['Percept 97D', 2023]] as const) {
+      expect(stock(m, y).control, m).toBeGreaterThan(stock('Pure Drive', 2025).control + 10)
+      expect(stock(m, y).control, m).toBeGreaterThan(stock('Pure Aero', 2026).control + 10)
+    }
+  })
+
+  it('a spin frame spins more than it controls; a control frame the other way round', () => {
+    const aero = stock('Pure Aero', 2026)
+    expect(aero.spin).toBeGreaterThan(aero.control)
+    const prestige = stock('Prestige Pro', 2023)
+    expect(prestige.control).toBeGreaterThan(prestige.spin)
   })
 
   it('lead still moves it from there', () => {
